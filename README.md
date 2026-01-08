@@ -22,10 +22,8 @@ A comprehensive bill-splitting mobile application built with Flutter and Google 
 ## 📁 Project Structure
 
 ```
-WhatsMyShare/
+whatsmyshare-app/
 ├── README.md                    # This file
-├── LICENSE                      # MIT License
-├── .gitignore                   # Git ignore rules
 ├── docs/                        # Planning documentation
 │   ├── 01-development-environment-setup.md
 │   ├── 02-architecture-design.md
@@ -35,9 +33,9 @@ WhatsMyShare/
 │   ├── 06-testing-strategy.md
 │   ├── 07-deployment-guide.md
 │   └── 08-manual-steps-summary.md
-├── firestore-database/          # Database configuration
-│   ├── firestore.rules          # Security rules
-│   └── firestore.indexes.json   # Index definitions
+└── database/                    # Database configuration
+    ├── firestore.rules          # Security rules
+    └── firestore.indexes.json   # Index definitions
 ```
 
 ---
@@ -130,8 +128,8 @@ See [08 - Manual Steps Summary](docs/08-manual-steps-summary.md) for complete de
 
 1. **Clone the repository**
    ```bash
-   git clone https://github.com/avtansh-code/WhatsMyShare.git
-   cd WhatsMyShare
+   git clone https://github.com/your-org/whatsmyshare.git
+   cd whatsmyshare
    ```
 
 2. **Install Flutter dependencies**

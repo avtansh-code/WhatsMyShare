@@ -105,7 +105,9 @@ firebase login
 - Flutter
 - Dart
 - Google Cloud Code
+- GitLens
 - Error Lens
+- Bracket Pair Colorizer
 - REST Client
 
 ---
@@ -115,6 +117,11 @@ firebase login
 ### 3.1 Create Flutter Project
 
 ```bash
+# Create new Flutter project
+flutter create --org com.whatsmyshare --project-name whatsmyshare whatsmyshare_app
+
+cd whatsmyshare_app
+
 # Get dependencies
 flutter pub get
 ```
