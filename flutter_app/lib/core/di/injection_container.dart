@@ -30,6 +30,10 @@ import '../../features/settlements/data/datasources/settlement_datasource.dart';
 import '../../features/settlements/data/repositories/settlement_repository_impl.dart';
 import '../../features/settlements/domain/repositories/settlement_repository.dart';
 import '../../features/settlements/presentation/bloc/settlement_bloc.dart';
+import '../../features/notifications/data/datasources/notification_datasource.dart';
+import '../../features/notifications/data/repositories/notification_repository_impl.dart';
+import '../../features/notifications/domain/repositories/notification_repository.dart';
+import '../../features/notifications/presentation/bloc/notification_bloc.dart';
 
 /// Global service locator instance
 final sl = GetIt.instance;
@@ -47,6 +51,7 @@ Future<void> initializeDependencies() async {
   await _initGroupFeature();
   await _initExpenseFeature();
   await _initSettlementFeature();
+  await _initNotificationFeature();
 }
 
 /// Initialize external dependencies (Firebase, etc.)
@@ -191,6 +196,27 @@ Future<void> _initSettlementFeature() async {
   // BLoC
   sl.registerFactory<SettlementBloc>(
     () => SettlementBloc(repository: sl<SettlementRepository>()),
+  );
+}
+
+/// Initialize notifications feature
+Future<void> _initNotificationFeature() async {
+  // Data Sources
+  sl.registerLazySingleton<NotificationDataSource>(
+    () => NotificationDataSourceImpl(firestore: sl<FirebaseFirestore>()),
+  );
+
+  // Repositories
+  sl.registerLazySingleton<NotificationRepository>(
+    () => NotificationRepositoryImpl(
+      dataSource: sl<NotificationDataSource>(),
+      auth: sl<FirebaseAuth>(),
+    ),
+  );
+
+  // BLoC
+  sl.registerFactory<NotificationBloc>(
+    () => NotificationBloc(repository: sl<NotificationRepository>()),
   );
 }
 

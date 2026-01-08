@@ -17,6 +17,9 @@ import '../features/groups/presentation/bloc/group_event.dart';
 import '../features/groups/presentation/pages/group_list_page.dart';
 import '../features/groups/presentation/pages/create_group_page.dart';
 import '../features/groups/presentation/pages/group_detail_page.dart';
+import '../features/notifications/presentation/bloc/notification_bloc.dart';
+import '../features/notifications/presentation/bloc/notification_event.dart';
+import '../features/notifications/presentation/pages/notifications_page.dart';
 
 /// App router configuration with auth-aware navigation
 class AppRouter {
@@ -108,6 +111,16 @@ class AppRouter {
       builder: (context, state) => BlocProvider(
         create: (_) => sl<ProfileBloc>()..add(const ProfileLoadRequested()),
         child: const EditProfilePage(),
+      ),
+    ),
+
+    // Notification Routes
+    GoRoute(
+      path: '/notifications',
+      name: 'notifications',
+      builder: (context, state) => BlocProvider(
+        create: (_) => sl<NotificationBloc>()..add(const LoadNotifications()),
+        child: const NotificationsPage(),
       ),
     ),
 
