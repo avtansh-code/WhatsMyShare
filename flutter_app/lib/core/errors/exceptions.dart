@@ -178,6 +178,19 @@ class StorageException extends AppException {
   String toString() => 'StorageException: $message (code: $code)';
 }
 
+/// Exception thrown when a resource is not found
+class NotFoundException extends AppException {
+  const NotFoundException({
+    required super.message,
+    super.code = 'NOT_FOUND',
+    super.originalException,
+    super.stackTrace,
+  });
+
+  @override
+  String toString() => 'NotFoundException: $message';
+}
+
 /// Exception thrown for biometric authentication
 class BiometricException extends AppException {
   const BiometricException({

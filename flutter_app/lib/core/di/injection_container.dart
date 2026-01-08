@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 import 'package:get_it/get_it.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 
@@ -13,6 +14,10 @@ import '../../features/auth/domain/usecases/sign_in_with_google.dart';
 import '../../features/auth/domain/usecases/sign_out.dart';
 import '../../features/auth/domain/usecases/sign_up_with_email.dart';
 import '../../features/auth/presentation/bloc/auth_bloc.dart';
+import '../../features/profile/data/datasources/user_profile_datasource.dart';
+import '../../features/profile/data/repositories/user_profile_repository_impl.dart';
+import '../../features/profile/domain/repositories/user_profile_repository.dart';
+import '../../features/profile/presentation/bloc/profile_bloc.dart';
 
 /// Global service locator instance
 final sl = GetIt.instance;
@@ -37,6 +42,9 @@ void _initExternal() {
   // Firestore
   sl.registerLazySingleton<FirebaseFirestore>(() => FirebaseFirestore.instance);
 
+  // Firebase Storage
+  sl.registerLazySingleton<FirebaseStorage>(() => FirebaseStorage.instance);
+
   // Google Sign In
   sl.registerLazySingleton<GoogleSignIn>(() => GoogleSignIn(
         scopes: ['email', 'profile'],
@@ -50,6 +58,8 @@ void _initCore() {
 
 /// Initialize authentication feature
 Future<void> _initAuthFeature() async {
+  await _initProfileFeature();
+  
   // Data Sources
   sl.registerLazySingleton<FirebaseAuthDataSource>(
     () => FirebaseAuthDataSourceImpl(
@@ -85,8 +95,34 @@ Future<void> _initAuthFeature() async {
   );
 }
 
+/// Initialize profile feature
+Future<void> _initProfileFeature() async {
+  // Data Sources
+  sl.registerLazySingleton<UserProfileDataSource>(
+    () => UserProfileDataSourceImpl(
+      firestore: sl<FirebaseFirestore>(),
+      storage: sl<FirebaseStorage>(),
+      auth: sl<FirebaseAuth>(),
+    ),
+  );
+
+  // Repositories
+  sl.registerLazySingleton<UserProfileRepository>(
+    () => UserProfileRepositoryImpl(
+      dataSource: sl<UserProfileDataSource>(),
+    ),
+  );
+
+  // BLoC
+  sl.registerFactory<ProfileBloc>(
+    () => ProfileBloc(
+      repository: sl<UserProfileRepository>(),
+    ),
+  );
+}
+
 /// Reset all dependencies (useful for testing)
 Future<void> resetDependencies() async {
   await sl.reset();
   await initializeDependencies();
-}  // BLoC
+}

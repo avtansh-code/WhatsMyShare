@@ -9,6 +9,9 @@ import '../features/auth/presentation/pages/forgot_password_page.dart';
 import '../features/auth/presentation/pages/login_page.dart';
 import '../features/auth/presentation/pages/signup_page.dart';
 import '../features/dashboard/presentation/pages/dashboard_page.dart';
+import '../features/profile/presentation/bloc/profile_bloc.dart';
+import '../features/profile/presentation/pages/edit_profile_page.dart';
+import '../features/profile/presentation/pages/profile_page.dart';
 
 /// App router configuration with auth-aware navigation
 class AppRouter {
@@ -81,6 +84,24 @@ class AppRouter {
       builder: (context, state) => BlocProvider(
         create: (_) => sl<AuthBloc>()..add(const AuthCheckRequested()),
         child: const DashboardPage(),
+      ),
+    ),
+
+    // Profile Routes
+    GoRoute(
+      path: '/profile',
+      name: 'profile',
+      builder: (context, state) => BlocProvider(
+        create: (_) => sl<ProfileBloc>()..add(const ProfileLoadRequested()),
+        child: const ProfilePage(),
+      ),
+    ),
+    GoRoute(
+      path: '/profile/edit',
+      name: 'edit-profile',
+      builder: (context, state) => BlocProvider(
+        create: (_) => sl<ProfileBloc>()..add(const ProfileLoadRequested()),
+        child: const EditProfilePage(),
       ),
     ),
 
