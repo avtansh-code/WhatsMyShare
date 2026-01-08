@@ -199,3 +199,5 @@ functions/.env
 *.backup
 *.tmp
 *~
+
+agent_updates/
