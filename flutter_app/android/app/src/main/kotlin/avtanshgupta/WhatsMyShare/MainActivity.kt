@@ -1,4 +1,4 @@
-package avtanshgupta.whats_my_share
+package avtanshgupta.WhatsMyShare
 
 import io.flutter.embedding.android.FlutterActivity
 

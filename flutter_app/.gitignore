@@ -43,3 +43,82 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# ============================================
+# FIREBASE CONFIG FILES (contain API keys)
+# ============================================
+# Android Firebase config
+android/app/google-services.json
+
+# iOS Firebase config
+ios/Runner/GoogleService-Info.plist
+
+# Generated Firebase options
+lib/firebase_options.dart
+
+# FlutterFire CLI generated config (contains project IDs)
+firebase.json
+
+# Firebase emulator files
+firebase-debug.log
+firebase-debug.*.log
+firestore-debug.log
+ui-debug.log
+pubsub-debug.log
+.firebase/
+
+# ============================================
+# ENVIRONMENT & SECRETS
+# ============================================
+.env
+.env.*
+.env.local
+*.env
+
+# ============================================
+# ANDROID SIGNING (DO NOT COMMIT)
+# ============================================
+android/key.properties
+android/*.keystore
+android/*.jks
+*.keystore
+*.jks
+
+# ============================================
+# iOS SIGNING & CERTIFICATES
+# ============================================
+ios/*.p12
+ios/*.cer
+ios/*.mobileprovision
+ios/fastlane/report.xml
+ios/fastlane/Preview.html
+ios/fastlane/screenshots/
+ios/fastlane/test_output/
+
+# ============================================
+# ADDITIONAL BUILD ARTIFACTS
+# ============================================
+# Flutter build outputs
+/build/
+*.apk
+*.aab
+*.ipa
+*.app
+*.dSYM.zip
+
+# Coverage
+/coverage/
+lcov.info
+
+# ============================================
+# IDE SPECIFIC
+# ============================================
+.vscode/
+.idea/
+*.iml
+
+# ============================================
+# PODS (can be regenerated)
+# ============================================
+ios/Pods/
+ios/Podfile.lock

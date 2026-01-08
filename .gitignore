@@ -122,3 +122,80 @@ app.*.symbols
 .DS_Store
 
 docs/planning/
+
+# ============================================
+# ENVIRONMENT & SECRETS (DO NOT COMMIT)
+# ============================================
+.env
+.env.*
+.env.local
+.env.*.local
+
+# ============================================
+# FIREBASE / GCP SENSITIVE FILES
+# ============================================
+# Service account keys (contains private keys)
+service-account.json
+*-service-account.json
+*.serviceaccount.json
+*-firebase-adminsdk-*.json
+
+# Firebase config files (contain API keys)
+google-services.json
+GoogleService-Info.plist
+firebase_options.dart
+
+# Firebase project binding (contains project ID)
+.firebaserc
+
+# GCP/Firebase emulator data
+.firebase/
+firebase-debug.log
+firebase-debug.*.log
+firestore-debug.log
+ui-debug.log
+pubsub-debug.log
+.firebaserc.local
+
+# Firebase Data Connect (may contain project-specific config)
+dataconnect/
+
+# Secret files
+*.pem
+*.p12
+*.key
+*.keystore
+*.jks
+secrets/
+credentials/
+
+# ============================================
+# CLOUD FUNCTIONS
+# ============================================
+functions/node_modules/
+functions/lib/
+functions/.env
+
+# ============================================
+# TERRAFORM / INFRASTRUCTURE
+# ============================================
+*.tfstate
+*.tfstate.*
+.terraform/
+*.tfvars
+!*.tfvars.example
+
+# ============================================
+# IDE & OS SPECIFIC
+# ============================================
+.vscode/
+.idea/
+*.sublime-*
+
+# ============================================
+# BACKUP & TEMP FILES
+# ============================================
+*.bak
+*.backup
+*.tmp
+*~

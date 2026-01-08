@@ -28,6 +28,11 @@ This document outlines the steps to set up the development environment for the "
 | Node.js | 18+ LTS | Cloud Functions development |
 | Docker | Latest | Local testing of containerized services |
 
+### 1.3 Required Accounts
+- **Google Cloud Platform Account** - For Firebase and backend services
+- **Apple Developer Account** - $99/year (required for iOS deployment)
+- **Google Play Developer Account** - $25 one-time (required for Android deployment)
+
 ---
 
 ## 2. Installation Steps
@@ -114,83 +119,69 @@ firebase login
 
 ---
 
-## 3. Project Setup
+## 3. Clone and Configure Project
 
-### 3.1 Create Flutter Project
-
-```bash
-# Create new Flutter project (iOS and Android only)
-flutter create --org com.<your_org> --project-name whats_my_share --platforms=ios,android flutter_app
-
-cd flutter_app
-
-# Get dependencies
-flutter pub get
-```
-
-> **Note**: The `--platforms=ios,android` flag ensures only iOS and Android platform support is generated. If you already have a project with other platforms, you can remove the `linux/`, `macos/`, `web/`, and `windows/` directories.
-
-### 3.2 Configure Firebase/GCP
+### 3.1 Clone Repository
 
 ```bash
-# Install FlutterFire CLI
-dart pub global activate flutterfire_cli
-
-# Configure Firebase project
-flutterfire configure --project=whatsmyshare-prod
+git clone https://github.com/your-org/whatsmyshare.git
+cd whatsmyshare
 ```
 
-**Manual Steps Required:**
-1. Go to [Firebase Console](https://console.firebase.google.com)
-2. Create new project: `whatsmyshare-prod`
-3. Enable required services (see Section 4)
+### 3.2 Project Structure Overview
 
-### 3.3 Android Configuration
+After cloning, you'll see this structure:
 
-Edit `android/app/build.gradle`:
-```gradle
-android {
-    compileSdkVersion 34
-    
-    defaultConfig {
-        minSdkVersion 23  // Android 6.0+
-        targetSdkVersion 34
-        multiDexEnabled true
-    }
-}
+```
+WhatsMyShare/
+├── .gitignore                   # Git ignore rules
+├── README.md                    # Project overview
+├── firebase.json                # Firebase CLI configuration
+├── storage.rules                # Cloud Storage security rules
+├── docs/                        # Documentation
+├── firestore-database/          # Firestore rules and indexes
+│   ├── firestore.rules
+│   └── firestore.indexes.json
+└── flutter_app/                 # Flutter application
+    ├── android/
+    ├── ios/
+    ├── lib/
+    └── pubspec.yaml
 ```
 
-### 3.4 iOS Configuration
+### 3.3 Files You Need to Create
 
-Edit `ios/Podfile`:
-```ruby
-platform :ios, '13.0'
-```
+The following files are **not included in the repository** for security reasons. You must create them:
+
+| File | Location | Purpose |
+|------|----------|---------|
+| `.firebaserc` | Root | Links to your Firebase project |
+| `.env` | Root | Environment variables |
+| `service-account.json` | Root | GCP service account key |
+| `google-services.json` | `flutter_app/android/app/` | Firebase Android config |
+| `GoogleService-Info.plist` | `flutter_app/ios/Runner/` | Firebase iOS config |
+| `firebase_options.dart` | `flutter_app/lib/` | Generated Firebase options |
+| `firebase.json` | `flutter_app/` | FlutterFire CLI config |
 
 ---
 
-## 4. GCP Services Setup
+## 4. Firebase/GCP Project Setup
 
-### 4.1 Required GCP Services
+### 4.1 Create Firebase Project
 
-| Service | Purpose |
-|---------|---------|
-| Cloud Firestore | NoSQL database for real-time data |
-| Cloud Run | Containerized backend services |
-| Cloud Functions | Event-driven serverless functions |
-| Cloud Storage | File storage (receipts, profile pictures) |
-| Firebase Auth | User authentication |
-| Cloud Pub/Sub | Async messaging & notifications |
-| Secret Manager | API keys and secrets |
-| Cloud Scheduler | Scheduled tasks (reminders) |
+1. Go to [Firebase Console](https://console.firebase.google.com)
+2. Click "Add project"
+3. Enter project name (e.g., `whatsmyshare-dev` for development)
+4. Enable Google Analytics (optional)
+5. Wait for project creation
 
-### 4.2 Enable Services
+### 4.2 Enable Required GCP Services
 
 ```bash
-# Set project
-gcloud config set project whatsmyshare-prod
+# Set your project ID
+gcloud config set project YOUR_PROJECT_ID
 
-# Enable APIs
+# Enable required APIs
 gcloud services enable \
   firestore.googleapis.com \
   run.googleapis.com \
@@ -200,24 +191,102 @@ gcloud services enable \
   secretmanager.googleapis.com \
   cloudscheduler.googleapis.com \
   firebase.googleapis.com \
-  identitytoolkit.googleapis.com
+  identitytoolkit.googleapis.com \
+  fcm.googleapis.com \
+  artifactregistry.googleapis.com \
+  cloudtrace.googleapis.com \
+  logging.googleapis.com \
+  monitoring.googleapis.com
 ```
+
+### 4.3 Create Service Account
+
+1. Go to [GCP Console → IAM & Admin → Service Accounts](https://console.cloud.google.com/iam-admin/serviceaccounts)
+2. Click "Create Service Account"
+3. Name: `firebase-admin-sdk`
+4. Grant roles:
+   - Firebase Admin SDK Administrator Service Agent
+   - Cloud Datastore User
+   - Storage Admin
+5. Create key (JSON format)
+6. Save as `service-account.json` in project root
+
+**Store in Secret Manager (recommended):**
+```bash
+gcloud secrets create firebase-admin-key \
+  --data-file=./service-account.json
+```
+
+### 4.4 Enable Firebase Services
+
+In Firebase Console for your project:
+
+1. **Authentication**
+   - Go to Authentication → Sign-in method
+   - Enable "Email/Password"
+   - Enable "Google" (configure OAuth consent screen if prompted)
+
+2. **Firestore Database**
+   - Go to Firestore Database → Create database
+   - Start in production mode
+   - Choose location: `asia-south1` (Mumbai) for India
+
+3. **Cloud Storage**
+   - Go to Storage → Get started
+   - Start in production mode
+
+4. **Cloud Messaging**
+   - Enabled by default for push notifications
 
 ---
 
-## 5. Environment Variables
+## 5. Configure Flutter App
 
-### 5.1 Local Development
+### 5.1 Install FlutterFire CLI
 
-Create `.env` file (DO NOT COMMIT):
+```bash
+dart pub global activate flutterfire_cli
+```
+
+### 5.2 Configure Firebase for Flutter
+
+```bash
+cd flutter_app
+
+# This will generate the required config files
+flutterfire configure --project=YOUR_PROJECT_ID
+```
+
+This command will:
+- Create `lib/firebase_options.dart`
+- Create `android/app/google-services.json`
+- Create `ios/Runner/GoogleService-Info.plist`
+- Create `firebase.json` in flutter_app
+
+### 5.3 Link Firebase Project
+
+Create `.firebaserc` in project root:
+
+```json
+{
+  "projects": {
+    "default": "YOUR_PROJECT_ID"
+  }
+}
+```
+
+### 5.4 Create Environment File
+
+Create `.env` in project root:
+
 ```env
 # Firebase Configuration
-FIREBASE_PROJECT_ID=whatsmyshare-prod
+FIREBASE_PROJECT_ID=YOUR_PROJECT_ID
 FIREBASE_API_KEY=your-api-key
-FIREBASE_AUTH_DOMAIN=whatsmyshare-prod.firebaseapp.com
+FIREBASE_AUTH_DOMAIN=YOUR_PROJECT_ID.firebaseapp.com
 
 # GCP Configuration
-GCP_PROJECT_ID=whatsmyshare-prod
+GCP_PROJECT_ID=YOUR_PROJECT_ID
 GCP_REGION=asia-south1
 
 # Feature Flags
@@ -226,46 +295,95 @@ ENABLE_BIOMETRIC_AUTH=true
 DEFAULT_CURRENCY=INR
 ```
 
-### 5.2 Secrets Management
+### 5.5 Install Flutter Dependencies
 
 ```bash
-# Store sensitive data in Secret Manager
-gcloud secrets create firebase-admin-key \
-  --data-file=./service-account.json
+cd flutter_app
+flutter pub get
+```
 
-gcloud secrets create razorpay-api-key \
-  --data-file=./razorpay-key.txt
+### 5.6 iOS Configuration
+
+The iOS platform is already set to iOS 13.0. Run:
+
+```bash
+cd ios
+pod install
+cd ..
+```
+
+### 5.7 Verify Setup
+
+```bash
+# Run Flutter analysis
+flutter analyze
+
+# Run on iOS Simulator
+flutter run -d ios
+
+# Run on Android Emulator
+flutter run -d android
 ```
 
 ---
 
-## 6. Development Tools
+## 6. Deploy Firebase Rules
 
-### 6.1 Emulators Setup
+### 6.1 Deploy Firestore Rules
 
 ```bash
-# Android Emulator
-flutter emulators --create --name Pixel_5_API_34
-
-# iOS Simulator
-open -a Simulator
-
-# Firebase Emulators (for local testing)
-firebase emulators:start --only firestore,auth,functions
+# From project root
+firebase deploy --only firestore:rules
 ```
 
-### 6.2 Code Quality Tools
+### 6.2 Deploy Storage Rules
 
 ```bash
-# Add to pubspec.yaml dev_dependencies
-flutter pub add --dev flutter_lints
-flutter pub add --dev build_runner
-flutter pub add --dev mockito
+firebase deploy --only storage
+```
+
+### 6.3 Deploy All Rules
+
+```bash
+firebase deploy --only firestore,storage
 ```
 
 ---
 
-## 7. Verification Checklist
+## 7. Firebase Emulators (Local Development)
+
+### 7.1 Start Emulators
+
+```bash
+firebase emulators:start --only firestore,auth,functions,storage
+```
+
+### 7.2 Emulator Ports
+
+| Service | Port |
+|---------|------|
+| Auth | 9099 |
+| Firestore | 8080 |
+| Functions | 5001 |
+| Storage | 9199 |
+| Emulator UI | 4000 |
+
+### 7.3 Connect Flutter App to Emulators
+
+In your Flutter app, enable emulator connection during development:
+
+```dart
+// In main.dart or firebase initialization
+if (kDebugMode) {
+  await FirebaseAuth.instance.useAuthEmulator('localhost', 9099);
+  FirebaseFirestore.instance.useFirestoreEmulator('localhost', 8080);
+  FirebaseStorage.instance.useStorageEmulator('localhost', 9199);
+}
+```
+
+---
+
+## 8. Verification Checklist
 
 Run these commands to verify setup:
 
@@ -273,36 +391,112 @@ Run these commands to verify setup:
 # Flutter setup
 flutter doctor -v
 
-# Firebase setup
+# Firebase CLI
 firebase projects:list
 
 # GCP setup
 gcloud info
+
+# Current project
+gcloud config get-value project
 
 # Android SDK
 adb devices
 
 # iOS (macOS only)
 xcrun simctl list devices
+
+# Flutter app analysis
+cd flutter_app && flutter analyze
 ```
 
 **Expected Output:** All checks should pass with no critical errors.
 
 ---
 
-## 8. Manual Steps Summary
+## 9. Troubleshooting
 
-| Step | Description | Owner |
-|------|-------------|-------|
-| M1 | Create Firebase project in console | Developer |
-| M2 | Configure Android Studio SDK Tools | Developer |
-| M3 | Accept Xcode license and configure | Developer |
-| M4 | Set up GCP billing account | Project Lead |
-| M5 | Create OAuth credentials in GCP Console | Developer |
-| M6 | Configure iOS signing certificates | Developer |
-| M7 | Set up Android keystore for signing | Developer |
+### 9.1 Common Issues
+
+| Issue | Solution |
+|-------|----------|
+| `firebase_options.dart` not found | Run `flutterfire configure` |
+| CocoaPods issues | Run `cd ios && pod install --repo-update` |
+| Android build fails | Check `minSdkVersion` is 23+ |
+| Firebase Auth errors | Verify SHA-1 fingerprint is added in Firebase Console |
+| Firestore permission denied | Deploy Firestore rules with `firebase deploy --only firestore:rules` |
+
+### 9.2 Reset Firebase Configuration
+
+```bash
+cd flutter_app
+rm -f lib/firebase_options.dart
+rm -f android/app/google-services.json
+rm -f ios/Runner/GoogleService-Info.plist
+rm -f firebase.json
+flutterfire configure --project=YOUR_PROJECT_ID
+```
+
+### 9.3 Get Android SHA-1 for Firebase Auth
+
+```bash
+cd flutter_app/android
+./gradlew signingReport
+```
+
+Add the SHA-1 fingerprint to Firebase Console → Project Settings → Your apps → Android app → Add fingerprint.
+
+---
+
+## 10. Files Reference
+
+### 10.1 Files in Repository (Version Controlled)
+
+| File | Description |
+|------|-------------|
+| `firebase.json` (root) | Firebase CLI config for deploying rules/functions |
+| `storage.rules` | Cloud Storage security rules |
+| `firestore-database/firestore.rules` | Firestore security rules |
+| `firestore-database/firestore.indexes.json` | Firestore index definitions |
+| `flutter_app/pubspec.yaml` | Flutter dependencies |
+| `flutter_app/ios/Podfile` | iOS CocoaPods configuration |
+
+### 10.2 Files NOT in Repository (Must Create)
+
+| File | How to Create |
+|------|---------------|
+| `.firebaserc` | Manual (see Section 5.3) |
+| `.env` | Manual (see Section 5.4) |
+| `service-account.json` | Download from GCP Console |
+| `flutter_app/android/app/google-services.json` | Generated by `flutterfire configure` |
+| `flutter_app/ios/Runner/GoogleService-Info.plist` | Generated by `flutterfire configure` |
+| `flutter_app/lib/firebase_options.dart` | Generated by `flutterfire configure` |
+| `flutter_app/firebase.json` | Generated by `flutterfire configure` |
+
+---
+
+## 11. Manual Steps Summary
+
+| Step | Description | Time |
+|------|-------------|------|
+| M1 | Create Firebase project in console | 5 min |
+| M2 | Enable GCP services | 5 min |
+| M3 | Create service account | 10 min |
+| M4 | Enable Firebase Auth providers | 5 min |
+| M5 | Create Firestore database | 5 min |
+| M6 | Run `flutterfire configure` | 5 min |
+| M7 | Create `.firebaserc` and `.env` | 5 min |
+| M8 | Configure Android Studio SDK Tools | 15 min |
+| M9 | Accept Xcode license and configure | 10 min |
+| M10 | Add SHA-1 fingerprint for Android | 5 min |
+
+**Total Setup Time**: ~1-2 hours for a new developer
 
 ---
 
 ## Next Steps
-Proceed to [02-architecture-design.md](./02-architecture-design.md) for system architecture details.
+
+1. Verify the app runs on both iOS and Android
+2. Proceed to [02-architecture-design.md](./02-architecture-design.md) for system architecture details
+3. Review [03-database-schema.md](./03-database-schema.md) for data models
+4. Follow [04-implementation-roadmap.md](./04-implementation-roadmap.md) for development phases

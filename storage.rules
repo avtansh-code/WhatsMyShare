@@ -1,0 +1,79 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    // Helper function to check if user is authenticated
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    // Helper function to check if user owns the file
+    function isOwner(userId) {
+      return request.auth.uid == userId;
+    }
+    
+    // Helper function to validate file size (max 10MB)
+    function isValidFileSize() {
+      return request.resource.size < 10 * 1024 * 1024;
+    }
+    
+    // Helper function to validate image content type
+    function isImage() {
+      return request.resource.contentType.matches('image/.*');
+    }
+    
+    // ============================================
+    // USER PROFILE PICTURES
+    // ============================================
+    match /users/{userId}/profile/{fileName} {
+      // Anyone can read profile pictures
+      allow read: if isAuthenticated();
+      
+      // Only owner can upload/update/delete their profile picture
+      allow write: if isOwner(userId) && isImage() && isValidFileSize();
+    }
+    
+    // ============================================
+    // GROUP IMAGES
+    // ============================================
+    match /groups/{groupId}/images/{fileName} {
+      // Group members can read
+      allow read: if isAuthenticated();
+      
+      // Group members can write (verified through Firestore)
+      allow write: if isAuthenticated() && isImage() && isValidFileSize();
+    }
+    
+    // ============================================
+    // EXPENSE RECEIPTS
+    // ============================================
+    match /groups/{groupId}/expenses/{expenseId}/receipts/{fileName} {
+      // Group members can read
+      allow read: if isAuthenticated();
+      
+      // Group members can upload receipts
+      allow write: if isAuthenticated() && isValidFileSize();
+    }
+    
+    // ============================================
+    // CHAT ATTACHMENTS
+    // ============================================
+    match /groups/{groupId}/expenses/{expenseId}/chat/{messageId}/{fileName} {
+      // Group members can read
+      allow read: if isAuthenticated();
+      
+      // Group members can upload attachments
+      allow write: if isAuthenticated() && isValidFileSize();
+    }
+    
+    // ============================================
+    // SETTLEMENT PROOFS
+    // ============================================
+    match /groups/{groupId}/settlements/{settlementId}/proofs/{fileName} {
+      // Group members can read
+      allow read: if isAuthenticated();
+      
+      // Authenticated users can upload settlement proofs
+      allow write: if isAuthenticated() && isValidFileSize();
+    }
+  }
+}
