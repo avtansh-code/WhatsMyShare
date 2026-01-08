@@ -36,6 +36,12 @@ import '../../features/notifications/data/datasources/notification_datasource.da
 import '../../features/notifications/data/repositories/notification_repository_impl.dart';
 import '../../features/notifications/domain/repositories/notification_repository.dart';
 import '../../features/notifications/presentation/bloc/notification_bloc.dart';
+import '../services/audio_service.dart';
+import '../services/logging_service.dart';
+import '../services/analytics_service.dart';
+import '../services/connectivity_service.dart';
+import '../services/offline_queue_manager.dart';
+import '../services/sync_service.dart';
 
 /// Global service locator instance
 final sl = GetIt.instance;
@@ -75,7 +81,35 @@ void _initExternal() {
 
 /// Initialize core services
 void _initCore() {
-  // Network info, local storage, etc. can be added here
+  // Logging Service (singleton - same instance throughout app)
+  sl.registerLazySingleton<LoggingService>(() => LoggingService());
+
+  // Analytics Service (singleton)
+  sl.registerLazySingleton<AnalyticsService>(() => AnalyticsService());
+
+  // Connectivity Service (singleton - using concrete implementation)
+  sl.registerLazySingleton<ConnectivityService>(
+    () => ConnectivityServiceImpl(),
+  );
+
+  // Sync Service (singleton - uses default Firebase instances internally)
+  sl.registerLazySingleton<SyncService>(
+    () => SyncService(
+      firestore: sl<FirebaseFirestore>(),
+      auth: sl<FirebaseAuth>(),
+    ),
+  );
+
+  // Offline Queue Manager (singleton - depends on connectivity and sync service)
+  sl.registerLazySingleton<OfflineQueueManager>(
+    () => OfflineQueueManagerImpl(
+      connectivityService: sl<ConnectivityService>(),
+      operationExecutor: sl<SyncService>().executeOperation,
+    ),
+  );
+
+  // Audio Service (factory - new instance for each use case)
+  sl.registerFactory<AudioService>(() => AudioService());
 }
 
 /// Initialize authentication feature
