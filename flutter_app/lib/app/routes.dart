@@ -20,6 +20,9 @@ import '../features/groups/presentation/pages/group_detail_page.dart';
 import '../features/notifications/presentation/bloc/notification_bloc.dart';
 import '../features/notifications/presentation/bloc/notification_event.dart';
 import '../features/notifications/presentation/pages/notifications_page.dart';
+import '../features/expenses/presentation/bloc/chat_bloc.dart';
+import '../features/expenses/presentation/pages/expense_chat_page.dart';
+import '../features/expenses/domain/entities/expense_entity.dart';
 
 /// App router configuration with auth-aware navigation
 class AppRouter {
@@ -149,6 +152,23 @@ class AppRouter {
         return BlocProvider(
           create: (_) => sl<GroupBloc>()..add(GroupLoadByIdRequested(groupId)),
           child: GroupDetailPage(groupId: groupId),
+        );
+      },
+    ),
+
+    // Expense Chat Route
+    GoRoute(
+      path: '/expenses/:expenseId/chat',
+      name: 'expense-chat',
+      builder: (context, state) {
+        final expense = state.extra as ExpenseEntity;
+        final currentUserId = FirebaseAuth.instance.currentUser?.uid ?? '';
+        return BlocProvider(
+          create: (_) => sl<ChatBloc>(),
+          child: ExpenseChatPage(
+            expense: expense,
+            currentUserId: currentUserId,
+          ),
         );
       },
     ),

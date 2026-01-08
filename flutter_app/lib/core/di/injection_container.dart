@@ -23,9 +23,11 @@ import '../../features/groups/data/repositories/group_repository_impl.dart';
 import '../../features/groups/domain/repositories/group_repository.dart';
 import '../../features/groups/presentation/bloc/group_bloc.dart';
 import '../../features/expenses/data/datasources/expense_datasource.dart';
+import '../../features/expenses/data/datasources/expense_chat_datasource.dart';
 import '../../features/expenses/data/repositories/expense_repository_impl.dart';
 import '../../features/expenses/domain/repositories/expense_repository.dart';
 import '../../features/expenses/presentation/bloc/expense_bloc.dart';
+import '../../features/expenses/presentation/bloc/chat_bloc.dart';
 import '../../features/settlements/data/datasources/settlement_datasource.dart';
 import '../../features/settlements/data/repositories/settlement_repository_impl.dart';
 import '../../features/settlements/domain/repositories/settlement_repository.dart';
@@ -170,6 +172,14 @@ Future<void> _initExpenseFeature() async {
     ),
   );
 
+  // Expense Chat Data Source
+  sl.registerLazySingleton<ExpenseChatDataSource>(
+    () => ExpenseChatDataSource(
+      firestore: sl<FirebaseFirestore>(),
+      storage: sl<FirebaseStorage>(),
+    ),
+  );
+
   // Repositories
   sl.registerLazySingleton<ExpenseRepository>(
     () => ExpenseRepositoryImpl(datasource: sl<ExpenseDatasource>()),
@@ -178,6 +188,14 @@ Future<void> _initExpenseFeature() async {
   // BLoC
   sl.registerFactory<ExpenseBloc>(
     () => ExpenseBloc(expenseRepository: sl<ExpenseRepository>()),
+  );
+
+  // Chat BLoC
+  sl.registerFactory<ChatBloc>(
+    () => ChatBloc(
+      chatDataSource: sl<ExpenseChatDataSource>(),
+      authRepository: sl<AuthRepository>(),
+    ),
   );
 }
 
