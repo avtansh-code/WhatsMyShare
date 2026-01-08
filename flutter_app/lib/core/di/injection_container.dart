@@ -26,6 +26,10 @@ import '../../features/expenses/data/datasources/expense_datasource.dart';
 import '../../features/expenses/data/repositories/expense_repository_impl.dart';
 import '../../features/expenses/domain/repositories/expense_repository.dart';
 import '../../features/expenses/presentation/bloc/expense_bloc.dart';
+import '../../features/settlements/data/datasources/settlement_datasource.dart';
+import '../../features/settlements/data/repositories/settlement_repository_impl.dart';
+import '../../features/settlements/domain/repositories/settlement_repository.dart';
+import '../../features/settlements/presentation/bloc/settlement_bloc.dart';
 
 /// Global service locator instance
 final sl = GetIt.instance;
@@ -42,6 +46,7 @@ Future<void> initializeDependencies() async {
   await _initAuthFeature();
   await _initGroupFeature();
   await _initExpenseFeature();
+  await _initSettlementFeature();
 }
 
 /// Initialize external dependencies (Firebase, etc.)
@@ -168,6 +173,24 @@ Future<void> _initExpenseFeature() async {
   // BLoC
   sl.registerFactory<ExpenseBloc>(
     () => ExpenseBloc(expenseRepository: sl<ExpenseRepository>()),
+  );
+}
+
+/// Initialize settlements feature
+Future<void> _initSettlementFeature() async {
+  // Data Sources
+  sl.registerLazySingleton<SettlementDataSource>(
+    () => SettlementDataSourceImpl(firestore: sl<FirebaseFirestore>()),
+  );
+
+  // Repositories
+  sl.registerLazySingleton<SettlementRepository>(
+    () => SettlementRepositoryImpl(dataSource: sl<SettlementDataSource>()),
+  );
+
+  // BLoC
+  sl.registerFactory<SettlementBloc>(
+    () => SettlementBloc(repository: sl<SettlementRepository>()),
   );
 }
 

@@ -66,6 +66,18 @@ class AppConstants {
   static const int biometricThresholdPaisa = 500000; // ₹5,000
   static const int maxExpenseAmountPaisa = 10000000; // ₹1,00,000
   static const int maxGroupMembers = 50;
+
+  // Firestore collections
+  static const String usersCollection = 'users';
+  static const String groupsCollection = 'groups';
+  static const String expensesCollection = 'expenses';
+  static const String settlementsCollection = 'settlements';
+  static const String activityCollection = 'activity';
+  static const String notificationsCollection = 'notifications';
+  static const String invitationsCollection = 'invitations';
+  static const String metadataCollection = 'metadata';
+  static const String friendsCollection = 'friends';
+  static const String chatCollection = 'chat';
 }
 
 /// Expense category definitions
