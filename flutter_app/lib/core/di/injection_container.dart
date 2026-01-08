@@ -22,6 +22,10 @@ import '../../features/groups/data/datasources/group_datasource.dart';
 import '../../features/groups/data/repositories/group_repository_impl.dart';
 import '../../features/groups/domain/repositories/group_repository.dart';
 import '../../features/groups/presentation/bloc/group_bloc.dart';
+import '../../features/expenses/data/datasources/expense_datasource.dart';
+import '../../features/expenses/data/repositories/expense_repository_impl.dart';
+import '../../features/expenses/domain/repositories/expense_repository.dart';
+import '../../features/expenses/presentation/bloc/expense_bloc.dart';
 
 /// Global service locator instance
 final sl = GetIt.instance;
@@ -37,6 +41,7 @@ Future<void> initializeDependencies() async {
   // ==================== Features ====================
   await _initAuthFeature();
   await _initGroupFeature();
+  await _initExpenseFeature();
 }
 
 /// Initialize external dependencies (Firebase, etc.)
@@ -141,6 +146,28 @@ Future<void> _initGroupFeature() async {
   // BLoC
   sl.registerFactory<GroupBloc>(
     () => GroupBloc(groupRepository: sl<GroupRepository>()),
+  );
+}
+
+/// Initialize expenses feature
+Future<void> _initExpenseFeature() async {
+  // Data Sources
+  sl.registerLazySingleton<ExpenseDatasource>(
+    () => FirebaseExpenseDatasource(
+      firestore: sl<FirebaseFirestore>(),
+      auth: sl<FirebaseAuth>(),
+      storage: sl<FirebaseStorage>(),
+    ),
+  );
+
+  // Repositories
+  sl.registerLazySingleton<ExpenseRepository>(
+    () => ExpenseRepositoryImpl(datasource: sl<ExpenseDatasource>()),
+  );
+
+  // BLoC
+  sl.registerFactory<ExpenseBloc>(
+    () => ExpenseBloc(expenseRepository: sl<ExpenseRepository>()),
   );
 }
 
