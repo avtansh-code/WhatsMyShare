@@ -1,0 +1,193 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // ============================================
+    // HELPER FUNCTIONS
+    // ============================================
+    
+    // Check if user is authenticated
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    // Check if the authenticated user owns this document
+    function isOwner(userId) {
+      return request.auth.uid == userId;
+    }
+    
+    // Check if user is a member of the specified group
+    function isGroupMember(groupId) {
+      return isAuthenticated() &&
+        request.auth.uid in get(/databases/$(database)/documents/groups/$(groupId)).data.memberIds;
+    }
+    
+    // Check if user is an admin of the specified group
+    function isGroupAdmin(groupId) {
+      return isAuthenticated() &&
+        request.auth.uid in get(/databases/$(database)/documents/groups/$(groupId)).data.admins;
+    }
+    
+    // Validate that amount is in paisa (positive integer)
+    function isValidAmount(amount) {
+      return amount is int && amount > 0;
+    }
+    
+    // Validate currency code
+    function isValidCurrency(currency) {
+      return currency in ['INR', 'USD', 'EUR', 'GBP', 'AUD', 'CAD', 'SGD'];
+    }
+    
+    // ============================================
+    // USER COLLECTION
+    // ============================================
+    
+    match /users/{userId} {
+      // Any authenticated user can read basic user info (for searching friends)
+      allow read: if isAuthenticated();
+      
+      // Only the user can write their own data
+      allow create: if isOwner(userId) && 
+        request.resource.data.keys().hasAll(['email', 'displayName', 'defaultCurrency', 'locale']) &&
+        request.resource.data.email == request.auth.token.email;
+      
+      allow update: if isOwner(userId) &&
+        // Cannot change email or ID
+        request.resource.data.email == resource.data.email;
+      
+      allow delete: if isOwner(userId);
+      
+      // Friends subcollection - only owner can access
+      match /friends/{friendId} {
+        allow read, write: if isOwner(userId);
+      }
+      
+      // Notifications subcollection - only owner can access
+      match /notifications/{notificationId} {
+        allow read: if isOwner(userId);
+        allow create: if isAuthenticated(); // Other users can create notifications
+        allow update, delete: if isOwner(userId);
+      }
+    }
+    
+    // ============================================
+    // GROUPS COLLECTION
+    // ============================================
+    
+    match /groups/{groupId} {
+      // Only group members can read group data
+      allow read: if isGroupMember(groupId);
+      
+      // Any authenticated user can create a group
+      allow create: if isAuthenticated() &&
+        request.resource.data.keys().hasAll(['name', 'memberIds', 'members', 'createdBy', 'admins', 'currency']) &&
+        request.auth.uid in request.resource.data.memberIds &&
+        request.auth.uid == request.resource.data.createdBy &&
+        request.auth.uid in request.resource.data.admins;
+      
+      // Only members can update
+      allow update: if isGroupMember(groupId) &&
+        // Cannot remove yourself if you're the only admin
+        (resource.data.admins.size() > 1 || request.auth.uid in request.resource.data.admins);
+      
+      // Only admins can delete
+      allow delete: if isGroupAdmin(groupId);
+      
+      // ----------------------------------------
+      // Expenses subcollection
+      // ----------------------------------------
+      match /expenses/{expenseId} {
+        allow read: if isGroupMember(groupId);
+        
+        allow create: if isGroupMember(groupId) &&
+          request.resource.data.keys().hasAll(['description', 'amount', 'currency', 'paidBy', 'splits', 'createdBy']) &&
+          isValidAmount(request.resource.data.amount) &&
+          request.auth.uid == request.resource.data.createdBy;
+        
+        allow update: if isGroupMember(groupId) &&
+          // Only creator or admin can update
+          (resource.data.createdBy == request.auth.uid || isGroupAdmin(groupId));
+        
+        allow delete: if isGroupMember(groupId) &&
+          (resource.data.createdBy == request.auth.uid || isGroupAdmin(groupId));
+        
+        // Chat messages within expense
+        match /chat/{messageId} {
+          allow read: if isGroupMember(groupId);
+          
+          allow create: if isGroupMember(groupId) &&
+            request.resource.data.senderId == request.auth.uid;
+          
+          allow update: if isGroupMember(groupId) &&
+            resource.data.senderId == request.auth.uid;
+          
+          allow delete: if isGroupMember(groupId) &&
+            (resource.data.senderId == request.auth.uid || isGroupAdmin(groupId));
+        }
+      }
+      
+      // ----------------------------------------
+      // Settlements subcollection
+      // ----------------------------------------
+      match /settlements/{settlementId} {
+        allow read: if isGroupMember(groupId);
+        
+        allow create: if isGroupMember(groupId) &&
+          request.resource.data.keys().hasAll(['fromUserId', 'toUserId', 'amount', 'currency', 'status']) &&
+          isValidAmount(request.resource.data.amount) &&
+          request.auth.uid == request.resource.data.fromUserId;
+        
+        // Only the parties involved can update
+        allow update: if isGroupMember(groupId) &&
+          (resource.data.fromUserId == request.auth.uid || 
+           resource.data.toUserId == request.auth.uid);
+        
+        allow delete: if false; // Settlements cannot be deleted
+      }
+      
+      // ----------------------------------------
+      // Activity subcollection
+      // ----------------------------------------
+      match /activity/{activityId} {
+        allow read: if isGroupMember(groupId);
+        allow create: if isGroupMember(groupId);
+        allow update, delete: if false; // Activity is immutable
+      }
+    }
+    
+    // ============================================
+    // INVITATIONS COLLECTION
+    // ============================================
+    
+    match /invitations/{invitationId} {
+      // Inviter or invitee can read
+      allow read: if isAuthenticated() &&
+        (resource.data.inviterId == request.auth.uid ||
+         resource.data.inviteeEmail == request.auth.token.email);
+      
+      // Any authenticated user can create invitations
+      allow create: if isAuthenticated() &&
+        request.resource.data.inviterId == request.auth.uid &&
+        request.resource.data.status == 'pending';
+      
+      // Only invitee can update (accept/decline)
+      allow update: if isAuthenticated() &&
+        resource.data.inviteeEmail == request.auth.token.email &&
+        resource.data.status == 'pending';
+      
+      // Only inviter can delete pending invitations
+      allow delete: if isAuthenticated() &&
+        resource.data.inviterId == request.auth.uid &&
+        resource.data.status == 'pending';
+    }
+    
+    // ============================================
+    // METADATA COLLECTION (Read-only for clients)
+    // ============================================
+    
+    match /metadata/{configId} {
+      allow read: if isAuthenticated();
+      allow write: if false; // Only backend can write
+    }
+  }
+}
