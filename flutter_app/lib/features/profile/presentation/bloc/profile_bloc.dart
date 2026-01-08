@@ -3,6 +3,8 @@ import 'dart:io';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:equatable/equatable.dart';
 
+import '../../../../core/errors/error_messages.dart';
+import '../../../../core/services/logging_service.dart';
 import '../../domain/entities/user_profile_entity.dart';
 import '../../domain/repositories/user_profile_repository.dart';
 
@@ -12,6 +14,7 @@ part 'profile_state.dart';
 /// BLoC for user profile management
 class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
   final UserProfileRepository _repository;
+  final LoggingService _log = LoggingService();
 
   ProfileBloc({required UserProfileRepository repository})
     : _repository = repository,
@@ -21,25 +24,41 @@ class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
     on<ProfilePhotoUpdateRequested>(_onPhotoUpdateRequested);
     on<ProfilePhotoDeleteRequested>(_onPhotoDeleteRequested);
     on<ProfileSettingsChanged>(_onSettingsChanged);
+
+    _log.info('ProfileBloc initialized', tag: LogTags.profile);
   }
 
   Future<void> _onLoadRequested(
     ProfileLoadRequested event,
     Emitter<ProfileState> emit,
   ) async {
+    _log.debug('Loading user profile...', tag: LogTags.profile);
     emit(state.copyWith(status: ProfileStatus.loading));
 
     final result = await _repository.getCurrentUserProfile();
 
     result.fold(
-      (failure) => emit(
-        state.copyWith(
-          status: ProfileStatus.error,
-          errorMessage: failure.message,
-        ),
-      ),
-      (profile) =>
-          emit(state.copyWith(status: ProfileStatus.loaded, profile: profile)),
+      (failure) {
+        _log.error(
+          'Failed to load profile',
+          tag: LogTags.profile,
+          data: {'error': failure.message},
+        );
+        emit(
+          state.copyWith(
+            status: ProfileStatus.error,
+            errorMessage: ErrorMessages.profileLoadFailed,
+          ),
+        );
+      },
+      (profile) {
+        _log.info(
+          'Profile loaded successfully',
+          tag: LogTags.profile,
+          data: {'userId': profile.id, 'displayName': profile.displayName},
+        );
+        emit(state.copyWith(status: ProfileStatus.loaded, profile: profile));
+      },
     );
   }
 
@@ -47,8 +66,19 @@ class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
     ProfileUpdateRequested event,
     Emitter<ProfileState> emit,
   ) async {
-    if (state.profile == null) return;
+    if (state.profile == null) {
+      _log.warning(
+        'Attempted to update profile but no profile loaded',
+        tag: LogTags.profile,
+      );
+      return;
+    }
 
+    _log.info(
+      'Updating profile',
+      tag: LogTags.profile,
+      data: {'userId': state.profile!.id, 'displayName': event.displayName},
+    );
     emit(state.copyWith(status: ProfileStatus.updating));
 
     final result = await _repository.updateUserProfile(
@@ -62,14 +92,23 @@ class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
     );
 
     result.fold(
-      (failure) => emit(
-        state.copyWith(
-          status: ProfileStatus.error,
-          errorMessage: failure.message,
-        ),
-      ),
-      (profile) =>
-          emit(state.copyWith(status: ProfileStatus.updated, profile: profile)),
+      (failure) {
+        _log.error(
+          'Failed to update profile',
+          tag: LogTags.profile,
+          data: {'userId': state.profile!.id, 'error': failure.message},
+        );
+        emit(
+          state.copyWith(
+            status: ProfileStatus.error,
+            errorMessage: ErrorMessages.profileUpdateFailed,
+          ),
+        );
+      },
+      (profile) {
+        _log.info('Profile updated successfully', tag: LogTags.profile);
+        emit(state.copyWith(status: ProfileStatus.updated, profile: profile));
+      },
     );
   }
 
@@ -77,8 +116,19 @@ class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
     ProfilePhotoUpdateRequested event,
     Emitter<ProfileState> emit,
   ) async {
-    if (state.profile == null) return;
+    if (state.profile == null) {
+      _log.warning(
+        'Attempted to update photo but no profile loaded',
+        tag: LogTags.profile,
+      );
+      return;
+    }
 
+    _log.info(
+      'Uploading profile photo',
+      tag: LogTags.profile,
+      data: {'userId': state.profile!.id},
+    );
     emit(state.copyWith(status: ProfileStatus.uploadingPhoto));
 
     final result = await _repository.updateProfilePhoto(
@@ -87,13 +137,21 @@ class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
     );
 
     result.fold(
-      (failure) => emit(
-        state.copyWith(
-          status: ProfileStatus.error,
-          errorMessage: failure.message,
-        ),
-      ),
+      (failure) {
+        _log.error(
+          'Failed to upload profile photo',
+          tag: LogTags.profile,
+          data: {'userId': state.profile!.id, 'error': failure.message},
+        );
+        emit(
+          state.copyWith(
+            status: ProfileStatus.error,
+            errorMessage: ErrorMessages.profilePhotoUploadFailed,
+          ),
+        );
+      },
       (photoUrl) {
+        _log.info('Profile photo uploaded successfully', tag: LogTags.profile);
         final updatedProfile = state.profile!.copyWith(photoUrl: photoUrl);
         emit(
           state.copyWith(
@@ -109,20 +167,39 @@ class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
     ProfilePhotoDeleteRequested event,
     Emitter<ProfileState> emit,
   ) async {
-    if (state.profile == null) return;
+    if (state.profile == null) {
+      _log.warning(
+        'Attempted to delete photo but no profile loaded',
+        tag: LogTags.profile,
+      );
+      return;
+    }
 
+    _log.info(
+      'Deleting profile photo',
+      tag: LogTags.profile,
+      data: {'userId': state.profile!.id},
+    );
     emit(state.copyWith(status: ProfileStatus.updating));
 
     final result = await _repository.deleteProfilePhoto(state.profile!.id);
 
     result.fold(
-      (failure) => emit(
-        state.copyWith(
-          status: ProfileStatus.error,
-          errorMessage: failure.message,
-        ),
-      ),
+      (failure) {
+        _log.error(
+          'Failed to delete profile photo',
+          tag: LogTags.profile,
+          data: {'userId': state.profile!.id, 'error': failure.message},
+        );
+        emit(
+          state.copyWith(
+            status: ProfileStatus.error,
+            errorMessage: ErrorMessages.storageDeleteFailed,
+          ),
+        );
+      },
       (_) {
+        _log.info('Profile photo deleted successfully', tag: LogTags.profile);
         final updatedProfile = UserProfileEntity(
           id: state.profile!.id,
           email: state.profile!.email,
@@ -157,30 +234,73 @@ class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
     ProfileSettingsChanged event,
     Emitter<ProfileState> emit,
   ) async {
-    if (state.profile == null) return;
+    if (state.profile == null) {
+      _log.warning(
+        'Attempted to change settings but no profile loaded',
+        tag: LogTags.profile,
+      );
+      return;
+    }
 
+    _log.info(
+      'Updating profile settings',
+      tag: LogTags.profile,
+      data: {
+        'userId': state.profile!.id,
+        'notifications': event.notificationsEnabled,
+        'contactSync': event.contactSyncEnabled,
+        'biometric': event.biometricAuthEnabled,
+      },
+    );
     emit(state.copyWith(status: ProfileStatus.updating));
 
     final userId = state.profile!.id;
 
     if (event.notificationsEnabled != null) {
-      await _repository.updateNotificationSettings(
+      final result = await _repository.updateNotificationSettings(
         userId: userId,
         enabled: event.notificationsEnabled!,
+      );
+      result.fold(
+        (failure) => _log.warning(
+          'Failed to update notification settings',
+          tag: LogTags.profile,
+          data: {'error': failure.message},
+        ),
+        (_) =>
+            _log.debug('Notification settings updated', tag: LogTags.profile),
       );
     }
 
     if (event.contactSyncEnabled != null) {
-      await _repository.updateContactSyncSettings(
+      final result = await _repository.updateContactSyncSettings(
         userId: userId,
         enabled: event.contactSyncEnabled!,
+      );
+      result.fold(
+        (failure) => _log.warning(
+          'Failed to update contact sync settings',
+          tag: LogTags.profile,
+          data: {'error': failure.message},
+        ),
+        (_) =>
+            _log.debug('Contact sync settings updated', tag: LogTags.profile),
       );
     }
 
     if (event.biometricAuthEnabled != null) {
-      await _repository.updateBiometricAuthSettings(
+      final result = await _repository.updateBiometricAuthSettings(
         userId: userId,
         enabled: event.biometricAuthEnabled!,
+      );
+      result.fold(
+        (failure) => _log.warning(
+          'Failed to update biometric auth settings',
+          tag: LogTags.profile,
+          data: {'error': failure.message},
+        ),
+        (_) =>
+            _log.debug('Biometric auth settings updated', tag: LogTags.profile),
       );
     }
 
@@ -188,14 +308,26 @@ class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
     final result = await _repository.getCurrentUserProfile();
 
     result.fold(
-      (failure) => emit(
-        state.copyWith(
-          status: ProfileStatus.error,
-          errorMessage: failure.message,
-        ),
-      ),
-      (profile) =>
-          emit(state.copyWith(status: ProfileStatus.updated, profile: profile)),
+      (failure) {
+        _log.error(
+          'Failed to reload profile after settings change',
+          tag: LogTags.profile,
+          data: {'error': failure.message},
+        );
+        emit(
+          state.copyWith(
+            status: ProfileStatus.error,
+            errorMessage: ErrorMessages.profileLoadFailed,
+          ),
+        );
+      },
+      (profile) {
+        _log.info(
+          'Profile settings updated successfully',
+          tag: LogTags.profile,
+        );
+        emit(state.copyWith(status: ProfileStatus.updated, profile: profile));
+      },
     );
   }
 }

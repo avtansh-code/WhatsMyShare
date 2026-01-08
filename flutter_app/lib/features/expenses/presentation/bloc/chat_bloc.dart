@@ -1,5 +1,8 @@
 import 'dart:async';
 import 'package:flutter_bloc/flutter_bloc.dart';
+
+import '../../../../core/errors/error_messages.dart';
+import '../../../../core/services/logging_service.dart';
 import '../../data/datasources/expense_chat_datasource.dart';
 import '../../domain/entities/chat_message_entity.dart';
 import '../../../auth/domain/repositories/auth_repository.dart';
@@ -10,6 +13,7 @@ import 'chat_state.dart';
 class ChatBloc extends Bloc<ChatEvent, ChatState> {
   final ExpenseChatDataSource _chatDataSource;
   final AuthRepository _authRepository;
+  final LoggingService _log = LoggingService();
 
   StreamSubscription<List<ChatMessageEntity>>? _messagesSubscription;
 
@@ -34,12 +38,19 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
     on<CancelVoiceRecording>(_onCancelVoiceRecording);
     on<VoiceRecordingProgressUpdated>(_onVoiceRecordingProgressUpdated);
     on<ClearChatError>(_onClearChatError);
+
+    _log.info('ChatBloc initialized', tag: LogTags.chat);
   }
 
   Future<void> _onLoadChatMessages(
     LoadChatMessages event,
     Emitter<ChatState> emit,
   ) async {
+    _log.debug(
+      'Loading chat messages',
+      tag: LogTags.chat,
+      data: {'expenseId': event.expenseId},
+    );
     emit(
       state.copyWith(status: ChatStatus.loading, expenseId: event.expenseId),
     );
@@ -49,9 +60,25 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
         expenseId: event.expenseId,
       );
 
+      _log.info(
+        'Chat messages loaded',
+        tag: LogTags.chat,
+        data: {'expenseId': event.expenseId, 'count': messages.length},
+      );
       emit(state.copyWith(status: ChatStatus.loaded, messages: messages));
-    } catch (e) {
-      emit(state.copyWith(status: ChatStatus.error, error: e.toString()));
+    } catch (e, stackTrace) {
+      _log.error(
+        'Failed to load chat messages',
+        tag: LogTags.chat,
+        error: e,
+        stackTrace: stackTrace,
+      );
+      emit(
+        state.copyWith(
+          status: ChatStatus.error,
+          error: ErrorMessages.chatLoadFailed,
+        ),
+      );
     }
   }
 
@@ -59,6 +86,11 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
     SubscribeToChatStream event,
     Emitter<ChatState> emit,
   ) async {
+    _log.debug(
+      'Subscribing to chat stream',
+      tag: LogTags.chat,
+      data: {'expenseId': event.expenseId},
+    );
     emit(
       state.copyWith(status: ChatStatus.loading, expenseId: event.expenseId),
     );
@@ -67,15 +99,31 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
 
     _messagesSubscription = _chatDataSource
         .getMessagesStream(event.expenseId)
-        .listen((messages) {
-          add(ChatMessagesUpdated(messages));
-        });
+        .listen(
+          (messages) {
+            _log.debug(
+              'Chat stream updated',
+              tag: LogTags.chat,
+              data: {'count': messages.length},
+            );
+            add(ChatMessagesUpdated(messages));
+          },
+          onError: (error, stackTrace) {
+            _log.error(
+              'Chat stream error',
+              tag: LogTags.chat,
+              error: error,
+              stackTrace: stackTrace,
+            );
+          },
+        );
   }
 
   void _onUnsubscribeFromChatStream(
     UnsubscribeFromChatStream event,
     Emitter<ChatState> emit,
   ) {
+    _log.debug('Unsubscribing from chat stream', tag: LogTags.chat);
     _messagesSubscription?.cancel();
     _messagesSubscription = null;
   }
@@ -91,11 +139,20 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
     SendTextMessage event,
     Emitter<ChatState> emit,
   ) async {
+    _log.info(
+      'Sending text message',
+      tag: LogTags.chat,
+      data: {'expenseId': event.expenseId},
+    );
     emit(state.copyWith(isSending: true));
 
     try {
       final currentUser = await _authRepository.getCurrentUser();
       if (currentUser == null) {
+        _log.warning(
+          'User not authenticated when sending message',
+          tag: LogTags.chat,
+        );
         throw Exception('User not authenticated');
       }
 
@@ -111,13 +168,20 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
         text: event.text,
       );
 
+      _log.debug('Text message sent successfully', tag: LogTags.chat);
       emit(state.copyWith(isSending: false));
-    } catch (e) {
+    } catch (e, stackTrace) {
+      _log.error(
+        'Failed to send text message',
+        tag: LogTags.chat,
+        error: e,
+        stackTrace: stackTrace,
+      );
       emit(
         state.copyWith(
           isSending: false,
           status: ChatStatus.error,
-          error: e.toString(),
+          error: ErrorMessages.chatSendFailed,
         ),
       );
     }
@@ -127,11 +191,20 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
     SendImageMessage event,
     Emitter<ChatState> emit,
   ) async {
+    _log.info(
+      'Sending image message',
+      tag: LogTags.chat,
+      data: {'expenseId': event.expenseId},
+    );
     emit(state.copyWith(isSending: true));
 
     try {
       final currentUser = await _authRepository.getCurrentUser();
       if (currentUser == null) {
+        _log.warning(
+          'User not authenticated when sending image',
+          tag: LogTags.chat,
+        );
         throw Exception('User not authenticated');
       }
 
@@ -147,13 +220,20 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
         imageFile: event.imageFile,
       );
 
+      _log.debug('Image message sent successfully', tag: LogTags.chat);
       emit(state.copyWith(isSending: false));
-    } catch (e) {
+    } catch (e, stackTrace) {
+      _log.error(
+        'Failed to send image message',
+        tag: LogTags.chat,
+        error: e,
+        stackTrace: stackTrace,
+      );
       emit(
         state.copyWith(
           isSending: false,
           status: ChatStatus.error,
-          error: e.toString(),
+          error: ErrorMessages.chatImageUploadFailed,
         ),
       );
     }
@@ -163,11 +243,20 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
     SendVoiceNoteMessage event,
     Emitter<ChatState> emit,
   ) async {
+    _log.info(
+      'Sending voice note message',
+      tag: LogTags.chat,
+      data: {'expenseId': event.expenseId, 'durationMs': event.durationMs},
+    );
     emit(state.copyWith(isSending: true));
 
     try {
       final currentUser = await _authRepository.getCurrentUser();
       if (currentUser == null) {
+        _log.warning(
+          'User not authenticated when sending voice note',
+          tag: LogTags.chat,
+        );
         throw Exception('User not authenticated');
       }
 
@@ -184,6 +273,7 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
         durationMs: event.durationMs,
       );
 
+      _log.debug('Voice note message sent successfully', tag: LogTags.chat);
       emit(
         state.copyWith(
           isSending: false,
@@ -192,12 +282,18 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
           voiceRecordingPath: null,
         ),
       );
-    } catch (e) {
+    } catch (e, stackTrace) {
+      _log.error(
+        'Failed to send voice note message',
+        tag: LogTags.chat,
+        error: e,
+        stackTrace: stackTrace,
+      );
       emit(
         state.copyWith(
           isSending: false,
           status: ChatStatus.error,
-          error: e.toString(),
+          error: ErrorMessages.chatVoiceNoteUploadFailed,
         ),
       );
     }
@@ -211,12 +307,18 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
       final currentUser = await _authRepository.getCurrentUser();
       if (currentUser == null) return;
 
+      _log.debug(
+        'Marking messages as read',
+        tag: LogTags.chat,
+        data: {'expenseId': event.expenseId},
+      );
       await _chatDataSource.markAllAsRead(
         expenseId: event.expenseId,
         userId: currentUser.id,
       );
     } catch (e) {
       // Silent fail for marking as read
+      _log.warning('Failed to mark messages as read', tag: LogTags.chat);
     }
   }
 
@@ -224,16 +326,28 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
     DeleteMessage event,
     Emitter<ChatState> emit,
   ) async {
+    _log.info(
+      'Deleting message',
+      tag: LogTags.chat,
+      data: {'messageId': event.messageId},
+    );
     try {
       await _chatDataSource.deleteMessage(
         expenseId: event.expenseId,
         messageId: event.messageId,
       );
-    } catch (e) {
+      _log.debug('Message deleted successfully', tag: LogTags.chat);
+    } catch (e, stackTrace) {
+      _log.error(
+        'Failed to delete message',
+        tag: LogTags.chat,
+        error: e,
+        stackTrace: stackTrace,
+      );
       emit(
         state.copyWith(
           status: ChatStatus.error,
-          error: 'Failed to delete message: ${e.toString()}',
+          error: ErrorMessages.chatDeleteFailed,
         ),
       );
     }
@@ -243,17 +357,29 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
     EditTextMessage event,
     Emitter<ChatState> emit,
   ) async {
+    _log.info(
+      'Editing message',
+      tag: LogTags.chat,
+      data: {'messageId': event.messageId},
+    );
     try {
       await _chatDataSource.editMessage(
         expenseId: event.expenseId,
         messageId: event.messageId,
         newText: event.newText,
       );
-    } catch (e) {
+      _log.debug('Message edited successfully', tag: LogTags.chat);
+    } catch (e, stackTrace) {
+      _log.error(
+        'Failed to edit message',
+        tag: LogTags.chat,
+        error: e,
+        stackTrace: stackTrace,
+      );
       emit(
         state.copyWith(
           status: ChatStatus.error,
-          error: 'Failed to edit message: ${e.toString()}',
+          error: ErrorMessages.chatSendFailed,
         ),
       );
     }
@@ -263,6 +389,7 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
     StartVoiceRecording event,
     Emitter<ChatState> emit,
   ) {
+    _log.debug('Starting voice recording', tag: LogTags.chat);
     emit(
       state.copyWith(
         voiceRecordingStatus: VoiceRecordingStatus.recording,
@@ -275,6 +402,7 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
     StopVoiceRecording event,
     Emitter<ChatState> emit,
   ) {
+    _log.debug('Stopping voice recording', tag: LogTags.chat);
     emit(state.copyWith(voiceRecordingStatus: VoiceRecordingStatus.stopped));
   }
 
@@ -282,6 +410,7 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
     CancelVoiceRecording event,
     Emitter<ChatState> emit,
   ) {
+    _log.debug('Cancelling voice recording', tag: LogTags.chat);
     emit(
       state.copyWith(
         voiceRecordingStatus: VoiceRecordingStatus.idle,
@@ -299,11 +428,13 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
   }
 
   void _onClearChatError(ClearChatError event, Emitter<ChatState> emit) {
+    _log.debug('Clearing chat error', tag: LogTags.chat);
     emit(state.copyWith(status: ChatStatus.loaded, error: null));
   }
 
   @override
   Future<void> close() {
+    _log.debug('ChatBloc closing', tag: LogTags.chat);
     _messagesSubscription?.cancel();
     return super.close();
   }

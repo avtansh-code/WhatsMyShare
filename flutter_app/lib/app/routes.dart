@@ -4,6 +4,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
 import '../core/di/injection_container.dart';
+import '../core/services/logging_service.dart';
 import '../features/auth/presentation/bloc/auth_bloc.dart';
 import '../features/auth/presentation/pages/forgot_password_page.dart';
 import '../features/auth/presentation/pages/login_page.dart';
@@ -24,19 +25,31 @@ import '../features/expenses/presentation/bloc/chat_bloc.dart';
 import '../features/expenses/presentation/pages/expense_chat_page.dart';
 import '../features/expenses/domain/entities/expense_entity.dart';
 
+/// Logging service for navigation
+final _log = LoggingService();
+
 /// App router configuration with auth-aware navigation
 class AppRouter {
   static final _rootNavigatorKey = GlobalKey<NavigatorState>();
 
   /// Create and configure the GoRouter instance
   static GoRouter createRouter() {
+    _log.info('Creating app router', tag: LogTags.navigation);
     return GoRouter(
       navigatorKey: _rootNavigatorKey,
       initialLocation: '/login',
       debugLogDiagnostics: true,
       redirect: _handleRedirect,
       routes: _routes,
-      errorBuilder: (context, state) => _ErrorPage(error: state.error),
+      errorBuilder: (context, state) {
+        _log.error(
+          'Navigation error',
+          tag: LogTags.navigation,
+          error: state.error,
+          data: {'location': state.matchedLocation},
+        );
+        return _ErrorPage(error: state.error);
+      },
     );
   }
 
@@ -48,13 +61,33 @@ class AppRouter {
         state.matchedLocation == '/signup' ||
         state.matchedLocation == '/forgot-password';
 
+    _log.debug(
+      'Handling redirect',
+      tag: LogTags.navigation,
+      data: {
+        'location': state.matchedLocation,
+        'isLoggedIn': isLoggedIn,
+        'isAuthRoute': isAuthRoute,
+      },
+    );
+
     // If not logged in and trying to access protected route, redirect to login
     if (!isLoggedIn && !isAuthRoute) {
+      _log.info(
+        'Redirecting unauthenticated user to login',
+        tag: LogTags.navigation,
+        data: {'from': state.matchedLocation},
+      );
       return '/login';
     }
 
     // If logged in and on auth route, redirect to dashboard
     if (isLoggedIn && isAuthRoute) {
+      _log.info(
+        'Redirecting authenticated user to dashboard',
+        tag: LogTags.navigation,
+        data: {'from': state.matchedLocation},
+      );
       return '/dashboard';
     }
 
@@ -67,88 +100,123 @@ class AppRouter {
     GoRoute(
       path: '/login',
       name: 'login',
-      builder: (context, state) => BlocProvider(
-        create: (_) => sl<AuthBloc>()..add(const AuthCheckRequested()),
-        child: const LoginPage(),
-      ),
+      builder: (context, state) {
+        _log.debug('Navigating to login page', tag: LogTags.navigation);
+        return BlocProvider(
+          create: (_) => sl<AuthBloc>()..add(const AuthCheckRequested()),
+          child: const LoginPage(),
+        );
+      },
     ),
     GoRoute(
       path: '/signup',
       name: 'signup',
-      builder: (context, state) => BlocProvider(
-        create: (_) => sl<AuthBloc>(),
-        child: const SignUpPage(),
-      ),
+      builder: (context, state) {
+        _log.debug('Navigating to signup page', tag: LogTags.navigation);
+        return BlocProvider(
+          create: (_) => sl<AuthBloc>(),
+          child: const SignUpPage(),
+        );
+      },
     ),
     GoRoute(
       path: '/forgot-password',
       name: 'forgot-password',
-      builder: (context, state) => BlocProvider(
-        create: (_) => sl<AuthBloc>(),
-        child: const ForgotPasswordPage(),
-      ),
+      builder: (context, state) {
+        _log.debug(
+          'Navigating to forgot password page',
+          tag: LogTags.navigation,
+        );
+        return BlocProvider(
+          create: (_) => sl<AuthBloc>(),
+          child: const ForgotPasswordPage(),
+        );
+      },
     ),
 
     // Main App Routes
     GoRoute(
       path: '/dashboard',
       name: 'dashboard',
-      builder: (context, state) => BlocProvider(
-        create: (_) => sl<AuthBloc>()..add(const AuthCheckRequested()),
-        child: const DashboardPage(),
-      ),
+      builder: (context, state) {
+        _log.debug('Navigating to dashboard', tag: LogTags.navigation);
+        return BlocProvider(
+          create: (_) => sl<AuthBloc>()..add(const AuthCheckRequested()),
+          child: const DashboardPage(),
+        );
+      },
     ),
 
     // Profile Routes
     GoRoute(
       path: '/profile',
       name: 'profile',
-      builder: (context, state) => BlocProvider(
-        create: (_) => sl<ProfileBloc>()..add(const ProfileLoadRequested()),
-        child: const ProfilePage(),
-      ),
+      builder: (context, state) {
+        _log.debug('Navigating to profile page', tag: LogTags.navigation);
+        return BlocProvider(
+          create: (_) => sl<ProfileBloc>()..add(const ProfileLoadRequested()),
+          child: const ProfilePage(),
+        );
+      },
     ),
     GoRoute(
       path: '/profile/edit',
       name: 'edit-profile',
-      builder: (context, state) => BlocProvider(
-        create: (_) => sl<ProfileBloc>()..add(const ProfileLoadRequested()),
-        child: const EditProfilePage(),
-      ),
+      builder: (context, state) {
+        _log.debug('Navigating to edit profile page', tag: LogTags.navigation);
+        return BlocProvider(
+          create: (_) => sl<ProfileBloc>()..add(const ProfileLoadRequested()),
+          child: const EditProfilePage(),
+        );
+      },
     ),
 
     // Notification Routes
     GoRoute(
       path: '/notifications',
       name: 'notifications',
-      builder: (context, state) => BlocProvider(
-        create: (_) => sl<NotificationBloc>()..add(const LoadNotifications()),
-        child: const NotificationsPage(),
-      ),
+      builder: (context, state) {
+        _log.debug('Navigating to notifications page', tag: LogTags.navigation);
+        return BlocProvider(
+          create: (_) => sl<NotificationBloc>()..add(const LoadNotifications()),
+          child: const NotificationsPage(),
+        );
+      },
     ),
 
     // Group Routes
     GoRoute(
       path: '/groups',
       name: 'groups',
-      builder: (context, state) => BlocProvider(
-        create: (_) => sl<GroupBloc>()..add(const GroupLoadAllRequested()),
-        child: const GroupListPage(),
-      ),
+      builder: (context, state) {
+        _log.debug('Navigating to groups list', tag: LogTags.navigation);
+        return BlocProvider(
+          create: (_) => sl<GroupBloc>()..add(const GroupLoadAllRequested()),
+          child: const GroupListPage(),
+        );
+      },
     ),
     GoRoute(
       path: '/groups/create',
       name: 'create-group',
-      builder: (context, state) => BlocProvider(
-        create: (_) => sl<GroupBloc>(),
-        child: const CreateGroupPage(),
-      ),
+      builder: (context, state) {
+        _log.debug('Navigating to create group page', tag: LogTags.navigation);
+        return BlocProvider(
+          create: (_) => sl<GroupBloc>(),
+          child: const CreateGroupPage(),
+        );
+      },
     ),
     GoRoute(
       path: '/groups/:groupId',
       name: 'group-detail',
       builder: (context, state) {
         final groupId = state.pathParameters['groupId']!;
+        _log.debug(
+          'Navigating to group detail',
+          tag: LogTags.navigation,
+          data: {'groupId': groupId},
+        );
         return BlocProvider(
           create: (_) => sl<GroupBloc>()..add(GroupLoadByIdRequested(groupId)),
           child: GroupDetailPage(groupId: groupId),
@@ -163,6 +231,11 @@ class AppRouter {
       builder: (context, state) {
         final expense = state.extra as ExpenseEntity;
         final currentUserId = FirebaseAuth.instance.currentUser?.uid ?? '';
+        _log.debug(
+          'Navigating to expense chat',
+          tag: LogTags.navigation,
+          data: {'expenseId': expense.id},
+        );
         return BlocProvider(
           create: (_) => sl<ChatBloc>(),
           child: ExpenseChatPage(
@@ -178,7 +251,13 @@ class AppRouter {
       path: '/',
       redirect: (context, state) {
         final isLoggedIn = FirebaseAuth.instance.currentUser != null;
-        return isLoggedIn ? '/dashboard' : '/login';
+        final destination = isLoggedIn ? '/dashboard' : '/login';
+        _log.debug(
+          'Root redirect',
+          tag: LogTags.navigation,
+          data: {'destination': destination},
+        );
+        return destination;
       },
     ),
   ];
@@ -223,7 +302,13 @@ class _ErrorPage extends StatelessWidget {
               ),
               const SizedBox(height: 24),
               FilledButton(
-                onPressed: () => context.go('/'),
+                onPressed: () {
+                  _log.info(
+                    'User navigating home from error page',
+                    tag: LogTags.navigation,
+                  );
+                  context.go('/');
+                },
                 child: const Text('Go Home'),
               ),
             ],

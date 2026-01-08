@@ -6,6 +6,7 @@ import 'package:uuid/uuid.dart';
 
 import '../models/offline_operation.dart';
 import 'connectivity_service.dart';
+import 'logging_service.dart';
 
 /// Sync status for the queue
 enum SyncStatus { idle, syncing, error, completed }
@@ -60,6 +61,7 @@ class OfflineQueueManagerImpl implements OfflineQueueManager {
 
   final ConnectivityService _connectivityService;
   final Future<void> Function(OfflineOperation operation) _operationExecutor;
+  final LoggingService _log = LoggingService();
 
   Box<String>? _box;
   StreamSubscription<ConnectivityStatus>? _connectivitySubscription;
@@ -75,7 +77,9 @@ class OfflineQueueManagerImpl implements OfflineQueueManager {
     required Future<void> Function(OfflineOperation operation)
     operationExecutor,
   }) : _connectivityService = connectivityService,
-       _operationExecutor = operationExecutor;
+       _operationExecutor = operationExecutor {
+    _log.debug('OfflineQueueManager created', tag: LogTags.sync);
+  }
 
   @override
   Stream<SyncStatus> get syncStatusStream => _statusController.stream;
@@ -114,12 +118,23 @@ class OfflineQueueManagerImpl implements OfflineQueueManager {
 
   @override
   Future<void> initialize() async {
+    _log.info('Initializing offline queue', tag: LogTags.sync);
     _box = await Hive.openBox<String>(_boxName);
+    _log.debug(
+      'Hive box opened',
+      tag: LogTags.sync,
+      data: {'pendingCount': pendingCount},
+    );
 
     // Listen to connectivity changes
     _connectivitySubscription = _connectivityService.statusStream.listen((
       status,
     ) {
+      _log.debug(
+        'Connectivity status in queue',
+        tag: LogTags.sync,
+        data: {'status': status.name},
+      );
       if (status == ConnectivityStatus.online) {
         processQueue();
       }
@@ -142,12 +157,26 @@ class OfflineQueueManagerImpl implements OfflineQueueManager {
       groupId: groupId,
     );
 
+    _log.info(
+      'Enqueueing operation',
+      tag: LogTags.sync,
+      data: {
+        'operationId': operation.id,
+        'type': type.name,
+        'entityId': entityId,
+        'groupId': groupId,
+      },
+    );
+
     await _saveOperation(operation);
 
     // Try to process immediately if online
     final isOnline = await _connectivityService.isConnected;
     if (isOnline) {
+      _log.debug('Online, processing queue immediately', tag: LogTags.sync);
       processQueue();
+    } else {
+      _log.debug('Offline, operation queued for later', tag: LogTags.sync);
     }
 
     return operation.id;
@@ -155,20 +184,42 @@ class OfflineQueueManagerImpl implements OfflineQueueManager {
 
   @override
   Future<void> processQueue() async {
-    if (_currentStatus == SyncStatus.syncing) return;
+    if (_currentStatus == SyncStatus.syncing) {
+      _log.debug('Already syncing, skipping', tag: LogTags.sync);
+      return;
+    }
 
     final isOnline = await _connectivityService.isConnected;
-    if (!isOnline) return;
+    if (!isOnline) {
+      _log.debug('Offline, cannot process queue', tag: LogTags.sync);
+      return;
+    }
 
     final pending = pendingOperations;
-    if (pending.isEmpty) return;
+    if (pending.isEmpty) {
+      _log.debug('No pending operations', tag: LogTags.sync);
+      return;
+    }
 
+    _log.info(
+      'Processing queue',
+      tag: LogTags.sync,
+      data: {'pendingCount': pending.length},
+    );
     _updateStatus(SyncStatus.syncing);
 
     bool hasErrors = false;
+    int successCount = 0;
+    int failCount = 0;
 
     for (final operation in pending) {
       try {
+        _log.debug(
+          'Processing operation',
+          tag: LogTags.sync,
+          data: {'operationId': operation.id, 'type': operation.type.name},
+        );
+
         // Mark as in progress
         await _saveOperation(operation.markInProgress());
 
@@ -177,13 +228,43 @@ class OfflineQueueManagerImpl implements OfflineQueueManager {
 
         // Mark as completed
         await _saveOperation(operation.markCompleted());
+        successCount++;
+        _log.debug(
+          'Operation completed',
+          tag: LogTags.sync,
+          data: {'operationId': operation.id},
+        );
       } catch (e) {
         hasErrors = true;
+        failCount++;
+        _log.error(
+          'Operation failed',
+          tag: LogTags.sync,
+          data: {
+            'operationId': operation.id,
+            'error': e.toString(),
+            'retryCount': operation.retryCount,
+          },
+        );
+
         final updated = operation.incrementRetry();
 
         if (updated.hasExceededMaxRetries) {
+          _log.warning(
+            'Operation exceeded max retries, marking as failed',
+            tag: LogTags.sync,
+            data: {'operationId': operation.id},
+          );
           await _saveOperation(updated.markFailed(e.toString()));
         } else {
+          _log.debug(
+            'Operation will be retried',
+            tag: LogTags.sync,
+            data: {
+              'operationId': operation.id,
+              'nextRetry': updated.retryCount,
+            },
+          );
           // Reset to pending for retry
           await _saveOperation(
             updated.copyWith(status: OperationStatus.pending),
@@ -192,6 +273,11 @@ class OfflineQueueManagerImpl implements OfflineQueueManager {
       }
     }
 
+    _log.info(
+      'Queue processing complete',
+      tag: LogTags.sync,
+      data: {'successCount': successCount, 'failCount': failCount},
+    );
     _updateStatus(hasErrors ? SyncStatus.error : SyncStatus.completed);
 
     // Reset to idle after a delay
@@ -204,6 +290,12 @@ class OfflineQueueManagerImpl implements OfflineQueueManager {
 
   @override
   Future<void> retryOperation(String operationId) async {
+    _log.info(
+      'Retrying operation',
+      tag: LogTags.sync,
+      data: {'operationId': operationId},
+    );
+
     final operations = _allOperations;
     final operation = operations.firstWhere(
       (op) => op.id == operationId,
@@ -228,6 +320,11 @@ class OfflineQueueManagerImpl implements OfflineQueueManager {
     if (_box == null) return;
 
     final completed = _getOperationsByStatus(OperationStatus.completed);
+    _log.info(
+      'Clearing completed operations',
+      tag: LogTags.sync,
+      data: {'count': completed.length},
+    );
     for (final op in completed) {
       await _box!.delete(op.id);
     }
@@ -236,6 +333,11 @@ class OfflineQueueManagerImpl implements OfflineQueueManager {
   @override
   Future<void> clearFailed(String operationId) async {
     if (_box == null) return;
+    _log.info(
+      'Clearing failed operation',
+      tag: LogTags.sync,
+      data: {'operationId': operationId},
+    );
     await _box!.delete(operationId);
   }
 
@@ -245,12 +347,18 @@ class OfflineQueueManagerImpl implements OfflineQueueManager {
   }
 
   void _updateStatus(SyncStatus status) {
+    _log.debug(
+      'Sync status updated',
+      tag: LogTags.sync,
+      data: {'status': status.name},
+    );
     _currentStatus = status;
     _statusController.add(status);
   }
 
   @override
   void dispose() {
+    _log.debug('Disposing offline queue manager', tag: LogTags.sync);
     _connectivitySubscription?.cancel();
     _statusController.close();
     _box?.close();

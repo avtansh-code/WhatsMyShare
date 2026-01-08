@@ -5,6 +5,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 
 import '../../../../core/errors/exceptions.dart';
+import '../../../../core/services/logging_service.dart';
 import '../../domain/entities/group_entity.dart';
 import '../models/group_model.dart';
 
@@ -86,6 +87,7 @@ class GroupDataSourceImpl implements GroupDataSource {
   final FirebaseFirestore _firestore;
   final FirebaseStorage _storage;
   final FirebaseAuth _auth;
+  final LoggingService _log = LoggingService();
 
   GroupDataSourceImpl({
     required FirebaseFirestore firestore,
@@ -93,12 +95,18 @@ class GroupDataSourceImpl implements GroupDataSource {
     required FirebaseAuth auth,
   }) : _firestore = firestore,
        _storage = storage,
-       _auth = auth;
+       _auth = auth {
+    _log.debug('GroupDataSource initialized', tag: LogTags.groups);
+  }
 
   /// Get current user ID or throw exception
   String get _currentUserId {
     final user = _auth.currentUser;
     if (user == null) {
+      _log.error(
+        'User not authenticated when accessing groups',
+        tag: LogTags.groups,
+      );
       throw const AuthException(message: 'User not authenticated');
     }
     return user.uid;
@@ -110,6 +118,7 @@ class GroupDataSourceImpl implements GroupDataSource {
 
   @override
   Future<List<GroupModel>> getGroups() async {
+    _log.debug('Fetching user groups', tag: LogTags.groups);
     try {
       final userId = _currentUserId;
       final snapshot = await _groupsCollection
@@ -117,48 +126,101 @@ class GroupDataSourceImpl implements GroupDataSource {
           .orderBy('lastActivityAt', descending: true)
           .get();
 
-      return snapshot.docs.map((doc) => GroupModel.fromFirestore(doc)).toList();
+      final groups = snapshot.docs
+          .map((doc) => GroupModel.fromFirestore(doc))
+          .toList();
+      _log.info(
+        'Groups fetched successfully',
+        tag: LogTags.groups,
+        data: {'count': groups.length},
+      );
+      return groups;
     } on FirebaseException catch (e) {
+      _log.error(
+        'Failed to get groups',
+        tag: LogTags.groups,
+        data: {'error': e.message},
+      );
       throw ServerException(message: 'Failed to get groups: ${e.message}');
     }
   }
 
   @override
   Stream<List<GroupModel>> watchGroups() {
+    _log.debug('Setting up groups stream', tag: LogTags.groups);
     try {
       final userId = _currentUserId;
       return _groupsCollection
           .where('memberIds', arrayContains: userId)
           .orderBy('lastActivityAt', descending: true)
           .snapshots()
-          .map(
-            (snapshot) => snapshot.docs
+          .map((snapshot) {
+            _log.debug(
+              'Groups stream updated',
+              tag: LogTags.groups,
+              data: {'count': snapshot.docs.length},
+            );
+            return snapshot.docs
                 .map((doc) => GroupModel.fromFirestore(doc))
-                .toList(),
-          );
+                .toList();
+          });
     } on FirebaseException catch (e) {
+      _log.error(
+        'Failed to watch groups',
+        tag: LogTags.groups,
+        data: {'error': e.message},
+      );
       throw ServerException(message: 'Failed to watch groups: ${e.message}');
     }
   }
 
   @override
   Future<GroupModel> getGroupById(String groupId) async {
+    _log.debug(
+      'Fetching group by ID',
+      tag: LogTags.groups,
+      data: {'groupId': groupId},
+    );
     try {
       final doc = await _groupsCollection.doc(groupId).get();
       if (!doc.exists) {
+        _log.warning(
+          'Group not found',
+          tag: LogTags.groups,
+          data: {'groupId': groupId},
+        );
         throw const NotFoundException(message: 'Group not found');
       }
+      _log.debug(
+        'Group fetched successfully',
+        tag: LogTags.groups,
+        data: {'groupId': groupId},
+      );
       return GroupModel.fromFirestore(doc);
     } on FirebaseException catch (e) {
+      _log.error(
+        'Failed to get group',
+        tag: LogTags.groups,
+        data: {'groupId': groupId, 'error': e.message},
+      );
       throw ServerException(message: 'Failed to get group: ${e.message}');
     }
   }
 
   @override
-  @override
   Stream<GroupModel> watchGroupById(String groupId) {
+    _log.debug(
+      'Setting up single group stream',
+      tag: LogTags.groups,
+      data: {'groupId': groupId},
+    );
     return _groupsCollection.doc(groupId).snapshots().map((doc) {
       if (!doc.exists) {
+        _log.warning(
+          'Watched group not found',
+          tag: LogTags.groups,
+          data: {'groupId': groupId},
+        );
         throw const NotFoundException(message: 'Group not found');
       }
       return GroupModel.fromFirestore(doc);
@@ -174,6 +236,11 @@ class GroupDataSourceImpl implements GroupDataSource {
     bool simplifyDebts = true,
     List<String>? initialMemberIds,
   }) async {
+    _log.info(
+      'Creating new group',
+      tag: LogTags.groups,
+      data: {'name': name, 'type': type.name, 'currency': currency},
+    );
     try {
       final userId = _currentUserId;
       final user = _auth.currentUser!;
@@ -193,8 +260,6 @@ class GroupDataSourceImpl implements GroupDataSource {
       final balances = <String, int>{userId: 0};
 
       // Add initial members if provided
-      // Note: In a real app, you'd fetch user details for each member
-      // For now, we just add their IDs
       if (initialMemberIds != null) {
         for (final memberId in initialMemberIds) {
           if (memberId != userId) {
@@ -202,6 +267,11 @@ class GroupDataSourceImpl implements GroupDataSource {
             balances[memberId] = 0;
           }
         }
+        _log.debug(
+          'Initial members added',
+          tag: LogTags.groups,
+          data: {'count': memberIds.length},
+        );
       }
 
       final group = GroupModel(
@@ -225,8 +295,18 @@ class GroupDataSourceImpl implements GroupDataSource {
 
       final docRef = await _groupsCollection.add(group.toFirestore());
       final newDoc = await docRef.get();
+      _log.info(
+        'Group created successfully',
+        tag: LogTags.groups,
+        data: {'groupId': docRef.id, 'name': name},
+      );
       return GroupModel.fromFirestore(newDoc);
     } on FirebaseException catch (e) {
+      _log.error(
+        'Failed to create group',
+        tag: LogTags.groups,
+        data: {'name': name, 'error': e.message},
+      );
       throw ServerException(message: 'Failed to create group: ${e.message}');
     }
   }
@@ -240,6 +320,11 @@ class GroupDataSourceImpl implements GroupDataSource {
     String? currency,
     bool? simplifyDebts,
   }) async {
+    _log.info(
+      'Updating group',
+      tag: LogTags.groups,
+      data: {'groupId': groupId, 'name': name},
+    );
     try {
       final updateMap = <String, dynamic>{
         'updatedAt': FieldValue.serverTimestamp(),
@@ -252,8 +337,18 @@ class GroupDataSourceImpl implements GroupDataSource {
       if (simplifyDebts != null) updateMap['simplifyDebts'] = simplifyDebts;
 
       await _groupsCollection.doc(groupId).update(updateMap);
+      _log.info(
+        'Group updated successfully',
+        tag: LogTags.groups,
+        data: {'groupId': groupId},
+      );
       return await getGroupById(groupId);
     } on FirebaseException catch (e) {
+      _log.error(
+        'Failed to update group',
+        tag: LogTags.groups,
+        data: {'groupId': groupId, 'error': e.message},
+      );
       throw ServerException(message: 'Failed to update group: ${e.message}');
     }
   }
@@ -263,6 +358,11 @@ class GroupDataSourceImpl implements GroupDataSource {
     required String groupId,
     required File imageFile,
   }) async {
+    _log.info(
+      'Updating group image',
+      tag: LogTags.groups,
+      data: {'groupId': groupId},
+    );
     try {
       final ref = _storage.ref().child('groups/$groupId/cover/image.jpg');
       await ref.putFile(imageFile);
@@ -273,8 +373,18 @@ class GroupDataSourceImpl implements GroupDataSource {
         'updatedAt': FieldValue.serverTimestamp(),
       });
 
+      _log.info(
+        'Group image updated successfully',
+        tag: LogTags.groups,
+        data: {'groupId': groupId},
+      );
       return downloadUrl;
     } on FirebaseException catch (e) {
+      _log.error(
+        'Failed to update group image',
+        tag: LogTags.groups,
+        data: {'groupId': groupId, 'error': e.message},
+      );
       throw ServerException(
         message: 'Failed to update group image: ${e.message}',
       );
@@ -283,6 +393,11 @@ class GroupDataSourceImpl implements GroupDataSource {
 
   @override
   Future<void> deleteGroupImage(String groupId) async {
+    _log.info(
+      'Deleting group image',
+      tag: LogTags.groups,
+      data: {'groupId': groupId},
+    );
     try {
       final ref = _storage.ref().child('groups/$groupId/cover/image.jpg');
       await ref.delete();
@@ -291,7 +406,17 @@ class GroupDataSourceImpl implements GroupDataSource {
         'imageUrl': FieldValue.delete(),
         'updatedAt': FieldValue.serverTimestamp(),
       });
+      _log.info(
+        'Group image deleted successfully',
+        tag: LogTags.groups,
+        data: {'groupId': groupId},
+      );
     } on FirebaseException catch (e) {
+      _log.error(
+        'Failed to delete group image',
+        tag: LogTags.groups,
+        data: {'groupId': groupId, 'error': e.message},
+      );
       throw ServerException(
         message: 'Failed to delete group image: ${e.message}',
       );
@@ -300,9 +425,19 @@ class GroupDataSourceImpl implements GroupDataSource {
 
   @override
   Future<void> deleteGroup(String groupId) async {
+    _log.warning(
+      'Deleting group',
+      tag: LogTags.groups,
+      data: {'groupId': groupId},
+    );
     try {
       // Delete the group document
       await _groupsCollection.doc(groupId).delete();
+      _log.info(
+        'Group deleted successfully',
+        tag: LogTags.groups,
+        data: {'groupId': groupId},
+      );
 
       // Note: In production, you'd also want to:
       // 1. Delete all expenses in the group
@@ -310,6 +445,11 @@ class GroupDataSourceImpl implements GroupDataSource {
       // 3. Delete the group image from storage
       // This should be handled by a Cloud Function for consistency
     } on FirebaseException catch (e) {
+      _log.error(
+        'Failed to delete group',
+        tag: LogTags.groups,
+        data: {'groupId': groupId, 'error': e.message},
+      );
       throw ServerException(message: 'Failed to delete group: ${e.message}');
     }
   }
@@ -323,6 +463,11 @@ class GroupDataSourceImpl implements GroupDataSource {
     String? photoUrl,
     MemberRole role = MemberRole.member,
   }) async {
+    _log.info(
+      'Adding member to group',
+      tag: LogTags.groups,
+      data: {'groupId': groupId, 'userId': userId, 'displayName': displayName},
+    );
     try {
       final newMember = GroupMemberModel(
         userId: userId,
@@ -341,8 +486,18 @@ class GroupDataSourceImpl implements GroupDataSource {
         'updatedAt': FieldValue.serverTimestamp(),
       });
 
+      _log.info(
+        'Member added successfully',
+        tag: LogTags.groups,
+        data: {'groupId': groupId, 'userId': userId},
+      );
       return await getGroupById(groupId);
     } on FirebaseException catch (e) {
+      _log.error(
+        'Failed to add member',
+        tag: LogTags.groups,
+        data: {'groupId': groupId, 'userId': userId, 'error': e.message},
+      );
       throw ServerException(message: 'Failed to add member: ${e.message}');
     }
   }
@@ -352,13 +507,24 @@ class GroupDataSourceImpl implements GroupDataSource {
     required String groupId,
     required String userId,
   }) async {
+    _log.info(
+      'Removing member from group',
+      tag: LogTags.groups,
+      data: {'groupId': groupId, 'userId': userId},
+    );
     try {
       // Get current group to find member data
       final group = await getGroupById(groupId);
       final member = group.members.firstWhere(
         (m) => m.userId == userId,
-        orElse: () =>
-            throw const NotFoundException(message: 'Member not found'),
+        orElse: () {
+          _log.warning(
+            'Member not found in group',
+            tag: LogTags.groups,
+            data: {'groupId': groupId, 'userId': userId},
+          );
+          throw const NotFoundException(message: 'Member not found');
+        },
       );
 
       final memberModel = GroupMemberModel.fromEntity(member);
@@ -372,8 +538,18 @@ class GroupDataSourceImpl implements GroupDataSource {
         'updatedAt': FieldValue.serverTimestamp(),
       });
 
+      _log.info(
+        'Member removed successfully',
+        tag: LogTags.groups,
+        data: {'groupId': groupId, 'userId': userId},
+      );
       return await getGroupById(groupId);
     } on FirebaseException catch (e) {
+      _log.error(
+        'Failed to remove member',
+        tag: LogTags.groups,
+        data: {'groupId': groupId, 'userId': userId, 'error': e.message},
+      );
       throw ServerException(message: 'Failed to remove member: ${e.message}');
     }
   }
@@ -384,6 +560,11 @@ class GroupDataSourceImpl implements GroupDataSource {
     required String userId,
     required MemberRole newRole,
   }) async {
+    _log.info(
+      'Updating member role',
+      tag: LogTags.groups,
+      data: {'groupId': groupId, 'userId': userId, 'newRole': newRole.name},
+    );
     try {
       // Get current group
       final group = await getGroupById(groupId);
@@ -419,8 +600,18 @@ class GroupDataSourceImpl implements GroupDataSource {
         'updatedAt': FieldValue.serverTimestamp(),
       });
 
+      _log.info(
+        'Member role updated successfully',
+        tag: LogTags.groups,
+        data: {'groupId': groupId, 'userId': userId, 'newRole': newRole.name},
+      );
       return await getGroupById(groupId);
     } on FirebaseException catch (e) {
+      _log.error(
+        'Failed to update member role',
+        tag: LogTags.groups,
+        data: {'groupId': groupId, 'userId': userId, 'error': e.message},
+      );
       throw ServerException(
         message: 'Failed to update member role: ${e.message}',
       );
@@ -430,6 +621,11 @@ class GroupDataSourceImpl implements GroupDataSource {
   @override
   Future<void> leaveGroup(String groupId) async {
     final userId = _currentUserId;
+    _log.info(
+      'User leaving group',
+      tag: LogTags.groups,
+      data: {'groupId': groupId, 'userId': userId},
+    );
     await removeMember(groupId: groupId, userId: userId);
   }
 }

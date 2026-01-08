@@ -2,12 +2,7 @@ import 'dart:developer' as developer;
 import 'package:flutter/foundation.dart';
 
 /// Log levels for structured logging
-enum LogLevel {
-  debug,
-  info,
-  warning,
-  error,
-}
+enum LogLevel { debug, info, warning, error }
 
 /// Structured logging service for the application
 /// Provides consistent logging across all features with different levels
@@ -72,7 +67,7 @@ class LoggingService {
     final timestamp = DateTime.now().toIso8601String();
     final levelStr = _getLevelString(level);
     final tagStr = tag != null ? '[$tag]' : '';
-    
+
     // Build log message
     final buffer = StringBuffer();
     buffer.write('$timestamp $levelStr $tagStr $message');
@@ -145,19 +140,19 @@ class LoggingService {
 /// Extension for convenient logging from any class
 extension LoggingExtension on Object {
   LoggingService get log => LoggingService();
-  
+
   void logDebug(String message, {Map<String, dynamic>? data}) {
     LoggingService().debug(message, tag: runtimeType.toString(), data: data);
   }
-  
+
   void logInfo(String message, {Map<String, dynamic>? data}) {
     LoggingService().info(message, tag: runtimeType.toString(), data: data);
   }
-  
+
   void logWarning(String message, {Map<String, dynamic>? data}) {
     LoggingService().warning(message, tag: runtimeType.toString(), data: data);
   }
-  
+
   void logError(
     String message, {
     Object? error,
@@ -176,6 +171,7 @@ extension LoggingExtension on Object {
 
 /// Predefined tags for common logging categories
 class LogTags {
+  static const String app = 'App';
   static const String auth = 'Auth';
   static const String profile = 'Profile';
   static const String groups = 'Groups';

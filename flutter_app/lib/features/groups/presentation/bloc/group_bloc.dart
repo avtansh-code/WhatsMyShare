@@ -3,7 +3,9 @@ import 'dart:async';
 import 'package:dartz/dartz.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+import '../../../../core/errors/error_messages.dart';
 import '../../../../core/errors/failures.dart';
+import '../../../../core/services/logging_service.dart';
 import '../../domain/entities/group_entity.dart';
 import '../../domain/repositories/group_repository.dart';
 import 'group_event.dart';
@@ -12,6 +14,7 @@ import 'group_state.dart';
 /// BLoC for managing group state
 class GroupBloc extends Bloc<GroupEvent, GroupState> {
   final GroupRepository _groupRepository;
+  final LoggingService _log = LoggingService();
   StreamSubscription<Either<Failure, List<GroupEntity>>>? _groupsSubscription;
   StreamSubscription<Either<Failure, GroupEntity>>? _singleGroupSubscription;
 
@@ -31,6 +34,8 @@ class GroupBloc extends Bloc<GroupEvent, GroupState> {
     on<GroupLeaveRequested>(_onLeaveRequested);
     on<GroupUpdated>(_onGroupUpdated);
     on<SingleGroupUpdated>(_onSingleGroupUpdated);
+
+    _log.info('GroupBloc initialized', tag: LogTags.groups);
   }
 
   /// Handle load all groups request
@@ -38,6 +43,7 @@ class GroupBloc extends Bloc<GroupEvent, GroupState> {
     GroupLoadAllRequested event,
     Emitter<GroupState> emit,
   ) async {
+    _log.debug('Loading all groups...', tag: LogTags.groups);
     emit(state.copyWith(status: GroupStatus.loading));
 
     // Cancel existing subscription
@@ -47,20 +53,40 @@ class GroupBloc extends Bloc<GroupEvent, GroupState> {
     _groupsSubscription = _groupRepository.watchGroups().listen(
       (result) {
         result.fold(
-          (failure) => emit(
-            state.copyWith(
-              status: GroupStatus.failure,
-              errorMessage: failure.message,
-            ),
-          ),
-          (groups) => add(GroupUpdated(groups)),
+          (failure) {
+            _log.error(
+              'Failed to load groups',
+              tag: LogTags.groups,
+              data: {'error': failure.message},
+            );
+            emit(
+              state.copyWith(
+                status: GroupStatus.failure,
+                errorMessage: ErrorMessages.groupLoadFailed,
+              ),
+            );
+          },
+          (groups) {
+            _log.info(
+              'Groups loaded successfully',
+              tag: LogTags.groups,
+              data: {'count': groups.length},
+            );
+            add(GroupUpdated(groups));
+          },
         );
       },
-      onError: (error) {
+      onError: (error, stackTrace) {
+        _log.error(
+          'Groups stream error',
+          tag: LogTags.groups,
+          error: error,
+          stackTrace: stackTrace,
+        );
         emit(
           state.copyWith(
             status: GroupStatus.failure,
-            errorMessage: error.toString(),
+            errorMessage: ErrorMessages.groupLoadFailed,
           ),
         );
       },
@@ -72,6 +98,11 @@ class GroupBloc extends Bloc<GroupEvent, GroupState> {
     GroupLoadByIdRequested event,
     Emitter<GroupState> emit,
   ) async {
+    _log.debug(
+      'Loading group by ID',
+      tag: LogTags.groups,
+      data: {'groupId': event.groupId},
+    );
     emit(state.copyWith(status: GroupStatus.loading));
 
     // Cancel existing single group subscription
@@ -83,20 +114,40 @@ class GroupBloc extends Bloc<GroupEvent, GroupState> {
         .listen(
           (result) {
             result.fold(
-              (failure) => emit(
-                state.copyWith(
-                  status: GroupStatus.failure,
-                  errorMessage: failure.message,
-                ),
-              ),
-              (group) => add(SingleGroupUpdated(group)),
+              (failure) {
+                _log.error(
+                  'Failed to load group',
+                  tag: LogTags.groups,
+                  data: {'groupId': event.groupId, 'error': failure.message},
+                );
+                emit(
+                  state.copyWith(
+                    status: GroupStatus.failure,
+                    errorMessage: ErrorMessages.groupNotFound,
+                  ),
+                );
+              },
+              (group) {
+                _log.debug(
+                  'Group loaded',
+                  tag: LogTags.groups,
+                  data: {'groupId': group.id, 'name': group.name},
+                );
+                add(SingleGroupUpdated(group));
+              },
             );
           },
-          onError: (error) {
+          onError: (error, stackTrace) {
+            _log.error(
+              'Group stream error',
+              tag: LogTags.groups,
+              error: error,
+              stackTrace: stackTrace,
+            );
             emit(
               state.copyWith(
                 status: GroupStatus.failure,
-                errorMessage: error.toString(),
+                errorMessage: ErrorMessages.groupLoadFailed,
               ),
             );
           },
@@ -108,6 +159,11 @@ class GroupBloc extends Bloc<GroupEvent, GroupState> {
     GroupCreateRequested event,
     Emitter<GroupState> emit,
   ) async {
+    _log.info(
+      'Creating group',
+      tag: LogTags.groups,
+      data: {'name': event.name},
+    );
     emit(state.copyWith(status: GroupStatus.creating, isCreating: true));
 
     final result = await _groupRepository.createGroup(
@@ -120,14 +176,26 @@ class GroupBloc extends Bloc<GroupEvent, GroupState> {
     );
 
     result.fold(
-      (failure) => emit(
-        state.copyWith(
-          status: GroupStatus.failure,
-          errorMessage: failure.message,
-          isCreating: false,
-        ),
-      ),
+      (failure) {
+        _log.error(
+          'Failed to create group',
+          tag: LogTags.groups,
+          data: {'name': event.name, 'error': failure.message},
+        );
+        emit(
+          state.copyWith(
+            status: GroupStatus.failure,
+            errorMessage: ErrorMessages.groupCreateFailed,
+            isCreating: false,
+          ),
+        );
+      },
       (group) {
+        _log.info(
+          'Group created successfully',
+          tag: LogTags.groups,
+          data: {'groupId': group.id, 'name': group.name},
+        );
         // Add new group to the list
         final updatedGroups = [group, ...state.groups];
         emit(
@@ -148,6 +216,11 @@ class GroupBloc extends Bloc<GroupEvent, GroupState> {
     GroupUpdateRequested event,
     Emitter<GroupState> emit,
   ) async {
+    _log.info(
+      'Updating group',
+      tag: LogTags.groups,
+      data: {'groupId': event.groupId},
+    );
     emit(state.copyWith(status: GroupStatus.updating, isUpdating: true));
 
     final result = await _groupRepository.updateGroup(
@@ -160,14 +233,26 @@ class GroupBloc extends Bloc<GroupEvent, GroupState> {
     );
 
     result.fold(
-      (failure) => emit(
-        state.copyWith(
-          status: GroupStatus.failure,
-          errorMessage: failure.message,
-          isUpdating: false,
-        ),
-      ),
+      (failure) {
+        _log.error(
+          'Failed to update group',
+          tag: LogTags.groups,
+          data: {'groupId': event.groupId, 'error': failure.message},
+        );
+        emit(
+          state.copyWith(
+            status: GroupStatus.failure,
+            errorMessage: ErrorMessages.groupUpdateFailed,
+            isUpdating: false,
+          ),
+        );
+      },
       (group) {
+        _log.info(
+          'Group updated successfully',
+          tag: LogTags.groups,
+          data: {'groupId': group.id},
+        );
         // Update group in the list
         final updatedGroups = state.groups.map((g) {
           return g.id == group.id ? group : g;
@@ -190,6 +275,11 @@ class GroupBloc extends Bloc<GroupEvent, GroupState> {
     GroupImageUpdateRequested event,
     Emitter<GroupState> emit,
   ) async {
+    _log.info(
+      'Updating group image',
+      tag: LogTags.groups,
+      data: {'groupId': event.groupId},
+    );
     emit(state.copyWith(isUpdating: true));
 
     final result = await _groupRepository.updateGroupImage(
@@ -198,14 +288,26 @@ class GroupBloc extends Bloc<GroupEvent, GroupState> {
     );
 
     result.fold(
-      (failure) => emit(
-        state.copyWith(
-          status: GroupStatus.failure,
-          errorMessage: failure.message,
-          isUpdating: false,
-        ),
-      ),
+      (failure) {
+        _log.error(
+          'Failed to update group image',
+          tag: LogTags.groups,
+          data: {'groupId': event.groupId, 'error': failure.message},
+        );
+        emit(
+          state.copyWith(
+            status: GroupStatus.failure,
+            errorMessage: ErrorMessages.storageUploadFailed,
+            isUpdating: false,
+          ),
+        );
+      },
       (imageUrl) {
+        _log.info(
+          'Group image updated',
+          tag: LogTags.groups,
+          data: {'groupId': event.groupId},
+        );
         // Refresh the group to get updated data
         add(GroupLoadByIdRequested(event.groupId));
         emit(state.copyWith(isUpdating: false, clearError: true));
@@ -218,19 +320,36 @@ class GroupBloc extends Bloc<GroupEvent, GroupState> {
     GroupImageDeleteRequested event,
     Emitter<GroupState> emit,
   ) async {
+    _log.info(
+      'Deleting group image',
+      tag: LogTags.groups,
+      data: {'groupId': event.groupId},
+    );
     emit(state.copyWith(isUpdating: true));
 
     final result = await _groupRepository.deleteGroupImage(event.groupId);
 
     result.fold(
-      (failure) => emit(
-        state.copyWith(
-          status: GroupStatus.failure,
-          errorMessage: failure.message,
-          isUpdating: false,
-        ),
-      ),
+      (failure) {
+        _log.error(
+          'Failed to delete group image',
+          tag: LogTags.groups,
+          data: {'groupId': event.groupId, 'error': failure.message},
+        );
+        emit(
+          state.copyWith(
+            status: GroupStatus.failure,
+            errorMessage: ErrorMessages.storageDeleteFailed,
+            isUpdating: false,
+          ),
+        );
+      },
       (_) {
+        _log.info(
+          'Group image deleted',
+          tag: LogTags.groups,
+          data: {'groupId': event.groupId},
+        );
         // Refresh the group
         add(GroupLoadByIdRequested(event.groupId));
         emit(state.copyWith(isUpdating: false, clearError: true));
@@ -243,19 +362,36 @@ class GroupBloc extends Bloc<GroupEvent, GroupState> {
     GroupDeleteRequested event,
     Emitter<GroupState> emit,
   ) async {
+    _log.info(
+      'Deleting group',
+      tag: LogTags.groups,
+      data: {'groupId': event.groupId},
+    );
     emit(state.copyWith(status: GroupStatus.deleting, isDeleting: true));
 
     final result = await _groupRepository.deleteGroup(event.groupId);
 
     result.fold(
-      (failure) => emit(
-        state.copyWith(
-          status: GroupStatus.failure,
-          errorMessage: failure.message,
-          isDeleting: false,
-        ),
-      ),
+      (failure) {
+        _log.error(
+          'Failed to delete group',
+          tag: LogTags.groups,
+          data: {'groupId': event.groupId, 'error': failure.message},
+        );
+        emit(
+          state.copyWith(
+            status: GroupStatus.failure,
+            errorMessage: ErrorMessages.groupDeleteFailed,
+            isDeleting: false,
+          ),
+        );
+      },
       (_) {
+        _log.info(
+          'Group deleted successfully',
+          tag: LogTags.groups,
+          data: {'groupId': event.groupId},
+        );
         // Remove group from list
         final updatedGroups = state.groups
             .where((g) => g.id != event.groupId)
@@ -278,6 +414,11 @@ class GroupBloc extends Bloc<GroupEvent, GroupState> {
     GroupMemberAddRequested event,
     Emitter<GroupState> emit,
   ) async {
+    _log.info(
+      'Adding member to group',
+      tag: LogTags.groups,
+      data: {'groupId': event.groupId, 'userId': event.userId},
+    );
     emit(state.copyWith(isUpdating: true));
 
     final result = await _groupRepository.addMember(
@@ -290,14 +431,22 @@ class GroupBloc extends Bloc<GroupEvent, GroupState> {
     );
 
     result.fold(
-      (failure) => emit(
-        state.copyWith(
-          status: GroupStatus.failure,
-          errorMessage: failure.message,
-          isUpdating: false,
-        ),
-      ),
+      (failure) {
+        _log.error(
+          'Failed to add member',
+          tag: LogTags.groups,
+          data: {'groupId': event.groupId, 'error': failure.message},
+        );
+        emit(
+          state.copyWith(
+            status: GroupStatus.failure,
+            errorMessage: ErrorMessages.groupMemberAddFailed,
+            isUpdating: false,
+          ),
+        );
+      },
       (group) {
+        _log.info('Member added successfully', tag: LogTags.groups);
         _updateGroupInState(emit, group);
         emit(state.copyWith(isUpdating: false, clearError: true));
       },
@@ -309,6 +458,11 @@ class GroupBloc extends Bloc<GroupEvent, GroupState> {
     GroupMemberRemoveRequested event,
     Emitter<GroupState> emit,
   ) async {
+    _log.info(
+      'Removing member from group',
+      tag: LogTags.groups,
+      data: {'groupId': event.groupId, 'userId': event.userId},
+    );
     emit(state.copyWith(isUpdating: true));
 
     final result = await _groupRepository.removeMember(
@@ -317,14 +471,22 @@ class GroupBloc extends Bloc<GroupEvent, GroupState> {
     );
 
     result.fold(
-      (failure) => emit(
-        state.copyWith(
-          status: GroupStatus.failure,
-          errorMessage: failure.message,
-          isUpdating: false,
-        ),
-      ),
+      (failure) {
+        _log.error(
+          'Failed to remove member',
+          tag: LogTags.groups,
+          data: {'groupId': event.groupId, 'error': failure.message},
+        );
+        emit(
+          state.copyWith(
+            status: GroupStatus.failure,
+            errorMessage: ErrorMessages.groupMemberRemoveFailed,
+            isUpdating: false,
+          ),
+        );
+      },
       (group) {
+        _log.info('Member removed successfully', tag: LogTags.groups);
         _updateGroupInState(emit, group);
         emit(state.copyWith(isUpdating: false, clearError: true));
       },
@@ -336,6 +498,15 @@ class GroupBloc extends Bloc<GroupEvent, GroupState> {
     GroupMemberRoleUpdateRequested event,
     Emitter<GroupState> emit,
   ) async {
+    _log.info(
+      'Updating member role',
+      tag: LogTags.groups,
+      data: {
+        'groupId': event.groupId,
+        'userId': event.userId,
+        'newRole': event.newRole,
+      },
+    );
     emit(state.copyWith(isUpdating: true));
 
     final result = await _groupRepository.updateMemberRole(
@@ -345,14 +516,22 @@ class GroupBloc extends Bloc<GroupEvent, GroupState> {
     );
 
     result.fold(
-      (failure) => emit(
-        state.copyWith(
-          status: GroupStatus.failure,
-          errorMessage: failure.message,
-          isUpdating: false,
-        ),
-      ),
+      (failure) {
+        _log.error(
+          'Failed to update member role',
+          tag: LogTags.groups,
+          data: {'groupId': event.groupId, 'error': failure.message},
+        );
+        emit(
+          state.copyWith(
+            status: GroupStatus.failure,
+            errorMessage: failure.message,
+            isUpdating: false,
+          ),
+        );
+      },
       (group) {
+        _log.info('Member role updated successfully', tag: LogTags.groups);
         _updateGroupInState(emit, group);
         emit(state.copyWith(isUpdating: false, clearError: true));
       },
@@ -364,19 +543,36 @@ class GroupBloc extends Bloc<GroupEvent, GroupState> {
     GroupLeaveRequested event,
     Emitter<GroupState> emit,
   ) async {
+    _log.info(
+      'Leaving group',
+      tag: LogTags.groups,
+      data: {'groupId': event.groupId},
+    );
     emit(state.copyWith(isDeleting: true));
 
     final result = await _groupRepository.leaveGroup(event.groupId);
 
     result.fold(
-      (failure) => emit(
-        state.copyWith(
-          status: GroupStatus.failure,
-          errorMessage: failure.message,
-          isDeleting: false,
-        ),
-      ),
+      (failure) {
+        _log.error(
+          'Failed to leave group',
+          tag: LogTags.groups,
+          data: {'groupId': event.groupId, 'error': failure.message},
+        );
+        emit(
+          state.copyWith(
+            status: GroupStatus.failure,
+            errorMessage: failure.message,
+            isDeleting: false,
+          ),
+        );
+      },
       (_) {
+        _log.info(
+          'Left group successfully',
+          tag: LogTags.groups,
+          data: {'groupId': event.groupId},
+        );
         // Remove group from list
         final updatedGroups = state.groups
             .where((g) => g.id != event.groupId)
@@ -396,6 +592,11 @@ class GroupBloc extends Bloc<GroupEvent, GroupState> {
 
   /// Handle real-time group updates
   void _onGroupUpdated(GroupUpdated event, Emitter<GroupState> emit) {
+    _log.debug(
+      'Groups updated via stream',
+      tag: LogTags.groups,
+      data: {'count': event.groups.length},
+    );
     emit(
       state.copyWith(
         status: GroupStatus.success,
@@ -410,6 +611,11 @@ class GroupBloc extends Bloc<GroupEvent, GroupState> {
     SingleGroupUpdated event,
     Emitter<GroupState> emit,
   ) {
+    _log.debug(
+      'Single group updated via stream',
+      tag: LogTags.groups,
+      data: {'groupId': event.group.id},
+    );
     // Update in list if exists
     final updatedGroups = state.groups.map((g) {
       return g.id == event.group.id ? event.group : g;
@@ -443,6 +649,7 @@ class GroupBloc extends Bloc<GroupEvent, GroupState> {
 
   @override
   Future<void> close() {
+    _log.debug('GroupBloc closing', tag: LogTags.groups);
     _groupsSubscription?.cancel();
     _singleGroupSubscription?.cancel();
     return super.close();

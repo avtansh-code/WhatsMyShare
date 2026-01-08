@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../core/services/logging_service.dart';
 import '../bloc/auth_bloc.dart';
 
 /// Sign up page for new user registration
@@ -18,9 +19,16 @@ class _SignUpPageState extends State<SignUpPage> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
+  final LoggingService _log = LoggingService();
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
   bool _isLoading = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _log.info('SignUpPage opened', tag: LogTags.ui);
+  }
 
   @override
   void dispose() {
@@ -33,6 +41,14 @@ class _SignUpPageState extends State<SignUpPage> {
 
   void _onSignUp() {
     if (_formKey.currentState?.validate() ?? false) {
+      _log.info(
+        'Sign up requested',
+        tag: LogTags.ui,
+        data: {
+          'email': _emailController.text.trim(),
+          'displayName': _nameController.text.trim(),
+        },
+      );
       context.read<AuthBloc>().add(
         AuthSignUpWithEmailRequested(
           email: _emailController.text.trim(),
@@ -40,6 +56,8 @@ class _SignUpPageState extends State<SignUpPage> {
           displayName: _nameController.text.trim(),
         ),
       );
+    } else {
+      _log.debug('Sign up form validation failed', tag: LogTags.ui);
     }
   }
 
@@ -58,6 +76,11 @@ class _SignUpPageState extends State<SignUpPage> {
       body: BlocConsumer<AuthBloc, AuthState>(
         listener: (context, state) {
           if (state is AuthError) {
+            _log.warning(
+              'Auth error on signup page',
+              tag: LogTags.ui,
+              data: {'message': state.message},
+            );
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
                 content: Text(state.message),
@@ -65,6 +88,11 @@ class _SignUpPageState extends State<SignUpPage> {
               ),
             );
           } else if (state is AuthAuthenticated) {
+            _log.info(
+              'User signed up successfully, navigating to dashboard',
+              tag: LogTags.ui,
+              data: {'userId': state.user.id},
+            );
             context.go('/dashboard');
           }
         },

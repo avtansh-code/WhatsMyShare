@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../core/services/logging_service.dart';
 import '../bloc/auth_bloc.dart';
 
 /// Forgot password page for password reset
@@ -15,8 +16,15 @@ class ForgotPasswordPage extends StatefulWidget {
 class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
+  final LoggingService _log = LoggingService();
   bool _isLoading = false;
   bool _emailSent = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _log.info('ForgotPasswordPage opened', tag: LogTags.ui);
+  }
 
   @override
   void dispose() {
@@ -26,9 +34,16 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
 
   void _onResetPassword() {
     if (_formKey.currentState?.validate() ?? false) {
+      _log.info(
+        'Password reset requested',
+        tag: LogTags.ui,
+        data: {'email': _emailController.text.trim()},
+      );
       context.read<AuthBloc>().add(
         AuthResetPasswordRequested(email: _emailController.text.trim()),
       );
+    } else {
+      _log.debug('Password reset form validation failed', tag: LogTags.ui);
     }
   }
 
@@ -47,6 +62,11 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
       body: BlocConsumer<AuthBloc, AuthState>(
         listener: (context, state) {
           if (state is AuthError) {
+            _log.warning(
+              'Password reset error',
+              tag: LogTags.ui,
+              data: {'message': state.message},
+            );
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
                 content: Text(state.message),
@@ -54,6 +74,11 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
               ),
             );
           } else if (state is AuthPasswordResetSent) {
+            _log.info(
+              'Password reset email sent successfully',
+              tag: LogTags.ui,
+              data: {'email': _emailController.text.trim()},
+            );
             setState(() {
               _emailSent = true;
             });

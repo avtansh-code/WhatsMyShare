@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
 
 import '../../../../core/di/injection_container.dart';
+import '../../../../core/services/logging_service.dart';
 import '../../../../core/utils/currency_utils.dart';
 import '../../domain/entities/expense_entity.dart';
 import '../bloc/expense_bloc.dart';
@@ -11,7 +12,7 @@ import '../bloc/expense_state.dart';
 import 'add_expense_page.dart';
 
 /// Page displaying list of expenses for a group
-class ExpenseListPage extends StatelessWidget {
+class ExpenseListPage extends StatefulWidget {
   final String groupId;
   final String groupName;
   final String currency;
@@ -24,13 +25,30 @@ class ExpenseListPage extends StatelessWidget {
   });
 
   @override
+  State<ExpenseListPage> createState() => _ExpenseListPageState();
+}
+
+class _ExpenseListPageState extends State<ExpenseListPage> {
+  final LoggingService _log = LoggingService();
+
+  @override
+  void initState() {
+    super.initState();
+    _log.info(
+      'ExpenseListPage opened',
+      tag: LogTags.ui,
+      data: {'groupId': widget.groupId, 'groupName': widget.groupName},
+    );
+  }
+
+  @override
   Widget build(BuildContext context) {
     return BlocProvider(
-      create: (_) => sl<ExpenseBloc>()..add(WatchExpenses(groupId)),
+      create: (_) => sl<ExpenseBloc>()..add(WatchExpenses(widget.groupId)),
       child: _ExpenseListView(
-        groupId: groupId,
-        groupName: groupName,
-        currency: currency,
+        groupId: widget.groupId,
+        groupName: widget.groupName,
+        currency: widget.currency,
       ),
     );
   }

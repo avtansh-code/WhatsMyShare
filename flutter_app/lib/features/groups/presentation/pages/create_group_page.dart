@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../core/constants/app_constants.dart';
+import '../../../../core/services/logging_service.dart';
 import '../../domain/entities/group_entity.dart';
 import '../bloc/group_bloc.dart';
 import '../bloc/group_event.dart';
@@ -20,10 +21,17 @@ class _CreateGroupPageState extends State<CreateGroupPage> {
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
   final _descriptionController = TextEditingController();
+  final LoggingService _log = LoggingService();
 
   GroupType _selectedType = GroupType.other;
   String _selectedCurrency = AppConstants.defaultCurrency;
   bool _simplifyDebts = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _log.info('CreateGroupPage opened', tag: LogTags.ui);
+  }
 
   @override
   void dispose() {
@@ -34,6 +42,15 @@ class _CreateGroupPageState extends State<CreateGroupPage> {
 
   void _createGroup() {
     if (_formKey.currentState?.validate() ?? false) {
+      _log.info(
+        'Create group requested',
+        tag: LogTags.ui,
+        data: {
+          'name': _nameController.text.trim(),
+          'type': _selectedType.name,
+          'currency': _selectedCurrency,
+        },
+      );
       context.read<GroupBloc>().add(
         GroupCreateRequested(
           name: _nameController.text.trim(),

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../core/services/logging_service.dart';
 import '../bloc/auth_bloc.dart';
 
 /// Login page for email/password and Google authentication
@@ -16,8 +17,15 @@ class _LoginPageState extends State<LoginPage> {
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
+  final LoggingService _log = LoggingService();
   bool _obscurePassword = true;
   bool _isLoading = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _log.info('LoginPage opened', tag: LogTags.ui);
+  }
 
   @override
   void dispose() {
@@ -28,16 +36,24 @@ class _LoginPageState extends State<LoginPage> {
 
   void _onSignIn() {
     if (_formKey.currentState?.validate() ?? false) {
+      _log.info(
+        'Sign in with email requested',
+        tag: LogTags.ui,
+        data: {'email': _emailController.text.trim()},
+      );
       context.read<AuthBloc>().add(
         AuthSignInWithEmailRequested(
           email: _emailController.text.trim(),
           password: _passwordController.text,
         ),
       );
+    } else {
+      _log.debug('Sign in form validation failed', tag: LogTags.ui);
     }
   }
 
   void _onSignInWithGoogle() {
+    _log.info('Sign in with Google requested', tag: LogTags.ui);
     context.read<AuthBloc>().add(const AuthSignInWithGoogleRequested());
   }
 
@@ -49,6 +65,11 @@ class _LoginPageState extends State<LoginPage> {
       body: BlocConsumer<AuthBloc, AuthState>(
         listener: (context, state) {
           if (state is AuthError) {
+            _log.warning(
+              'Auth error on login page',
+              tag: LogTags.ui,
+              data: {'message': state.message},
+            );
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
                 content: Text(state.message),
@@ -56,6 +77,11 @@ class _LoginPageState extends State<LoginPage> {
               ),
             );
           } else if (state is AuthAuthenticated) {
+            _log.info(
+              'User authenticated, navigating to dashboard',
+              tag: LogTags.ui,
+              data: {'userId': state.user.id},
+            );
             context.go('/dashboard');
           }
         },

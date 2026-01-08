@@ -3,6 +3,8 @@ import 'dart:async';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:equatable/equatable.dart';
 
+import '../../../../core/errors/error_messages.dart';
+import '../../../../core/services/logging_service.dart';
 import '../../domain/entities/user_entity.dart';
 import '../../domain/usecases/get_current_user.dart';
 import '../../domain/usecases/sign_in_with_email.dart';
@@ -22,6 +24,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   final SignOut _signOut;
   final GetCurrentUser _getCurrentUser;
   final ResetPassword _resetPassword;
+  final LoggingService _log = LoggingService();
 
   StreamSubscription<UserEntity?>? _authStateSubscription;
 
@@ -47,6 +50,8 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     on<AuthResetPasswordRequested>(_onResetPasswordRequested);
     on<AuthUserChanged>(_onUserChanged);
 
+    _log.info('AuthBloc initialized', tag: LogTags.auth);
+
     // Listen to auth state changes
     _authStateSubscription = _getCurrentUser.authStateChanges.listen((user) {
       add(AuthUserChanged(user));
@@ -57,12 +62,30 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     AuthCheckRequested event,
     Emitter<AuthState> emit,
   ) async {
+    _log.debug('Checking auth state...', tag: LogTags.auth);
     emit(AuthLoading());
-    final user = await _getCurrentUser();
-    if (user != null) {
-      emit(AuthAuthenticated(user));
-    } else {
-      emit(AuthUnauthenticated());
+
+    try {
+      final user = await _getCurrentUser();
+      if (user != null) {
+        _log.info(
+          'User authenticated',
+          tag: LogTags.auth,
+          data: {'userId': user.id},
+        );
+        emit(AuthAuthenticated(user));
+      } else {
+        _log.info('User not authenticated', tag: LogTags.auth);
+        emit(AuthUnauthenticated());
+      }
+    } catch (e, stackTrace) {
+      _log.error(
+        'Auth check failed',
+        tag: LogTags.auth,
+        error: e,
+        stackTrace: stackTrace,
+      );
+      emit(AuthError(ErrorMessages.genericError));
     }
   }
 
@@ -70,13 +93,35 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     AuthSignInWithEmailRequested event,
     Emitter<AuthState> emit,
   ) async {
+    _log.info(
+      'Sign in with email requested',
+      tag: LogTags.auth,
+      data: {'email': event.email},
+    );
     emit(AuthLoading());
+
     final result = await _signInWithEmail(
       SignInParams(email: event.email, password: event.password),
     );
+
     result.fold(
-      (failure) => emit(AuthError(failure.message)),
-      (user) => emit(AuthAuthenticated(user)),
+      (failure) {
+        _log.warning(
+          'Sign in failed',
+          tag: LogTags.auth,
+          data: {'email': event.email, 'error': failure.message},
+        );
+        final errorMessage = ErrorMessages.fromFailure(failure);
+        emit(AuthError(errorMessage));
+      },
+      (user) {
+        _log.info(
+          'Sign in successful',
+          tag: LogTags.auth,
+          data: {'userId': user.id},
+        );
+        emit(AuthAuthenticated(user));
+      },
     );
   }
 
@@ -84,7 +129,13 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     AuthSignUpWithEmailRequested event,
     Emitter<AuthState> emit,
   ) async {
+    _log.info(
+      'Sign up with email requested',
+      tag: LogTags.auth,
+      data: {'email': event.email},
+    );
     emit(AuthLoading());
+
     final result = await _signUpWithEmail(
       SignUpParams(
         email: event.email,
@@ -92,9 +143,25 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         displayName: event.displayName,
       ),
     );
+
     result.fold(
-      (failure) => emit(AuthError(failure.message)),
-      (user) => emit(AuthAuthenticated(user)),
+      (failure) {
+        _log.warning(
+          'Sign up failed',
+          tag: LogTags.auth,
+          data: {'email': event.email, 'error': failure.message},
+        );
+        final errorMessage = ErrorMessages.fromFailure(failure);
+        emit(AuthError(errorMessage));
+      },
+      (user) {
+        _log.info(
+          'Sign up successful',
+          tag: LogTags.auth,
+          data: {'userId': user.id},
+        );
+        emit(AuthAuthenticated(user));
+      },
     );
   }
 
@@ -102,11 +169,31 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     AuthSignInWithGoogleRequested event,
     Emitter<AuthState> emit,
   ) async {
+    _log.info('Sign in with Google requested', tag: LogTags.auth);
     emit(AuthLoading());
+
     final result = await _signInWithGoogle();
+
     result.fold(
-      (failure) => emit(AuthError(failure.message)),
-      (user) => emit(AuthAuthenticated(user)),
+      (failure) {
+        _log.warning(
+          'Google sign in failed',
+          tag: LogTags.auth,
+          data: {'error': failure.message},
+        );
+        final errorMessage = failure.message.contains('cancelled')
+            ? ErrorMessages.authGoogleSignInCancelled
+            : ErrorMessages.authGoogleSignInFailed;
+        emit(AuthError(errorMessage));
+      },
+      (user) {
+        _log.info(
+          'Google sign in successful',
+          tag: LogTags.auth,
+          data: {'userId': user.id},
+        );
+        emit(AuthAuthenticated(user));
+      },
     );
   }
 
@@ -114,11 +201,24 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     AuthSignOutRequested event,
     Emitter<AuthState> emit,
   ) async {
+    _log.info('Sign out requested', tag: LogTags.auth);
     emit(AuthLoading());
+
     final result = await _signOut();
+
     result.fold(
-      (failure) => emit(AuthError(failure.message)),
-      (_) => emit(AuthUnauthenticated()),
+      (failure) {
+        _log.error(
+          'Sign out failed',
+          tag: LogTags.auth,
+          data: {'error': failure.message},
+        );
+        emit(AuthError(ErrorMessages.authSignOutFailed));
+      },
+      (_) {
+        _log.info('Sign out successful', tag: LogTags.auth);
+        emit(AuthUnauthenticated());
+      },
     );
   }
 
@@ -126,26 +226,54 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     AuthResetPasswordRequested event,
     Emitter<AuthState> emit,
   ) async {
+    _log.info(
+      'Password reset requested',
+      tag: LogTags.auth,
+      data: {'email': event.email},
+    );
     emit(AuthLoading());
+
     final result = await _resetPassword(
       ResetPasswordParams(email: event.email),
     );
+
     result.fold(
-      (failure) => emit(AuthError(failure.message)),
-      (_) => emit(AuthPasswordResetSent(event.email)),
+      (failure) {
+        _log.warning(
+          'Password reset failed',
+          tag: LogTags.auth,
+          data: {'email': event.email, 'error': failure.message},
+        );
+        emit(AuthError(ErrorMessages.authResetPasswordFailed));
+      },
+      (_) {
+        _log.info(
+          'Password reset email sent',
+          tag: LogTags.auth,
+          data: {'email': event.email},
+        );
+        emit(AuthPasswordResetSent(event.email));
+      },
     );
   }
 
   void _onUserChanged(AuthUserChanged event, Emitter<AuthState> emit) {
     if (event.user != null) {
+      _log.debug(
+        'Auth state changed: authenticated',
+        tag: LogTags.auth,
+        data: {'userId': event.user!.id},
+      );
       emit(AuthAuthenticated(event.user!));
     } else {
+      _log.debug('Auth state changed: unauthenticated', tag: LogTags.auth);
       emit(AuthUnauthenticated());
     }
   }
 
   @override
   Future<void> close() {
+    _log.debug('AuthBloc closing', tag: LogTags.auth);
     _authStateSubscription?.cancel();
     return super.close();
   }

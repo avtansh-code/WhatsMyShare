@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
+import '../../../../core/services/logging_service.dart';
 import '../../domain/entities/chat_message_entity.dart';
 import '../../domain/entities/expense_entity.dart';
 import '../bloc/chat_bloc.dart';
@@ -28,10 +29,19 @@ class _ExpenseChatPageState extends State<ExpenseChatPage> {
   final TextEditingController _messageController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
   final ImagePicker _imagePicker = ImagePicker();
+  final LoggingService _log = LoggingService();
 
   @override
   void initState() {
     super.initState();
+    _log.info(
+      'ExpenseChatPage opened',
+      tag: LogTags.ui,
+      data: {
+        'expenseId': widget.expense.id,
+        'expenseDescription': widget.expense.description,
+      },
+    );
     // Subscribe to real-time chat updates
     context.read<ChatBloc>().add(SubscribeToChatStream(widget.expense.id));
   }
@@ -59,6 +69,7 @@ class _ExpenseChatPageState extends State<ExpenseChatPage> {
   void _sendTextMessage() {
     final text = _messageController.text.trim();
     if (text.isEmpty) return;
+    _log.debug('Sending text message', tag: LogTags.ui);
 
     context.read<ChatBloc>().add(
       SendTextMessage(expenseId: widget.expense.id, text: text),

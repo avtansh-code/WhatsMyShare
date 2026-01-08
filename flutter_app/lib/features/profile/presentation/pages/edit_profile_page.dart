@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:image_picker/image_picker.dart';
 
+import '../../../../core/services/logging_service.dart';
 import '../bloc/profile_bloc.dart';
 
 /// Edit Profile page for updating user information
@@ -16,6 +17,7 @@ class EditProfilePage extends StatefulWidget {
 
 class _EditProfilePageState extends State<EditProfilePage> {
   final _formKey = GlobalKey<FormState>();
+  final LoggingService _log = LoggingService();
   late TextEditingController _displayNameController;
   late TextEditingController _phoneController;
   String? _selectedCurrency;
@@ -25,6 +27,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
   @override
   void initState() {
     super.initState();
+    _log.info('EditProfilePage opened', tag: LogTags.ui);
     final profile = context.read<ProfileBloc>().state.profile;
     _displayNameController = TextEditingController(
       text: profile?.displayName ?? '',
@@ -326,6 +329,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
 
   void _saveProfile() {
     if (!_formKey.currentState!.validate()) return;
+    _log.info('Profile save requested', tag: LogTags.ui);
 
     // Upload photo first if selected
     if (_selectedImage != null) {

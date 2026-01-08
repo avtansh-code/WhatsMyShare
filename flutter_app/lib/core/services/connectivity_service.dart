@@ -2,6 +2,8 @@ import 'dart:async';
 
 import 'package:connectivity_plus/connectivity_plus.dart';
 
+import 'logging_service.dart';
+
 /// Status of network connectivity
 enum ConnectivityStatus { online, offline }
 
@@ -25,6 +27,7 @@ class ConnectivityServiceImpl implements ConnectivityService {
   final Connectivity _connectivity;
   final StreamController<ConnectivityStatus> _statusController =
       StreamController<ConnectivityStatus>.broadcast();
+  final LoggingService _log = LoggingService();
 
   StreamSubscription<List<ConnectivityResult>>? _subscription;
   ConnectivityStatus _currentStatus = ConnectivityStatus.online;
@@ -35,6 +38,8 @@ class ConnectivityServiceImpl implements ConnectivityService {
   }
 
   void _initialize() {
+    _log.debug('Initializing connectivity service', tag: LogTags.network);
+
     // Listen to connectivity changes
     _subscription = _connectivity.onConnectivityChanged.listen(
       _onConnectivityChanged,
@@ -47,6 +52,15 @@ class ConnectivityServiceImpl implements ConnectivityService {
   void _onConnectivityChanged(List<ConnectivityResult> results) {
     final newStatus = _mapResultsToStatus(results);
     if (newStatus != _currentStatus) {
+      _log.info(
+        'Connectivity changed',
+        tag: LogTags.network,
+        data: {
+          'previousStatus': _currentStatus.name,
+          'newStatus': newStatus.name,
+          'results': results.map((r) => r.name).toList(),
+        },
+      );
       _currentStatus = newStatus;
       _statusController.add(_currentStatus);
     }
@@ -70,13 +84,20 @@ class ConnectivityServiceImpl implements ConnectivityService {
 
   @override
   Future<ConnectivityStatus> checkConnectivity() async {
+    _log.debug('Checking connectivity', tag: LogTags.network);
     final results = await _connectivity.checkConnectivity();
     _currentStatus = _mapResultsToStatus(results);
+    _log.debug(
+      'Connectivity check result',
+      tag: LogTags.network,
+      data: {'status': _currentStatus.name},
+    );
     return _currentStatus;
   }
 
   @override
   void dispose() {
+    _log.debug('Disposing connectivity service', tag: LogTags.network);
     _subscription?.cancel();
     _statusController.close();
   }

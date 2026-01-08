@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
 
+import '../../../../core/services/logging_service.dart';
 import '../../../../core/utils/currency_utils.dart';
 import '../../domain/entities/notification_entity.dart';
 import '../bloc/notification_bloc.dart';
@@ -26,9 +27,16 @@ class ActivityFeedWidget extends StatefulWidget {
 }
 
 class _ActivityFeedWidgetState extends State<ActivityFeedWidget> {
+  final LoggingService _log = LoggingService();
+
   @override
   void initState() {
     super.initState();
+    _log.debug(
+      'ActivityFeedWidget initialized',
+      tag: LogTags.ui,
+      data: {'groupId': widget.groupId, 'maxItems': widget.maxItems},
+    );
     // Load activity for this group
     context.read<NotificationBloc>().add(
       LoadGroupActivity(widget.groupId, limit: widget.maxItems),

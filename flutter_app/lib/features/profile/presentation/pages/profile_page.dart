@@ -1,12 +1,26 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+import '../../../../core/services/logging_service.dart';
 import '../../../../core/utils/currency_utils.dart';
 import '../bloc/profile_bloc.dart';
 
 /// Profile page showing user information and settings
-class ProfilePage extends StatelessWidget {
+class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
+
+  @override
+  State<ProfilePage> createState() => _ProfilePageState();
+}
+
+class _ProfilePageState extends State<ProfilePage> {
+  final LoggingService _log = LoggingService();
+
+  @override
+  void initState() {
+    super.initState();
+    _log.info('ProfilePage opened', tag: LogTags.ui);
+  }
 
   @override
   Widget build(BuildContext context) {

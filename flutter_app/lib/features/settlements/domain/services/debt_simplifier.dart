@@ -1,11 +1,14 @@
 import 'dart:math';
 
+import '../../../../core/services/logging_service.dart';
 import '../../../../core/utils/currency_utils.dart';
 import '../entities/settlement_entity.dart';
 
 /// Service that implements the debt simplification algorithm
 /// Uses a greedy approach to minimize the number of transactions
 class DebtSimplifier {
+  static final LoggingService _log = LoggingService();
+
   /// Simplifies debts to minimize the number of transactions
   ///
   /// Input: Map of userId to balance (positive = owed money, negative = owes money)
@@ -16,6 +19,12 @@ class DebtSimplifier {
     Map<String, int> balances,
     Map<String, String> displayNames,
   ) {
+    _log.info(
+      'Simplifying debts',
+      tag: LogTags.settlements,
+      data: {'participants': balances.length},
+    );
+
     // Separate into creditors (positive balance) and debtors (negative balance)
     final creditors = <String, int>{};
     final debtors = <String, int>{};
@@ -27,6 +36,12 @@ class DebtSimplifier {
         debtors[entry.key] = -entry.value; // Store as positive for easier math
       }
     }
+
+    _log.debug(
+      'Categorized participants',
+      tag: LogTags.settlements,
+      data: {'creditors': creditors.length, 'debtors': debtors.length},
+    );
 
     final settlements = <SimplifiedDebt>[];
 
@@ -44,6 +59,16 @@ class DebtSimplifier {
 
       // Settlement amount is minimum of both
       final amount = min(creditorEntry.value, debtorEntry.value);
+
+      _log.debug(
+        'Creating settlement',
+        tag: LogTags.settlements,
+        data: {
+          'from': displayNames[debtorEntry.key],
+          'to': displayNames[creditorEntry.key],
+          'amount': amount,
+        },
+      );
 
       // Create settlement
       settlements.add(
@@ -70,6 +95,12 @@ class DebtSimplifier {
       }
     }
 
+    _log.info(
+      'Debt simplification complete',
+      tag: LogTags.settlements,
+      data: {'settlements': settlements.length},
+    );
+
     return settlements;
   }
 
@@ -79,6 +110,12 @@ class DebtSimplifier {
     Map<String, String> displayNames,
     String currency,
   ) {
+    _log.debug(
+      'Generating simplification explanation',
+      tag: LogTags.settlements,
+      data: {'currency': currency, 'participants': originalBalances.length},
+    );
+
     final steps = <SimplificationStep>[];
 
     // Step 1: Show original balances
@@ -159,6 +196,12 @@ class DebtSimplifier {
       ),
     );
 
+    _log.debug(
+      'Explanation generated',
+      tag: LogTags.settlements,
+      data: {'steps': steps.length},
+    );
+
     return steps;
   }
 
@@ -217,6 +260,12 @@ class DebtSimplifier {
     List<Map<String, dynamic>> expenses,
     List<Map<String, dynamic>> settlements,
   ) {
+    _log.debug(
+      'Calculating balances from expenses',
+      tag: LogTags.settlements,
+      data: {'expenses': expenses.length, 'settlements': settlements.length},
+    );
+
     final balances = <String, int>{};
 
     // Process expenses
@@ -254,12 +303,26 @@ class DebtSimplifier {
       balances[toUserId] = (balances[toUserId] ?? 0) - amount;
     }
 
+    _log.debug(
+      'Balances calculated',
+      tag: LogTags.settlements,
+      data: {'participants': balances.length},
+    );
+
     return balances;
   }
 
   /// Check if biometric verification is required for an amount
   static bool requiresBiometric(int amount, {int threshold = 500000}) {
     // Default threshold is ₹5000 (500000 paisa)
-    return amount >= threshold;
+    final required = amount >= threshold;
+    if (required) {
+      _log.info(
+        'Biometric required for settlement',
+        tag: LogTags.settlements,
+        data: {'amount': amount, 'threshold': threshold},
+      );
+    }
+    return required;
   }
 }

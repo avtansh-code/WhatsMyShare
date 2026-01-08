@@ -2,11 +2,25 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../core/services/logging_service.dart';
 import '../../../auth/presentation/bloc/auth_bloc.dart';
 
 /// Main dashboard page for authenticated users
-class DashboardPage extends StatelessWidget {
+class DashboardPage extends StatefulWidget {
   const DashboardPage({super.key});
+
+  @override
+  State<DashboardPage> createState() => _DashboardPageState();
+}
+
+class _DashboardPageState extends State<DashboardPage> {
+  final LoggingService _log = LoggingService();
+
+  @override
+  void initState() {
+    super.initState();
+    _log.info('DashboardPage opened', tag: LogTags.ui);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -15,6 +29,7 @@ class DashboardPage extends StatelessWidget {
     return BlocConsumer<AuthBloc, AuthState>(
       listener: (context, state) {
         if (state is AuthUnauthenticated) {
+          _log.info('User signed out, redirecting to login', tag: LogTags.ui);
           context.go('/login');
         }
       },
@@ -60,11 +75,16 @@ class DashboardPage extends StatelessWidget {
                         ),
                 ),
                 onSelected: (value) {
+                  _log.debug('Menu item selected: $value', tag: LogTags.ui);
                   if (value == 'profile') {
                     // TODO: Navigate to profile
                   } else if (value == 'settings') {
                     // TODO: Navigate to settings
                   } else if (value == 'logout') {
+                    _log.info(
+                      'Sign out requested from dashboard',
+                      tag: LogTags.ui,
+                    );
                     context.read<AuthBloc>().add(const AuthSignOutRequested());
                   }
                 },
@@ -511,6 +531,7 @@ class DashboardPage extends StatelessWidget {
   }
 
   void _showAddOptions(BuildContext context) {
+    _log.debug('Add options bottom sheet opened', tag: LogTags.ui);
     showModalBottomSheet(
       context: context,
       builder: (context) {

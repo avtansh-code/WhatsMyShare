@@ -1,5 +1,6 @@
 import 'dart:math';
 
+import '../../../../core/services/logging_service.dart';
 import '../entities/expense_entity.dart';
 
 /// Participant information for splitting
@@ -12,18 +13,33 @@ class SplitParticipant {
 
 /// Service for calculating expense splits
 class SplitCalculator {
+  static final LoggingService _log = LoggingService();
+
   /// Calculate equal split among participants
   /// Handles remainder by distributing extra paisa to first N participants
   static List<ExpenseSplit> calculateEqual(
     int totalAmount,
     List<SplitParticipant> participants,
   ) {
+    _log.debug(
+      'Calculating equal split',
+      tag: LogTags.expenses,
+      data: {'totalAmount': totalAmount, 'participants': participants.length},
+    );
+
     if (participants.isEmpty) {
+      _log.warning('No participants for equal split', tag: LogTags.expenses);
       return [];
     }
 
     final perPerson = totalAmount ~/ participants.length;
     final remainder = totalAmount % participants.length;
+
+    _log.debug(
+      'Equal split calculated',
+      tag: LogTags.expenses,
+      data: {'perPerson': perPerson, 'remainder': remainder},
+    );
 
     return participants.asMap().entries.map((entry) {
       final index = entry.key;
@@ -47,6 +63,12 @@ class SplitCalculator {
     Map<String, int> exactAmounts, // userId -> amount
     Map<String, String> displayNames,
   ) {
+    _log.debug(
+      'Calculating exact split',
+      tag: LogTags.expenses,
+      data: {'totalAmount': totalAmount, 'entries': exactAmounts.length},
+    );
+
     final splits = <ExpenseSplit>[];
     int allocatedTotal = 0;
 
@@ -64,11 +86,17 @@ class SplitCalculator {
 
     // Validate total matches
     if (allocatedTotal != totalAmount) {
+      _log.error(
+        'Exact split validation failed',
+        tag: LogTags.expenses,
+        data: {'allocatedTotal': allocatedTotal, 'expectedTotal': totalAmount},
+      );
       throw ArgumentError(
         'Exact amounts sum ($allocatedTotal) does not match total ($totalAmount)',
       );
     }
 
+    _log.debug('Exact split calculated successfully', tag: LogTags.expenses);
     return splits;
   }
 
@@ -80,9 +108,20 @@ class SplitCalculator {
     Map<String, double> percentages, // userId -> percentage (0-100)
     Map<String, String> displayNames,
   ) {
+    _log.debug(
+      'Calculating percentage split',
+      tag: LogTags.expenses,
+      data: {'totalAmount': totalAmount, 'entries': percentages.length},
+    );
+
     // Validate percentages sum to 100
     final totalPercentage = percentages.values.fold(0.0, (sum, p) => sum + p);
     if ((totalPercentage - 100.0).abs() > 0.01) {
+      _log.error(
+        'Percentage split validation failed',
+        tag: LogTags.expenses,
+        data: {'totalPercentage': totalPercentage},
+      );
       throw ArgumentError(
         'Percentages must sum to 100% (got $totalPercentage%)',
       );
@@ -115,6 +154,10 @@ class SplitCalculator {
       );
     }
 
+    _log.debug(
+      'Percentage split calculated successfully',
+      tag: LogTags.expenses,
+    );
     return splits;
   }
 
@@ -125,14 +168,28 @@ class SplitCalculator {
     Map<String, int> shares, // userId -> number of shares
     Map<String, String> displayNames,
   ) {
+    _log.debug(
+      'Calculating shares split',
+      tag: LogTags.expenses,
+      data: {'totalAmount': totalAmount, 'entries': shares.length},
+    );
+
     if (shares.isEmpty) {
+      _log.warning('No shares for shares split', tag: LogTags.expenses);
       return [];
     }
 
     final totalShares = shares.values.fold(0, (sum, s) => sum + s);
     if (totalShares == 0) {
+      _log.error('Total shares is zero', tag: LogTags.expenses);
       throw ArgumentError('Total shares cannot be zero');
     }
+
+    _log.debug(
+      'Total shares',
+      tag: LogTags.expenses,
+      data: {'totalShares': totalShares},
+    );
 
     int allocated = 0;
     final splits = <ExpenseSplit>[];
@@ -161,13 +218,24 @@ class SplitCalculator {
       );
     }
 
+    _log.debug('Shares split calculated successfully', tag: LogTags.expenses);
     return splits;
   }
 
   /// Validate that splits sum to total amount
   static bool validateSplits(int totalAmount, List<ExpenseSplit> splits) {
     final splitSum = splits.fold(0, (sum, split) => sum + split.amount);
-    return splitSum == totalAmount;
+    final isValid = splitSum == totalAmount;
+
+    if (!isValid) {
+      _log.warning(
+        'Split validation failed',
+        tag: LogTags.expenses,
+        data: {'splitSum': splitSum, 'totalAmount': totalAmount},
+      );
+    }
+
+    return isValid;
   }
 
   /// Calculate split based on type
@@ -179,6 +247,16 @@ class SplitCalculator {
     Map<String, double>? percentages,
     Map<String, int>? shares,
   }) {
+    _log.info(
+      'Calculating split',
+      tag: LogTags.expenses,
+      data: {
+        'totalAmount': totalAmount,
+        'splitType': splitType.name,
+        'participants': participants.length,
+      },
+    );
+
     final displayNames = Map.fromEntries(
       participants.map((p) => MapEntry(p.userId, p.displayName)),
     );
@@ -189,18 +267,27 @@ class SplitCalculator {
 
       case SplitType.exact:
         if (exactAmounts == null) {
+          _log.error(
+            'exactAmounts required for exact split',
+            tag: LogTags.expenses,
+          );
           throw ArgumentError('exactAmounts required for exact split');
         }
         return calculateExact(totalAmount, exactAmounts, displayNames);
 
       case SplitType.percentage:
         if (percentages == null) {
+          _log.error(
+            'percentages required for percentage split',
+            tag: LogTags.expenses,
+          );
           throw ArgumentError('percentages required for percentage split');
         }
         return calculatePercentage(totalAmount, percentages, displayNames);
 
       case SplitType.shares:
         if (shares == null) {
+          _log.error('shares required for shares split', tag: LogTags.expenses);
           throw ArgumentError('shares required for shares split');
         }
         return calculateShares(totalAmount, shares, displayNames);
@@ -213,6 +300,12 @@ class SplitCalculator {
     List<PayerInfo> paidBy,
     List<ExpenseSplit> splits,
   ) {
+    _log.debug(
+      'Calculating debts',
+      tag: LogTags.expenses,
+      data: {'payers': paidBy.length, 'splits': splits.length},
+    );
+
     final debts = <String, Map<String, int>>{};
 
     // Calculate net balance for each person
@@ -239,6 +332,12 @@ class SplitCalculator {
         debtors.add(MapEntry(entry.key, -entry.value)); // Make positive
       }
     }
+
+    _log.debug(
+      'Debt calculation balances',
+      tag: LogTags.expenses,
+      data: {'creditors': creditors.length, 'debtors': debtors.length},
+    );
 
     // Sort by amount (descending)
     creditors.sort((a, b) => b.value.compareTo(a.value));
@@ -277,6 +376,12 @@ class SplitCalculator {
         debtorBalances[debtor.key] = debtor.value - amount;
       }
     }
+
+    _log.debug(
+      'Debts calculated',
+      tag: LogTags.expenses,
+      data: {'debtTransactions': debts.length},
+    );
 
     return debts;
   }

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../core/services/logging_service.dart';
 import '../../../../core/utils/currency_utils.dart';
 import '../../domain/entities/group_entity.dart';
 import '../bloc/group_bloc.dart';
@@ -21,10 +22,16 @@ class GroupDetailPage extends StatefulWidget {
 class _GroupDetailPageState extends State<GroupDetailPage>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
+  final LoggingService _log = LoggingService();
 
   @override
   void initState() {
     super.initState();
+    _log.info(
+      'GroupDetailPage opened',
+      tag: LogTags.ui,
+      data: {'groupId': widget.groupId},
+    );
     _tabController = TabController(length: 3, vsync: this);
     // Load the specific group
     context.read<GroupBloc>().add(GroupLoadByIdRequested(widget.groupId));

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../core/services/logging_service.dart';
 import '../../../../core/utils/currency_utils.dart';
 import '../../domain/entities/group_entity.dart';
 import '../bloc/group_bloc.dart';
@@ -17,9 +18,12 @@ class GroupListPage extends StatefulWidget {
 }
 
 class _GroupListPageState extends State<GroupListPage> {
+  final LoggingService _log = LoggingService();
+
   @override
   void initState() {
     super.initState();
+    _log.info('GroupListPage opened', tag: LogTags.ui);
     // Load groups when page initializes
     context.read<GroupBloc>().add(const GroupLoadAllRequested());
   }

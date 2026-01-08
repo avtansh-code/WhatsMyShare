@@ -2,6 +2,8 @@ import 'dart:async';
 
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+import '../../../../core/errors/error_messages.dart';
+import '../../../../core/services/logging_service.dart';
 import '../../domain/repositories/notification_repository.dart';
 import 'notification_event.dart';
 import 'notification_state.dart';
@@ -9,6 +11,7 @@ import 'notification_state.dart';
 /// BLoC for managing notifications and activity feed
 class NotificationBloc extends Bloc<NotificationEvent, NotificationState> {
   final NotificationRepository _repository;
+  final LoggingService _log = LoggingService();
 
   StreamSubscription? _notificationsSubscription;
   StreamSubscription? _activitySubscription;
@@ -28,12 +31,19 @@ class NotificationBloc extends Bloc<NotificationEvent, NotificationState> {
     on<LoadGroupActivity>(_onLoadGroupActivity);
     on<SubscribeToGroupActivity>(_onSubscribeToGroupActivity);
     on<ActivityUpdated>(_onActivityUpdated);
+
+    _log.info('NotificationBloc initialized', tag: LogTags.notifications);
   }
 
   Future<void> _onLoadNotifications(
     LoadNotifications event,
     Emitter<NotificationState> emit,
   ) async {
+    _log.debug(
+      'Loading notifications',
+      tag: LogTags.notifications,
+      data: {'limit': event.limit},
+    );
     emit(state.copyWith(isLoading: true, clearError: true));
 
     final result = await _repository.getNotifications(
@@ -42,15 +52,33 @@ class NotificationBloc extends Bloc<NotificationEvent, NotificationState> {
     );
 
     result.fold(
-      (failure) =>
-          emit(state.copyWith(isLoading: false, errorMessage: failure.message)),
-      (notifications) => emit(
-        state.copyWith(
-          isLoading: false,
-          notifications: notifications,
-          unreadCount: notifications.where((n) => !n.isRead).length,
-        ),
-      ),
+      (failure) {
+        _log.error(
+          'Failed to load notifications',
+          tag: LogTags.notifications,
+          data: {'error': failure.message},
+        );
+        emit(
+          state.copyWith(
+            isLoading: false,
+            errorMessage: ErrorMessages.notificationLoadFailed,
+          ),
+        );
+      },
+      (notifications) {
+        _log.info(
+          'Notifications loaded successfully',
+          tag: LogTags.notifications,
+          data: {'count': notifications.length},
+        );
+        emit(
+          state.copyWith(
+            isLoading: false,
+            notifications: notifications,
+            unreadCount: notifications.where((n) => !n.isRead).length,
+          ),
+        );
+      },
     );
   }
 
@@ -58,12 +86,32 @@ class NotificationBloc extends Bloc<NotificationEvent, NotificationState> {
     SubscribeToNotifications event,
     Emitter<NotificationState> emit,
   ) {
+    _log.debug(
+      'Subscribing to notifications',
+      tag: LogTags.notifications,
+      data: {'userId': event.userId},
+    );
     _notificationsSubscription?.cancel();
     _notificationsSubscription = _repository
         .watchNotifications(event.userId)
-        .listen((notifications) {
-          add(NotificationsUpdated(notifications));
-        });
+        .listen(
+          (notifications) {
+            _log.debug(
+              'Notifications stream updated',
+              tag: LogTags.notifications,
+              data: {'count': notifications.length},
+            );
+            add(NotificationsUpdated(notifications));
+          },
+          onError: (error, stackTrace) {
+            _log.error(
+              'Notifications stream error',
+              tag: LogTags.notifications,
+              error: error,
+              stackTrace: stackTrace,
+            );
+          },
+        );
   }
 
   void _onNotificationsUpdated(
@@ -82,11 +130,29 @@ class NotificationBloc extends Bloc<NotificationEvent, NotificationState> {
     MarkNotificationAsRead event,
     Emitter<NotificationState> emit,
   ) async {
+    _log.debug(
+      'Marking notification as read',
+      tag: LogTags.notifications,
+      data: {'notificationId': event.notificationId},
+    );
     final result = await _repository.markAsRead(event.notificationId);
 
     result.fold(
-      (failure) => emit(state.copyWith(errorMessage: failure.message)),
+      (failure) {
+        _log.warning(
+          'Failed to mark notification as read',
+          tag: LogTags.notifications,
+          data: {
+            'notificationId': event.notificationId,
+            'error': failure.message,
+          },
+        );
+        emit(
+          state.copyWith(errorMessage: ErrorMessages.notificationUpdateFailed),
+        );
+      },
       (_) {
+        _log.debug('Notification marked as read', tag: LogTags.notifications);
         // Update local state
         final updatedNotifications = state.notifications.map((n) {
           if (n.id == event.notificationId) {
@@ -109,11 +175,29 @@ class NotificationBloc extends Bloc<NotificationEvent, NotificationState> {
     MarkAllNotificationsAsRead event,
     Emitter<NotificationState> emit,
   ) async {
+    _log.info(
+      'Marking all notifications as read',
+      tag: LogTags.notifications,
+      data: {'userId': event.userId},
+    );
     final result = await _repository.markAllAsRead(event.userId);
 
     result.fold(
-      (failure) => emit(state.copyWith(errorMessage: failure.message)),
+      (failure) {
+        _log.error(
+          'Failed to mark all notifications as read',
+          tag: LogTags.notifications,
+          data: {'error': failure.message},
+        );
+        emit(
+          state.copyWith(errorMessage: ErrorMessages.notificationUpdateFailed),
+        );
+      },
       (_) {
+        _log.info(
+          'All notifications marked as read',
+          tag: LogTags.notifications,
+        );
         // Update local state
         final updatedNotifications = state.notifications
             .map((n) => n.markAsRead())
@@ -134,11 +218,29 @@ class NotificationBloc extends Bloc<NotificationEvent, NotificationState> {
     DeleteNotification event,
     Emitter<NotificationState> emit,
   ) async {
+    _log.debug(
+      'Deleting notification',
+      tag: LogTags.notifications,
+      data: {'notificationId': event.notificationId},
+    );
     final result = await _repository.deleteNotification(event.notificationId);
 
     result.fold(
-      (failure) => emit(state.copyWith(errorMessage: failure.message)),
+      (failure) {
+        _log.error(
+          'Failed to delete notification',
+          tag: LogTags.notifications,
+          data: {
+            'notificationId': event.notificationId,
+            'error': failure.message,
+          },
+        );
+        emit(
+          state.copyWith(errorMessage: ErrorMessages.notificationDeleteFailed),
+        );
+      },
       (_) {
+        _log.debug('Notification deleted', tag: LogTags.notifications);
         // Update local state
         final updatedNotifications = state.notifications
             .where((n) => n.id != event.notificationId)
@@ -158,11 +260,26 @@ class NotificationBloc extends Bloc<NotificationEvent, NotificationState> {
     DeleteReadNotifications event,
     Emitter<NotificationState> emit,
   ) async {
+    _log.info(
+      'Deleting read notifications',
+      tag: LogTags.notifications,
+      data: {'userId': event.userId},
+    );
     final result = await _repository.deleteReadNotifications(event.userId);
 
     result.fold(
-      (failure) => emit(state.copyWith(errorMessage: failure.message)),
+      (failure) {
+        _log.error(
+          'Failed to delete read notifications',
+          tag: LogTags.notifications,
+          data: {'error': failure.message},
+        );
+        emit(
+          state.copyWith(errorMessage: ErrorMessages.notificationDeleteFailed),
+        );
+      },
       (_) {
+        _log.info('Read notifications deleted', tag: LogTags.notifications);
         // Update local state - keep only unread
         final updatedNotifications = state.notifications
             .where((n) => !n.isRead)
@@ -182,20 +299,38 @@ class NotificationBloc extends Bloc<NotificationEvent, NotificationState> {
     LoadNotificationPreferences event,
     Emitter<NotificationState> emit,
   ) async {
+    _log.debug(
+      'Loading notification preferences',
+      tag: LogTags.notifications,
+      data: {'userId': event.userId},
+    );
     emit(state.copyWith(isLoadingPreferences: true));
 
     final result = await _repository.getPreferences(event.userId);
 
     result.fold(
-      (failure) => emit(
-        state.copyWith(
-          isLoadingPreferences: false,
-          errorMessage: failure.message,
-        ),
-      ),
-      (preferences) => emit(
-        state.copyWith(isLoadingPreferences: false, preferences: preferences),
-      ),
+      (failure) {
+        _log.error(
+          'Failed to load notification preferences',
+          tag: LogTags.notifications,
+          data: {'error': failure.message},
+        );
+        emit(
+          state.copyWith(
+            isLoadingPreferences: false,
+            errorMessage: ErrorMessages.notificationPreferencesLoadFailed,
+          ),
+        );
+      },
+      (preferences) {
+        _log.debug(
+          'Notification preferences loaded',
+          tag: LogTags.notifications,
+        );
+        emit(
+          state.copyWith(isLoadingPreferences: false, preferences: preferences),
+        );
+      },
     );
   }
 
@@ -203,6 +338,11 @@ class NotificationBloc extends Bloc<NotificationEvent, NotificationState> {
     UpdateNotificationPreferences event,
     Emitter<NotificationState> emit,
   ) async {
+    _log.info(
+      'Updating notification preferences',
+      tag: LogTags.notifications,
+      data: {'userId': event.userId},
+    );
     emit(state.copyWith(isLoadingPreferences: true));
 
     final result = await _repository.updatePreferences(
@@ -211,19 +351,32 @@ class NotificationBloc extends Bloc<NotificationEvent, NotificationState> {
     );
 
     result.fold(
-      (failure) => emit(
-        state.copyWith(
-          isLoadingPreferences: false,
-          errorMessage: failure.message,
-        ),
-      ),
-      (_) => emit(
-        state.copyWith(
-          isLoadingPreferences: false,
-          preferences: event.preferences,
-          successMessage: 'Preferences updated',
-        ),
-      ),
+      (failure) {
+        _log.error(
+          'Failed to update notification preferences',
+          tag: LogTags.notifications,
+          data: {'error': failure.message},
+        );
+        emit(
+          state.copyWith(
+            isLoadingPreferences: false,
+            errorMessage: ErrorMessages.notificationPreferencesSaveFailed,
+          ),
+        );
+      },
+      (_) {
+        _log.info(
+          'Notification preferences updated',
+          tag: LogTags.notifications,
+        );
+        emit(
+          state.copyWith(
+            isLoadingPreferences: false,
+            preferences: event.preferences,
+            successMessage: 'Preferences updated',
+          ),
+        );
+      },
     );
   }
 
@@ -231,6 +384,11 @@ class NotificationBloc extends Bloc<NotificationEvent, NotificationState> {
     LoadGroupActivity event,
     Emitter<NotificationState> emit,
   ) async {
+    _log.debug(
+      'Loading group activity',
+      tag: LogTags.notifications,
+      data: {'groupId': event.groupId, 'limit': event.limit},
+    );
     emit(state.copyWith(isLoadingActivity: true, clearError: true));
 
     final result = await _repository.getGroupActivity(
@@ -240,12 +398,27 @@ class NotificationBloc extends Bloc<NotificationEvent, NotificationState> {
     );
 
     result.fold(
-      (failure) => emit(
-        state.copyWith(isLoadingActivity: false, errorMessage: failure.message),
-      ),
-      (activities) => emit(
-        state.copyWith(isLoadingActivity: false, activities: activities),
-      ),
+      (failure) {
+        _log.error(
+          'Failed to load group activity',
+          tag: LogTags.notifications,
+          data: {'groupId': event.groupId, 'error': failure.message},
+        );
+        emit(
+          state.copyWith(
+            isLoadingActivity: false,
+            errorMessage: ErrorMessages.notificationActivityLoadFailed,
+          ),
+        );
+      },
+      (activities) {
+        _log.info(
+          'Group activity loaded',
+          tag: LogTags.notifications,
+          data: {'groupId': event.groupId, 'count': activities.length},
+        );
+        emit(state.copyWith(isLoadingActivity: false, activities: activities));
+      },
     );
   }
 
@@ -253,12 +426,32 @@ class NotificationBloc extends Bloc<NotificationEvent, NotificationState> {
     SubscribeToGroupActivity event,
     Emitter<NotificationState> emit,
   ) {
+    _log.debug(
+      'Subscribing to group activity',
+      tag: LogTags.notifications,
+      data: {'groupId': event.groupId},
+    );
     _activitySubscription?.cancel();
     _activitySubscription = _repository
         .watchGroupActivity(event.groupId)
-        .listen((activities) {
-          add(ActivityUpdated(activities));
-        });
+        .listen(
+          (activities) {
+            _log.debug(
+              'Activity stream updated',
+              tag: LogTags.notifications,
+              data: {'count': activities.length},
+            );
+            add(ActivityUpdated(activities));
+          },
+          onError: (error, stackTrace) {
+            _log.error(
+              'Activity stream error',
+              tag: LogTags.notifications,
+              error: error,
+              stackTrace: stackTrace,
+            );
+          },
+        );
   }
 
   void _onActivityUpdated(
@@ -270,6 +463,7 @@ class NotificationBloc extends Bloc<NotificationEvent, NotificationState> {
 
   @override
   Future<void> close() {
+    _log.debug('NotificationBloc closing', tag: LogTags.notifications);
     _notificationsSubscription?.cancel();
     _activitySubscription?.cancel();
     return super.close();

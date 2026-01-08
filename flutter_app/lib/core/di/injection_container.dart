@@ -46,24 +46,44 @@ import '../services/sync_service.dart';
 /// Global service locator instance
 final sl = GetIt.instance;
 
+/// Logging helper for DI initialization
+final _log = LoggingService();
+
 /// Initialize all dependencies
 Future<void> initializeDependencies() async {
+  _log.info('Initializing dependencies', tag: LogTags.app);
+
   // ==================== External ====================
   _initExternal();
+  _log.debug('External dependencies initialized', tag: LogTags.app);
 
   // ==================== Core ====================
   _initCore();
+  _log.debug('Core services initialized', tag: LogTags.app);
 
   // ==================== Features ====================
   await _initAuthFeature();
+  _log.debug('Auth feature initialized', tag: LogTags.app);
+
   await _initGroupFeature();
+  _log.debug('Group feature initialized', tag: LogTags.app);
+
   await _initExpenseFeature();
+  _log.debug('Expense feature initialized', tag: LogTags.app);
+
   await _initSettlementFeature();
+  _log.debug('Settlement feature initialized', tag: LogTags.app);
+
   await _initNotificationFeature();
+  _log.debug('Notification feature initialized', tag: LogTags.app);
+
+  _log.info('All dependencies initialized successfully', tag: LogTags.app);
 }
 
 /// Initialize external dependencies (Firebase, etc.)
 void _initExternal() {
+  _log.debug('Registering external dependencies', tag: LogTags.app);
+
   // Firebase Auth
   sl.registerLazySingleton<FirebaseAuth>(() => FirebaseAuth.instance);
 
@@ -81,6 +101,8 @@ void _initExternal() {
 
 /// Initialize core services
 void _initCore() {
+  _log.debug('Registering core services', tag: LogTags.app);
+
   // Logging Service (singleton - same instance throughout app)
   sl.registerLazySingleton<LoggingService>(() => LoggingService());
 
@@ -114,6 +136,8 @@ void _initCore() {
 
 /// Initialize authentication feature
 Future<void> _initAuthFeature() async {
+  _log.debug('Initializing auth feature', tag: LogTags.auth);
+
   await _initProfileFeature();
 
   // Data Sources
@@ -153,6 +177,8 @@ Future<void> _initAuthFeature() async {
 
 /// Initialize profile feature
 Future<void> _initProfileFeature() async {
+  _log.debug('Initializing profile feature', tag: LogTags.profile);
+
   // Data Sources
   sl.registerLazySingleton<UserProfileDataSource>(
     () => UserProfileDataSourceImpl(
@@ -175,6 +201,8 @@ Future<void> _initProfileFeature() async {
 
 /// Initialize groups feature
 Future<void> _initGroupFeature() async {
+  _log.debug('Initializing groups feature', tag: LogTags.groups);
+
   // Data Sources
   sl.registerLazySingleton<GroupDataSource>(
     () => GroupDataSourceImpl(
@@ -197,6 +225,8 @@ Future<void> _initGroupFeature() async {
 
 /// Initialize expenses feature
 Future<void> _initExpenseFeature() async {
+  _log.debug('Initializing expenses feature', tag: LogTags.expenses);
+
   // Data Sources
   sl.registerLazySingleton<ExpenseDatasource>(
     () => FirebaseExpenseDatasource(
@@ -235,6 +265,8 @@ Future<void> _initExpenseFeature() async {
 
 /// Initialize settlements feature
 Future<void> _initSettlementFeature() async {
+  _log.debug('Initializing settlements feature', tag: LogTags.settlements);
+
   // Data Sources
   sl.registerLazySingleton<SettlementDataSource>(
     () => SettlementDataSourceImpl(firestore: sl<FirebaseFirestore>()),
@@ -253,6 +285,8 @@ Future<void> _initSettlementFeature() async {
 
 /// Initialize notifications feature
 Future<void> _initNotificationFeature() async {
+  _log.debug('Initializing notifications feature', tag: LogTags.notifications);
+
   // Data Sources
   sl.registerLazySingleton<NotificationDataSource>(
     () => NotificationDataSourceImpl(firestore: sl<FirebaseFirestore>()),
@@ -274,6 +308,8 @@ Future<void> _initNotificationFeature() async {
 
 /// Reset all dependencies (useful for testing)
 Future<void> resetDependencies() async {
+  _log.warning('Resetting all dependencies', tag: LogTags.app);
   await sl.reset();
   await initializeDependencies();
+  _log.info('Dependencies reset complete', tag: LogTags.app);
 }

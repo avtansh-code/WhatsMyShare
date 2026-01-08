@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../core/config/theme_config.dart';
+import '../core/services/logging_service.dart';
 import 'routes.dart';
 
 /// Main application widget
@@ -12,17 +13,39 @@ class WhatsMyShareApp extends StatefulWidget {
   State<WhatsMyShareApp> createState() => _WhatsMyShareAppState();
 }
 
-class _WhatsMyShareAppState extends State<WhatsMyShareApp> {
+class _WhatsMyShareAppState extends State<WhatsMyShareApp>
+    with WidgetsBindingObserver {
   late final GoRouter _router;
+  final LoggingService _log = LoggingService();
 
   @override
   void initState() {
     super.initState();
+    _log.info('WhatsMyShareApp initializing', tag: LogTags.ui);
+    WidgetsBinding.instance.addObserver(this);
     _router = AppRouter.createRouter();
+    _log.info('Router created successfully', tag: LogTags.ui);
+  }
+
+  @override
+  void dispose() {
+    _log.info('WhatsMyShareApp disposing', tag: LogTags.ui);
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    _log.info(
+      'App lifecycle state changed',
+      tag: LogTags.ui,
+      data: {'state': state.name},
+    );
   }
 
   @override
   Widget build(BuildContext context) {
+    _log.debug('Building WhatsMyShareApp', tag: LogTags.ui);
     return MaterialApp.router(
       title: "What's My Share",
       debugShowCheckedModeBanner: false,

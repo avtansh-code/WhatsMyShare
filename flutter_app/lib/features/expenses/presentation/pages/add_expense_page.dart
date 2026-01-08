@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../../core/di/injection_container.dart';
+import '../../../../core/services/logging_service.dart';
 import '../../../../core/utils/currency_utils.dart';
 import '../../domain/entities/expense_entity.dart';
 import '../bloc/expense_bloc.dart';
@@ -56,6 +57,7 @@ class _AddExpenseFormState extends State<_AddExpenseForm> {
   final _amountController = TextEditingController();
   final _descriptionController = TextEditingController();
   final _notesController = TextEditingController();
+  final LoggingService _log = LoggingService();
 
   ExpenseCategory _selectedCategory = ExpenseCategory.other;
   SplitType _selectedSplitType = SplitType.equal;
@@ -68,6 +70,11 @@ class _AddExpenseFormState extends State<_AddExpenseForm> {
   @override
   void initState() {
     super.initState();
+    _log.info(
+      'AddExpensePage opened',
+      tag: LogTags.ui,
+      data: {'groupId': widget.groupId},
+    );
     _loadCurrentUser();
   }
 
@@ -439,6 +446,15 @@ class _AddExpenseFormState extends State<_AddExpenseForm> {
 
   void _saveExpense() {
     if (!_formKey.currentState!.validate()) return;
+    _log.info(
+      'Expense save requested',
+      tag: LogTags.ui,
+      data: {
+        'groupId': widget.groupId,
+        'category': _selectedCategory.name,
+        'splitType': _selectedSplitType.name,
+      },
+    );
     if (_currentUserId == null) {
       ScaffoldMessenger.of(
         context,

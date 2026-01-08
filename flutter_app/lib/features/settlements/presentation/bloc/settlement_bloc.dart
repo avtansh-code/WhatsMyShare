@@ -2,6 +2,8 @@ import 'dart:async';
 
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+import '../../../../core/errors/error_messages.dart';
+import '../../../../core/services/logging_service.dart';
 import '../../domain/entities/settlement_entity.dart';
 import '../../domain/repositories/settlement_repository.dart';
 import 'settlement_event.dart';
@@ -10,6 +12,7 @@ import 'settlement_state.dart';
 /// BLoC for managing settlement state
 class SettlementBloc extends Bloc<SettlementEvent, SettlementState> {
   final SettlementRepository _repository;
+  final LoggingService _log = LoggingService();
 
   StreamSubscription<List<SettlementEntity>>? _settlementsSubscription;
 
@@ -23,24 +26,42 @@ class SettlementBloc extends Bloc<SettlementEvent, SettlementState> {
     on<ConfirmSettlement>(_onConfirmSettlement);
     on<RejectSettlement>(_onRejectSettlement);
     on<ClearSettlementError>(_onClearError);
+
+    _log.info('SettlementBloc initialized', tag: LogTags.settlements);
   }
 
   Future<void> _onLoadGroupSettlements(
     LoadGroupSettlements event,
     Emitter<SettlementState> emit,
   ) async {
+    _log.debug(
+      'Loading group settlements',
+      tag: LogTags.settlements,
+      data: {'groupId': event.groupId},
+    );
     emit(const SettlementLoading());
 
     try {
       final settlements = await _repository.getGroupSettlements(event.groupId);
+      _log.info(
+        'Settlements loaded successfully',
+        tag: LogTags.settlements,
+        data: {'groupId': event.groupId, 'count': settlements.length},
+      );
       emit(
         SettlementLoaded(
           settlements: settlements,
           currentGroupId: event.groupId,
         ),
       );
-    } catch (e) {
-      emit(SettlementError(e.toString()));
+    } catch (e, stackTrace) {
+      _log.error(
+        'Failed to load settlements',
+        tag: LogTags.settlements,
+        error: e,
+        stackTrace: stackTrace,
+      );
+      emit(SettlementError(ErrorMessages.settlementLoadFailed));
     }
   }
 
@@ -48,6 +69,11 @@ class SettlementBloc extends Bloc<SettlementEvent, SettlementState> {
     WatchGroupSettlements event,
     Emitter<SettlementState> emit,
   ) async {
+    _log.debug(
+      'Watching group settlements',
+      tag: LogTags.settlements,
+      data: {'groupId': event.groupId},
+    );
     emit(const SettlementLoading());
 
     await _settlementsSubscription?.cancel();
@@ -55,30 +81,44 @@ class SettlementBloc extends Bloc<SettlementEvent, SettlementState> {
         .watchGroupSettlements(event.groupId)
         .listen(
           (settlements) {
-            if (!isClosed) {
-              // Manually emit state since we're in a stream
-              // ignore: invalid_use_of_visible_for_testing_member
-              // Use add to trigger another event instead
-            }
+            _log.debug(
+              'Settlements stream updated',
+              tag: LogTags.settlements,
+              data: {'count': settlements.length},
+            );
           },
-          onError: (error) {
-            if (!isClosed) {
-              // ignore: invalid_use_of_visible_for_testing_member
-            }
+          onError: (error, stackTrace) {
+            _log.error(
+              'Settlements stream error',
+              tag: LogTags.settlements,
+              error: error,
+              stackTrace: stackTrace,
+            );
           },
         );
 
     // Get initial data
     try {
       final settlements = await _repository.getGroupSettlements(event.groupId);
+      _log.info(
+        'Initial settlements loaded',
+        tag: LogTags.settlements,
+        data: {'count': settlements.length},
+      );
       emit(
         SettlementLoaded(
           settlements: settlements,
           currentGroupId: event.groupId,
         ),
       );
-    } catch (e) {
-      emit(SettlementError(e.toString()));
+    } catch (e, stackTrace) {
+      _log.error(
+        'Failed to load initial settlements',
+        tag: LogTags.settlements,
+        error: e,
+        stackTrace: stackTrace,
+      );
+      emit(SettlementError(ErrorMessages.settlementLoadFailed));
     }
   }
 
@@ -86,6 +126,11 @@ class SettlementBloc extends Bloc<SettlementEvent, SettlementState> {
     LoadGroupBalances event,
     Emitter<SettlementState> emit,
   ) async {
+    _log.debug(
+      'Loading group balances',
+      tag: LogTags.settlements,
+      data: {'groupId': event.groupId},
+    );
     final currentState = state;
 
     try {
@@ -93,6 +138,16 @@ class SettlementBloc extends Bloc<SettlementEvent, SettlementState> {
       final simplifiedDebts = await _repository.getSimplifiedDebts(
         event.groupId,
         event.displayNames,
+      );
+
+      _log.info(
+        'Balances loaded successfully',
+        tag: LogTags.settlements,
+        data: {
+          'groupId': event.groupId,
+          'balanceCount': balances.length,
+          'simplifiedDebtCount': simplifiedDebts.length,
+        },
       );
 
       if (currentState is SettlementLoaded) {
@@ -112,8 +167,14 @@ class SettlementBloc extends Bloc<SettlementEvent, SettlementState> {
           ),
         );
       }
-    } catch (e) {
-      emit(SettlementError(e.toString()));
+    } catch (e, stackTrace) {
+      _log.error(
+        'Failed to load balances',
+        tag: LogTags.settlements,
+        error: e,
+        stackTrace: stackTrace,
+      );
+      emit(SettlementError(ErrorMessages.settlementLoadFailed));
     }
   }
 
@@ -121,6 +182,16 @@ class SettlementBloc extends Bloc<SettlementEvent, SettlementState> {
     CreateSettlement event,
     Emitter<SettlementState> emit,
   ) async {
+    _log.info(
+      'Creating settlement',
+      tag: LogTags.settlements,
+      data: {
+        'groupId': event.groupId,
+        'fromUserId': event.fromUserId,
+        'toUserId': event.toUserId,
+        'amount': event.amount,
+      },
+    );
     emit(const SettlementOperationInProgress('create'));
 
     try {
@@ -137,6 +208,12 @@ class SettlementBloc extends Bloc<SettlementEvent, SettlementState> {
         notes: event.notes,
       );
 
+      _log.info(
+        'Settlement created successfully',
+        tag: LogTags.settlements,
+        data: {'settlementId': settlement.id, 'amount': settlement.amount},
+      );
+
       emit(
         SettlementOperationSuccess(
           message: 'Settlement recorded successfully',
@@ -146,8 +223,14 @@ class SettlementBloc extends Bloc<SettlementEvent, SettlementState> {
 
       // Reload settlements
       add(LoadGroupSettlements(event.groupId));
-    } catch (e) {
-      emit(SettlementError(e.toString()));
+    } catch (e, stackTrace) {
+      _log.error(
+        'Failed to create settlement',
+        tag: LogTags.settlements,
+        error: e,
+        stackTrace: stackTrace,
+      );
+      emit(SettlementError(ErrorMessages.settlementCreateFailed));
     }
   }
 
@@ -155,6 +238,15 @@ class SettlementBloc extends Bloc<SettlementEvent, SettlementState> {
     ConfirmSettlement event,
     Emitter<SettlementState> emit,
   ) async {
+    _log.info(
+      'Confirming settlement',
+      tag: LogTags.settlements,
+      data: {
+        'groupId': event.groupId,
+        'settlementId': event.settlementId,
+        'biometricVerified': event.biometricVerified,
+      },
+    );
     emit(const SettlementOperationInProgress('confirm'));
 
     try {
@@ -163,6 +255,12 @@ class SettlementBloc extends Bloc<SettlementEvent, SettlementState> {
         settlementId: event.settlementId,
         confirmedBy: event.confirmedBy,
         biometricVerified: event.biometricVerified,
+      );
+
+      _log.info(
+        'Settlement confirmed successfully',
+        tag: LogTags.settlements,
+        data: {'settlementId': settlement.id},
       );
 
       emit(
@@ -174,8 +272,14 @@ class SettlementBloc extends Bloc<SettlementEvent, SettlementState> {
 
       // Reload settlements
       add(LoadGroupSettlements(event.groupId));
-    } catch (e) {
-      emit(SettlementError(e.toString()));
+    } catch (e, stackTrace) {
+      _log.error(
+        'Failed to confirm settlement',
+        tag: LogTags.settlements,
+        error: e,
+        stackTrace: stackTrace,
+      );
+      emit(SettlementError(ErrorMessages.settlementConfirmationFailed));
     }
   }
 
@@ -183,6 +287,15 @@ class SettlementBloc extends Bloc<SettlementEvent, SettlementState> {
     RejectSettlement event,
     Emitter<SettlementState> emit,
   ) async {
+    _log.info(
+      'Rejecting settlement',
+      tag: LogTags.settlements,
+      data: {
+        'groupId': event.groupId,
+        'settlementId': event.settlementId,
+        'reason': event.reason,
+      },
+    );
     emit(const SettlementOperationInProgress('reject'));
 
     try {
@@ -192,12 +305,24 @@ class SettlementBloc extends Bloc<SettlementEvent, SettlementState> {
         reason: event.reason,
       );
 
+      _log.info(
+        'Settlement rejected successfully',
+        tag: LogTags.settlements,
+        data: {'settlementId': event.settlementId},
+      );
+
       emit(const SettlementOperationSuccess(message: 'Settlement rejected'));
 
       // Reload settlements
       add(LoadGroupSettlements(event.groupId));
-    } catch (e) {
-      emit(SettlementError(e.toString()));
+    } catch (e, stackTrace) {
+      _log.error(
+        'Failed to reject settlement',
+        tag: LogTags.settlements,
+        error: e,
+        stackTrace: stackTrace,
+      );
+      emit(SettlementError(ErrorMessages.settlementUpdateFailed));
     }
   }
 
@@ -205,11 +330,13 @@ class SettlementBloc extends Bloc<SettlementEvent, SettlementState> {
     ClearSettlementError event,
     Emitter<SettlementState> emit,
   ) {
+    _log.debug('Clearing settlement error', tag: LogTags.settlements);
     emit(const SettlementInitial());
   }
 
   @override
   Future<void> close() {
+    _log.debug('SettlementBloc closing', tag: LogTags.settlements);
     _settlementsSubscription?.cancel();
     return super.close();
   }

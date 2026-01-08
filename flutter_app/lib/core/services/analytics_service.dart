@@ -23,12 +23,12 @@ class AnalyticsService {
   /// Set user ID for analytics
   Future<void> setUserId(String? userId) async {
     if (!_enabled) return;
-    
+
     _log.debug(
       'Set user ID: ${userId != null ? "***" : "null"}',
       tag: LogTags.analytics,
     );
-    
+
     // In production, use Firebase Analytics:
     // await FirebaseAnalytics.instance.setUserId(id: userId);
   }
@@ -39,12 +39,9 @@ class AnalyticsService {
     required String? value,
   }) async {
     if (!_enabled) return;
-    
-    _log.debug(
-      'Set user property: $name = $value',
-      tag: LogTags.analytics,
-    );
-    
+
+    _log.debug('Set user property: $name = $value', tag: LogTags.analytics);
+
     // In production:
     // await FirebaseAnalytics.instance.setUserProperty(name: name, value: value);
   }
@@ -55,13 +52,13 @@ class AnalyticsService {
     String? screenClass,
   }) async {
     if (!_enabled) return;
-    
+
     _log.debug(
       'Screen view: $screenName',
       tag: LogTags.analytics,
       data: {'screenClass': screenClass},
     );
-    
+
     // In production:
     // await FirebaseAnalytics.instance.logScreenView(
     //   screenName: screenName,
@@ -75,13 +72,13 @@ class AnalyticsService {
     Map<String, Object>? parameters,
   }) async {
     if (!_enabled) return;
-    
+
     _log.debug(
       'Event: $name',
       tag: LogTags.analytics,
       data: parameters?.cast<String, dynamic>(),
     );
-    
+
     // In production:
     // await FirebaseAnalytics.instance.logEvent(
     //   name: name,
@@ -92,17 +89,11 @@ class AnalyticsService {
   // ==================== Authentication Events ====================
 
   Future<void> logSignUp({required String method}) async {
-    await logEvent(
-      name: 'sign_up',
-      parameters: {'method': method},
-    );
+    await logEvent(name: 'sign_up', parameters: {'method': method});
   }
 
   Future<void> logLogin({required String method}) async {
-    await logEvent(
-      name: 'login',
-      parameters: {'method': method},
-    );
+    await logEvent(name: 'login', parameters: {'method': method});
   }
 
   Future<void> logLogout() async {
@@ -121,25 +112,16 @@ class AnalyticsService {
   }) async {
     await logEvent(
       name: 'group_created',
-      parameters: {
-        'group_type': groupType,
-        'member_count': memberCount,
-      },
+      parameters: {'group_type': groupType, 'member_count': memberCount},
     );
   }
 
   Future<void> logGroupJoined({required String groupId}) async {
-    await logEvent(
-      name: 'group_joined',
-      parameters: {'group_id': groupId},
-    );
+    await logEvent(name: 'group_joined', parameters: {'group_id': groupId});
   }
 
   Future<void> logMemberAdded({required String groupId}) async {
-    await logEvent(
-      name: 'member_added',
-      parameters: {'group_id': groupId},
-    );
+    await logEvent(name: 'member_added', parameters: {'group_id': groupId});
   }
 
   // ==================== Expense Events ====================
@@ -248,8 +230,8 @@ class AnalyticsService {
       name: 'app_error',
       parameters: {
         'error_type': errorType,
-        'error_message': errorMessage.length > 100 
-            ? errorMessage.substring(0, 100) 
+        'error_message': errorMessage.length > 100
+            ? errorMessage.substring(0, 100)
             : errorMessage,
         if (screenName != null) 'screen_name': screenName,
       },

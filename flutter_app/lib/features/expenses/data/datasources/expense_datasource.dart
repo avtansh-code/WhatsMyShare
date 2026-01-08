@@ -4,6 +4,7 @@ import 'package:firebase_storage/firebase_storage.dart';
 import 'dart:io';
 
 import '../../../../core/errors/exceptions.dart';
+import '../../../../core/services/logging_service.dart';
 import '../../domain/entities/expense_entity.dart';
 import '../models/expense_model.dart';
 
@@ -46,6 +47,7 @@ class FirebaseExpenseDatasource implements ExpenseDatasource {
   final FirebaseFirestore _firestore;
   final FirebaseAuth _auth;
   final FirebaseStorage _storage;
+  final LoggingService _log = LoggingService();
 
   FirebaseExpenseDatasource({
     FirebaseFirestore? firestore,
@@ -53,12 +55,18 @@ class FirebaseExpenseDatasource implements ExpenseDatasource {
     FirebaseStorage? storage,
   }) : _firestore = firestore ?? FirebaseFirestore.instance,
        _auth = auth ?? FirebaseAuth.instance,
-       _storage = storage ?? FirebaseStorage.instance;
+       _storage = storage ?? FirebaseStorage.instance {
+    _log.debug('ExpenseDatasource initialized', tag: LogTags.expenses);
+  }
 
   /// Get current user ID
   String get _currentUserId {
     final user = _auth.currentUser;
     if (user == null) {
+      _log.error(
+        'User not authenticated when accessing expenses',
+        tag: LogTags.expenses,
+      );
       throw const ServerException(message: 'User not authenticated');
     }
     return user.uid;
@@ -71,42 +79,84 @@ class FirebaseExpenseDatasource implements ExpenseDatasource {
 
   @override
   Future<List<ExpenseModel>> getExpenses(String groupId) async {
+    _log.debug(
+      'Fetching expenses for group',
+      tag: LogTags.expenses,
+      data: {'groupId': groupId},
+    );
     try {
       final snapshot = await _expensesRef(groupId)
           .where('status', isEqualTo: 'active')
           .orderBy('date', descending: true)
           .get();
 
-      return snapshot.docs
+      final expenses = snapshot.docs
           .map((doc) => ExpenseModel.fromFirestore(doc))
           .toList();
+      _log.info(
+        'Expenses fetched successfully',
+        tag: LogTags.expenses,
+        data: {'groupId': groupId, 'count': expenses.length},
+      );
+      return expenses;
     } on FirebaseException catch (e) {
+      _log.error(
+        'Failed to get expenses',
+        tag: LogTags.expenses,
+        data: {'groupId': groupId, 'error': e.message},
+      );
       throw ServerException(message: e.message ?? 'Failed to get expenses');
     }
   }
 
   @override
   Stream<List<ExpenseModel>> watchExpenses(String groupId) {
+    _log.debug(
+      'Setting up expenses stream',
+      tag: LogTags.expenses,
+      data: {'groupId': groupId},
+    );
     return _expensesRef(groupId)
         .where('status', isEqualTo: 'active')
         .orderBy('date', descending: true)
         .snapshots()
-        .map(
-          (snapshot) => snapshot.docs
+        .map((snapshot) {
+          _log.debug(
+            'Expenses stream updated',
+            tag: LogTags.expenses,
+            data: {'count': snapshot.docs.length},
+          );
+          return snapshot.docs
               .map((doc) => ExpenseModel.fromFirestore(doc))
-              .toList(),
-        );
+              .toList();
+        });
   }
 
   @override
   Future<ExpenseModel> getExpense(String groupId, String expenseId) async {
+    _log.debug(
+      'Fetching expense by ID',
+      tag: LogTags.expenses,
+      data: {'groupId': groupId, 'expenseId': expenseId},
+    );
     try {
       final doc = await _expensesRef(groupId).doc(expenseId).get();
       if (!doc.exists) {
+        _log.warning(
+          'Expense not found',
+          tag: LogTags.expenses,
+          data: {'groupId': groupId, 'expenseId': expenseId},
+        );
         throw const ServerException(message: 'Expense not found');
       }
+      _log.debug('Expense fetched successfully', tag: LogTags.expenses);
       return ExpenseModel.fromFirestore(doc);
     } on FirebaseException catch (e) {
+      _log.error(
+        'Failed to get expense',
+        tag: LogTags.expenses,
+        data: {'expenseId': expenseId, 'error': e.message},
+      );
       throw ServerException(message: e.message ?? 'Failed to get expense');
     }
   }
@@ -116,6 +166,15 @@ class FirebaseExpenseDatasource implements ExpenseDatasource {
     String groupId,
     ExpenseModel expense,
   ) async {
+    _log.info(
+      'Creating expense',
+      tag: LogTags.expenses,
+      data: {
+        'groupId': groupId,
+        'description': expense.description,
+        'amount': expense.amount,
+      },
+    );
     try {
       final docRef = _expensesRef(groupId).doc();
       final now = DateTime.now();
@@ -145,8 +204,18 @@ class FirebaseExpenseDatasource implements ExpenseDatasource {
       // Update group's total expenses and last activity
       await _updateGroupStats(groupId, expense.amount);
 
+      _log.info(
+        'Expense created successfully',
+        tag: LogTags.expenses,
+        data: {'expenseId': docRef.id, 'amount': expense.amount},
+      );
       return newExpense;
     } on FirebaseException catch (e) {
+      _log.error(
+        'Failed to create expense',
+        tag: LogTags.expenses,
+        data: {'groupId': groupId, 'error': e.message},
+      );
       throw ServerException(message: e.message ?? 'Failed to create expense');
     }
   }
@@ -156,12 +225,22 @@ class FirebaseExpenseDatasource implements ExpenseDatasource {
     String groupId,
     ExpenseModel expense,
   ) async {
+    _log.info(
+      'Updating expense',
+      tag: LogTags.expenses,
+      data: {'groupId': groupId, 'expenseId': expense.id},
+    );
     try {
       final docRef = _expensesRef(groupId).doc(expense.id);
 
       // Get current expense for amount difference calculation
       final currentDoc = await docRef.get();
       if (!currentDoc.exists) {
+        _log.warning(
+          'Expense not found for update',
+          tag: LogTags.expenses,
+          data: {'expenseId': expense.id},
+        );
         throw const ServerException(message: 'Expense not found');
       }
       final currentExpense = ExpenseModel.fromFirestore(currentDoc);
@@ -191,23 +270,48 @@ class FirebaseExpenseDatasource implements ExpenseDatasource {
       // Update group stats if amount changed
       final amountDiff = expense.amount - currentExpense.amount;
       if (amountDiff != 0) {
+        _log.debug(
+          'Updating group stats for amount change',
+          tag: LogTags.expenses,
+          data: {'amountDiff': amountDiff},
+        );
         await _updateGroupStats(groupId, amountDiff);
       }
 
+      _log.info(
+        'Expense updated successfully',
+        tag: LogTags.expenses,
+        data: {'expenseId': expense.id},
+      );
       return updatedExpense;
     } on FirebaseException catch (e) {
+      _log.error(
+        'Failed to update expense',
+        tag: LogTags.expenses,
+        data: {'expenseId': expense.id, 'error': e.message},
+      );
       throw ServerException(message: e.message ?? 'Failed to update expense');
     }
   }
 
   @override
   Future<void> deleteExpense(String groupId, String expenseId) async {
+    _log.info(
+      'Soft deleting expense',
+      tag: LogTags.expenses,
+      data: {'groupId': groupId, 'expenseId': expenseId},
+    );
     try {
       final docRef = _expensesRef(groupId).doc(expenseId);
 
       // Get expense for amount
       final doc = await docRef.get();
       if (!doc.exists) {
+        _log.warning(
+          'Expense not found for deletion',
+          tag: LogTags.expenses,
+          data: {'expenseId': expenseId},
+        );
         throw const ServerException(message: 'Expense not found');
       }
       final expense = ExpenseModel.fromFirestore(doc);
@@ -222,7 +326,17 @@ class FirebaseExpenseDatasource implements ExpenseDatasource {
 
       // Update group stats (subtract expense amount)
       await _updateGroupStats(groupId, -expense.amount);
+      _log.info(
+        'Expense soft deleted successfully',
+        tag: LogTags.expenses,
+        data: {'expenseId': expenseId, 'amount': expense.amount},
+      );
     } on FirebaseException catch (e) {
+      _log.error(
+        'Failed to delete expense',
+        tag: LogTags.expenses,
+        data: {'expenseId': expenseId, 'error': e.message},
+      );
       throw ServerException(message: e.message ?? 'Failed to delete expense');
     }
   }
@@ -232,9 +346,24 @@ class FirebaseExpenseDatasource implements ExpenseDatasource {
     String groupId,
     String expenseId,
   ) async {
+    _log.warning(
+      'Permanently deleting expense',
+      tag: LogTags.expenses,
+      data: {'groupId': groupId, 'expenseId': expenseId},
+    );
     try {
       await _expensesRef(groupId).doc(expenseId).delete();
+      _log.info(
+        'Expense permanently deleted',
+        tag: LogTags.expenses,
+        data: {'expenseId': expenseId},
+      );
     } on FirebaseException catch (e) {
+      _log.error(
+        'Failed to permanently delete expense',
+        tag: LogTags.expenses,
+        data: {'expenseId': expenseId, 'error': e.message},
+      );
       throw ServerException(
         message: e.message ?? 'Failed to permanently delete expense',
       );
@@ -247,6 +376,11 @@ class FirebaseExpenseDatasource implements ExpenseDatasource {
     String expenseId,
     String filePath,
   ) async {
+    _log.info(
+      'Uploading receipt',
+      tag: LogTags.expenses,
+      data: {'groupId': groupId, 'expenseId': expenseId},
+    );
     try {
       final file = File(filePath);
       final fileName =
@@ -256,24 +390,47 @@ class FirebaseExpenseDatasource implements ExpenseDatasource {
       );
 
       await ref.putFile(file);
-      return await ref.getDownloadURL();
+      final downloadUrl = await ref.getDownloadURL();
+      _log.info(
+        'Receipt uploaded successfully',
+        tag: LogTags.expenses,
+        data: {'expenseId': expenseId},
+      );
+      return downloadUrl;
     } on FirebaseException catch (e) {
+      _log.error(
+        'Failed to upload receipt',
+        tag: LogTags.expenses,
+        data: {'expenseId': expenseId, 'error': e.message},
+      );
       throw ServerException(message: e.message ?? 'Failed to upload receipt');
     }
   }
 
   @override
   Future<void> deleteReceipt(String receiptUrl) async {
+    _log.info('Deleting receipt', tag: LogTags.expenses);
     try {
       final ref = _storage.refFromURL(receiptUrl);
       await ref.delete();
+      _log.info('Receipt deleted successfully', tag: LogTags.expenses);
     } on FirebaseException catch (e) {
+      _log.error(
+        'Failed to delete receipt',
+        tag: LogTags.expenses,
+        data: {'error': e.message},
+      );
       throw ServerException(message: e.message ?? 'Failed to delete receipt');
     }
   }
 
   /// Update group statistics after expense changes
   Future<void> _updateGroupStats(String groupId, int amountDelta) async {
+    _log.debug(
+      'Updating group stats',
+      tag: LogTags.expenses,
+      data: {'groupId': groupId, 'amountDelta': amountDelta},
+    );
     final groupRef = _firestore.collection('groups').doc(groupId);
     await groupRef.update({
       'totalExpenses': FieldValue.increment(amountDelta),

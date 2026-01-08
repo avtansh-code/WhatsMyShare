@@ -2,6 +2,8 @@ import 'dart:async';
 
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+import '../../../../core/errors/error_messages.dart';
+import '../../../../core/services/logging_service.dart';
 import '../../domain/entities/expense_entity.dart';
 import '../../domain/repositories/expense_repository.dart';
 import 'expense_event.dart';
@@ -10,6 +12,7 @@ import 'expense_state.dart';
 /// BLoC for managing expense state
 class ExpenseBloc extends Bloc<ExpenseEvent, ExpenseState> {
   final ExpenseRepository _expenseRepository;
+  final LoggingService _log = LoggingService();
   StreamSubscription<List<ExpenseEntity>>? _expensesSubscription;
 
   ExpenseBloc({required ExpenseRepository expenseRepository})
@@ -23,6 +26,8 @@ class ExpenseBloc extends Bloc<ExpenseEvent, ExpenseState> {
     on<DeleteExpense>(_onDeleteExpense);
     on<LoadExpenseDetail>(_onLoadExpenseDetail);
     on<ClearExpenseState>(_onClearExpenseState);
+
+    _log.info('ExpenseBloc initialized', tag: LogTags.expenses);
   }
 
   /// Load expenses for a group
@@ -30,22 +35,40 @@ class ExpenseBloc extends Bloc<ExpenseEvent, ExpenseState> {
     LoadExpenses event,
     Emitter<ExpenseState> emit,
   ) async {
+    _log.debug(
+      'Loading expenses',
+      tag: LogTags.expenses,
+      data: {'groupId': event.groupId},
+    );
     emit(const ExpenseLoading());
 
     final result = await _expenseRepository.getExpenses(event.groupId);
 
-    result.fold((failure) => emit(ExpenseError(message: failure.message)), (
-      expenses,
-    ) {
-      final totalAmount = expenses.fold(0, (sum, e) => sum + e.amount);
-      emit(
-        ExpenseLoaded(
-          expenses: expenses,
-          groupId: event.groupId,
-          totalAmount: totalAmount,
-        ),
-      );
-    });
+    result.fold(
+      (failure) {
+        _log.error(
+          'Failed to load expenses',
+          tag: LogTags.expenses,
+          data: {'groupId': event.groupId, 'error': failure.message},
+        );
+        emit(ExpenseError(message: ErrorMessages.expenseLoadFailed));
+      },
+      (expenses) {
+        _log.info(
+          'Expenses loaded successfully',
+          tag: LogTags.expenses,
+          data: {'groupId': event.groupId, 'count': expenses.length},
+        );
+        final totalAmount = expenses.fold(0, (sum, e) => sum + e.amount);
+        emit(
+          ExpenseLoaded(
+            expenses: expenses,
+            groupId: event.groupId,
+            totalAmount: totalAmount,
+          ),
+        );
+      },
+    );
   }
 
   /// Watch expenses for real-time updates
@@ -53,6 +76,11 @@ class ExpenseBloc extends Bloc<ExpenseEvent, ExpenseState> {
     WatchExpenses event,
     Emitter<ExpenseState> emit,
   ) async {
+    _log.debug(
+      'Watching expenses',
+      tag: LogTags.expenses,
+      data: {'groupId': event.groupId},
+    );
     emit(const ExpenseLoading());
 
     // Cancel any existing subscription
@@ -60,9 +88,24 @@ class ExpenseBloc extends Bloc<ExpenseEvent, ExpenseState> {
 
     _expensesSubscription = _expenseRepository
         .watchExpenses(event.groupId)
-        .listen((expenses) {
-          add(ExpensesUpdated(expenses));
-        });
+        .listen(
+          (expenses) {
+            _log.debug(
+              'Expenses stream updated',
+              tag: LogTags.expenses,
+              data: {'count': expenses.length},
+            );
+            add(ExpensesUpdated(expenses));
+          },
+          onError: (error, stackTrace) {
+            _log.error(
+              'Expenses stream error',
+              tag: LogTags.expenses,
+              error: error,
+              stackTrace: stackTrace,
+            );
+          },
+        );
   }
 
   /// Handle expense stream updates
@@ -89,6 +132,15 @@ class ExpenseBloc extends Bloc<ExpenseEvent, ExpenseState> {
     CreateExpense event,
     Emitter<ExpenseState> emit,
   ) async {
+    _log.info(
+      'Creating expense',
+      tag: LogTags.expenses,
+      data: {
+        'groupId': event.groupId,
+        'description': event.description,
+        'amount': event.amount,
+      },
+    );
     emit(const ExpenseOperationInProgress(operation: 'Creating expense...'));
 
     final result = await _expenseRepository.createExpense(
@@ -106,8 +158,22 @@ class ExpenseBloc extends Bloc<ExpenseEvent, ExpenseState> {
     );
 
     result.fold(
-      (failure) => emit(ExpenseError(message: failure.message)),
-      (expense) => emit(ExpenseCreated(expense: expense)),
+      (failure) {
+        _log.error(
+          'Failed to create expense',
+          tag: LogTags.expenses,
+          data: {'error': failure.message},
+        );
+        emit(ExpenseError(message: ErrorMessages.expenseCreateFailed));
+      },
+      (expense) {
+        _log.info(
+          'Expense created successfully',
+          tag: LogTags.expenses,
+          data: {'expenseId': expense.id, 'amount': expense.amount},
+        );
+        emit(ExpenseCreated(expense: expense));
+      },
     );
   }
 
@@ -116,6 +182,11 @@ class ExpenseBloc extends Bloc<ExpenseEvent, ExpenseState> {
     UpdateExpense event,
     Emitter<ExpenseState> emit,
   ) async {
+    _log.info(
+      'Updating expense',
+      tag: LogTags.expenses,
+      data: {'groupId': event.groupId, 'expenseId': event.expenseId},
+    );
     emit(const ExpenseOperationInProgress(operation: 'Updating expense...'));
 
     final result = await _expenseRepository.updateExpense(
@@ -133,8 +204,22 @@ class ExpenseBloc extends Bloc<ExpenseEvent, ExpenseState> {
     );
 
     result.fold(
-      (failure) => emit(ExpenseError(message: failure.message)),
-      (expense) => emit(ExpenseUpdated(expense: expense)),
+      (failure) {
+        _log.error(
+          'Failed to update expense',
+          tag: LogTags.expenses,
+          data: {'expenseId': event.expenseId, 'error': failure.message},
+        );
+        emit(ExpenseError(message: ErrorMessages.expenseUpdateFailed));
+      },
+      (expense) {
+        _log.info(
+          'Expense updated successfully',
+          tag: LogTags.expenses,
+          data: {'expenseId': expense.id},
+        );
+        emit(ExpenseUpdated(expense: expense));
+      },
     );
   }
 
@@ -143,6 +228,11 @@ class ExpenseBloc extends Bloc<ExpenseEvent, ExpenseState> {
     DeleteExpense event,
     Emitter<ExpenseState> emit,
   ) async {
+    _log.info(
+      'Deleting expense',
+      tag: LogTags.expenses,
+      data: {'groupId': event.groupId, 'expenseId': event.expenseId},
+    );
     emit(const ExpenseOperationInProgress(operation: 'Deleting expense...'));
 
     final result = await _expenseRepository.deleteExpense(
@@ -151,8 +241,22 @@ class ExpenseBloc extends Bloc<ExpenseEvent, ExpenseState> {
     );
 
     result.fold(
-      (failure) => emit(ExpenseError(message: failure.message)),
-      (_) => emit(ExpenseDeleted(expenseId: event.expenseId)),
+      (failure) {
+        _log.error(
+          'Failed to delete expense',
+          tag: LogTags.expenses,
+          data: {'expenseId': event.expenseId, 'error': failure.message},
+        );
+        emit(ExpenseError(message: ErrorMessages.expenseDeleteFailed));
+      },
+      (_) {
+        _log.info(
+          'Expense deleted successfully',
+          tag: LogTags.expenses,
+          data: {'expenseId': event.expenseId},
+        );
+        emit(ExpenseDeleted(expenseId: event.expenseId));
+      },
     );
   }
 
@@ -161,6 +265,11 @@ class ExpenseBloc extends Bloc<ExpenseEvent, ExpenseState> {
     LoadExpenseDetail event,
     Emitter<ExpenseState> emit,
   ) async {
+    _log.debug(
+      'Loading expense detail',
+      tag: LogTags.expenses,
+      data: {'groupId': event.groupId, 'expenseId': event.expenseId},
+    );
     emit(const ExpenseLoading());
 
     final result = await _expenseRepository.getExpense(
@@ -169,8 +278,22 @@ class ExpenseBloc extends Bloc<ExpenseEvent, ExpenseState> {
     );
 
     result.fold(
-      (failure) => emit(ExpenseError(message: failure.message)),
-      (expense) => emit(ExpenseDetailLoaded(expense: expense)),
+      (failure) {
+        _log.error(
+          'Failed to load expense detail',
+          tag: LogTags.expenses,
+          data: {'expenseId': event.expenseId, 'error': failure.message},
+        );
+        emit(ExpenseError(message: ErrorMessages.expenseNotFound));
+      },
+      (expense) {
+        _log.debug(
+          'Expense detail loaded',
+          tag: LogTags.expenses,
+          data: {'expenseId': expense.id},
+        );
+        emit(ExpenseDetailLoaded(expense: expense));
+      },
     );
   }
 
@@ -179,6 +302,7 @@ class ExpenseBloc extends Bloc<ExpenseEvent, ExpenseState> {
     ClearExpenseState event,
     Emitter<ExpenseState> emit,
   ) {
+    _log.debug('Clearing expense state', tag: LogTags.expenses);
     _expensesSubscription?.cancel();
     _expensesSubscription = null;
     emit(const ExpenseInitial());
@@ -186,6 +310,7 @@ class ExpenseBloc extends Bloc<ExpenseEvent, ExpenseState> {
 
   @override
   Future<void> close() {
+    _log.debug('ExpenseBloc closing', tag: LogTags.expenses);
     _expensesSubscription?.cancel();
     return super.close();
   }

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../../core/constants/app_constants.dart';
+import '../../../../core/services/logging_service.dart';
 import '../../../../core/utils/currency_utils.dart';
 import '../../../groups/domain/entities/group_entity.dart' hide SimplifiedDebt;
 import '../../domain/entities/settlement_entity.dart';
@@ -33,6 +34,7 @@ class _SettleUpPageState extends State<SettleUpPage> {
   final _amountController = TextEditingController();
   final _referenceController = TextEditingController();
   final _notesController = TextEditingController();
+  final LoggingService _log = LoggingService();
 
   String? _selectedPayerId;
   String? _selectedPayerName;
@@ -43,6 +45,11 @@ class _SettleUpPageState extends State<SettleUpPage> {
   @override
   void initState() {
     super.initState();
+    _log.info(
+      'SettleUpPage opened',
+      tag: LogTags.ui,
+      data: {'groupId': widget.group.id},
+    );
     // Pre-fill from suggested debt
     if (widget.suggestedDebt != null) {
       _selectedPayerId = widget.suggestedDebt!.fromUserId;
@@ -350,6 +357,15 @@ class _SettleUpPageState extends State<SettleUpPage> {
 
   void _submitSettlement() {
     if (!_formKey.currentState!.validate()) return;
+    _log.info(
+      'Settlement submission requested',
+      tag: LogTags.ui,
+      data: {
+        'groupId': widget.group.id,
+        'payerId': _selectedPayerId,
+        'receiverId': _selectedReceiverId,
+      },
+    );
 
     if (_selectedPayerId == null || _selectedReceiverId == null) {
       ScaffoldMessenger.of(context).showSnackBar(

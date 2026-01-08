@@ -2,6 +2,7 @@ import 'package:dartz/dartz.dart';
 
 import '../../../../core/errors/exceptions.dart';
 import '../../../../core/errors/failures.dart';
+import '../../../../core/services/logging_service.dart';
 import '../../domain/entities/expense_entity.dart';
 import '../../domain/repositories/expense_repository.dart';
 import '../datasources/expense_datasource.dart';
@@ -12,29 +13,62 @@ export '../models/expense_model.dart' show PayerInfoModel, ExpenseSplitModel;
 /// Implementation of ExpenseRepository
 class ExpenseRepositoryImpl implements ExpenseRepository {
   final ExpenseDatasource _datasource;
+  final LoggingService _log = LoggingService();
 
   ExpenseRepositoryImpl({required ExpenseDatasource datasource})
-    : _datasource = datasource;
+    : _datasource = datasource {
+    _log.debug('ExpenseRepository initialized', tag: LogTags.expenses);
+  }
 
   @override
   Future<Either<Failure, List<ExpenseEntity>>> getExpenses(
     String groupId,
   ) async {
+    _log.debug(
+      'Getting expenses',
+      tag: LogTags.expenses,
+      data: {'groupId': groupId},
+    );
     try {
       final expenses = await _datasource.getExpenses(groupId);
+      _log.info(
+        'Expenses fetched',
+        tag: LogTags.expenses,
+        data: {'groupId': groupId, 'count': expenses.length},
+      );
       return Right(expenses.map((e) => e.toEntity()).toList());
     } on ServerException catch (e) {
+      _log.error(
+        'Server error getting expenses',
+        tag: LogTags.expenses,
+        data: {'groupId': groupId, 'error': e.message},
+      );
       return Left(ServerFailure(message: e.message));
     } catch (e) {
+      _log.error(
+        'Unexpected error getting expenses',
+        tag: LogTags.expenses,
+        data: {'groupId': groupId, 'error': e.toString()},
+      );
       return Left(ServerFailure(message: e.toString()));
     }
   }
 
   @override
   Stream<List<ExpenseEntity>> watchExpenses(String groupId) {
-    return _datasource
-        .watchExpenses(groupId)
-        .map((expenses) => expenses.map((e) => e.toEntity()).toList());
+    _log.debug(
+      'Setting up expenses stream',
+      tag: LogTags.expenses,
+      data: {'groupId': groupId},
+    );
+    return _datasource.watchExpenses(groupId).map((expenses) {
+      _log.debug(
+        'Expenses stream updated',
+        tag: LogTags.expenses,
+        data: {'count': expenses.length},
+      );
+      return expenses.map((e) => e.toEntity()).toList();
+    });
   }
 
   @override
@@ -42,12 +76,32 @@ class ExpenseRepositoryImpl implements ExpenseRepository {
     String groupId,
     String expenseId,
   ) async {
+    _log.debug(
+      'Getting expense',
+      tag: LogTags.expenses,
+      data: {'groupId': groupId, 'expenseId': expenseId},
+    );
     try {
       final expense = await _datasource.getExpense(groupId, expenseId);
+      _log.info(
+        'Expense fetched',
+        tag: LogTags.expenses,
+        data: {'expenseId': expenseId, 'description': expense.description},
+      );
       return Right(expense.toEntity());
     } on ServerException catch (e) {
+      _log.error(
+        'Server error getting expense',
+        tag: LogTags.expenses,
+        data: {'expenseId': expenseId, 'error': e.message},
+      );
       return Left(ServerFailure(message: e.message));
     } catch (e) {
+      _log.error(
+        'Unexpected error getting expense',
+        tag: LogTags.expenses,
+        data: {'expenseId': expenseId, 'error': e.toString()},
+      );
       return Left(ServerFailure(message: e.toString()));
     }
   }
@@ -66,6 +120,16 @@ class ExpenseRepositoryImpl implements ExpenseRepository {
     List<String>? receiptUrls,
     String? notes,
   }) async {
+    _log.info(
+      'Creating expense',
+      tag: LogTags.expenses,
+      data: {
+        'groupId': groupId,
+        'description': description,
+        'amount': amount,
+        'splitType': splitType.name,
+      },
+    );
     try {
       final now = DateTime.now();
       final expenseModel = ExpenseModel(
@@ -91,10 +155,25 @@ class ExpenseRepositoryImpl implements ExpenseRepository {
         groupId,
         expenseModel,
       );
+      _log.info(
+        'Expense created',
+        tag: LogTags.expenses,
+        data: {'expenseId': createdExpense.id, 'amount': amount},
+      );
       return Right(createdExpense.toEntity());
     } on ServerException catch (e) {
+      _log.error(
+        'Server error creating expense',
+        tag: LogTags.expenses,
+        data: {'groupId': groupId, 'error': e.message},
+      );
       return Left(ServerFailure(message: e.message));
     } catch (e) {
+      _log.error(
+        'Unexpected error creating expense',
+        tag: LogTags.expenses,
+        data: {'groupId': groupId, 'error': e.toString()},
+      );
       return Left(ServerFailure(message: e.toString()));
     }
   }
@@ -113,6 +192,11 @@ class ExpenseRepositoryImpl implements ExpenseRepository {
     List<String>? receiptUrls,
     String? notes,
   }) async {
+    _log.info(
+      'Updating expense',
+      tag: LogTags.expenses,
+      data: {'groupId': groupId, 'expenseId': expenseId},
+    );
     try {
       // First get the current expense
       final currentExpense = await _datasource.getExpense(groupId, expenseId);
@@ -146,10 +230,25 @@ class ExpenseRepositoryImpl implements ExpenseRepository {
         groupId,
         updatedModel,
       );
+      _log.info(
+        'Expense updated',
+        tag: LogTags.expenses,
+        data: {'expenseId': expenseId},
+      );
       return Right(updatedExpense.toEntity());
     } on ServerException catch (e) {
+      _log.error(
+        'Server error updating expense',
+        tag: LogTags.expenses,
+        data: {'expenseId': expenseId, 'error': e.message},
+      );
       return Left(ServerFailure(message: e.message));
     } catch (e) {
+      _log.error(
+        'Unexpected error updating expense',
+        tag: LogTags.expenses,
+        data: {'expenseId': expenseId, 'error': e.toString()},
+      );
       return Left(ServerFailure(message: e.toString()));
     }
   }
@@ -159,12 +258,32 @@ class ExpenseRepositoryImpl implements ExpenseRepository {
     String groupId,
     String expenseId,
   ) async {
+    _log.info(
+      'Deleting expense (soft)',
+      tag: LogTags.expenses,
+      data: {'groupId': groupId, 'expenseId': expenseId},
+    );
     try {
       await _datasource.deleteExpense(groupId, expenseId);
+      _log.info(
+        'Expense deleted',
+        tag: LogTags.expenses,
+        data: {'expenseId': expenseId},
+      );
       return const Right(null);
     } on ServerException catch (e) {
+      _log.error(
+        'Server error deleting expense',
+        tag: LogTags.expenses,
+        data: {'expenseId': expenseId, 'error': e.message},
+      );
       return Left(ServerFailure(message: e.message));
     } catch (e) {
+      _log.error(
+        'Unexpected error deleting expense',
+        tag: LogTags.expenses,
+        data: {'expenseId': expenseId, 'error': e.toString()},
+      );
       return Left(ServerFailure(message: e.toString()));
     }
   }
@@ -174,12 +293,32 @@ class ExpenseRepositoryImpl implements ExpenseRepository {
     String groupId,
     String expenseId,
   ) async {
+    _log.warning(
+      'Permanently deleting expense',
+      tag: LogTags.expenses,
+      data: {'groupId': groupId, 'expenseId': expenseId},
+    );
     try {
       await _datasource.permanentlyDeleteExpense(groupId, expenseId);
+      _log.info(
+        'Expense permanently deleted',
+        tag: LogTags.expenses,
+        data: {'expenseId': expenseId},
+      );
       return const Right(null);
     } on ServerException catch (e) {
+      _log.error(
+        'Server error permanently deleting expense',
+        tag: LogTags.expenses,
+        data: {'expenseId': expenseId, 'error': e.message},
+      );
       return Left(ServerFailure(message: e.message));
     } catch (e) {
+      _log.error(
+        'Unexpected error permanently deleting expense',
+        tag: LogTags.expenses,
+        data: {'expenseId': expenseId, 'error': e.toString()},
+      );
       return Left(ServerFailure(message: e.toString()));
     }
   }
@@ -190,12 +329,32 @@ class ExpenseRepositoryImpl implements ExpenseRepository {
     required String expenseId,
     required String filePath,
   }) async {
+    _log.info(
+      'Uploading receipt',
+      tag: LogTags.expenses,
+      data: {'groupId': groupId, 'expenseId': expenseId},
+    );
     try {
       final url = await _datasource.uploadReceipt(groupId, expenseId, filePath);
+      _log.info(
+        'Receipt uploaded',
+        tag: LogTags.expenses,
+        data: {'expenseId': expenseId},
+      );
       return Right(url);
     } on ServerException catch (e) {
+      _log.error(
+        'Server error uploading receipt',
+        tag: LogTags.expenses,
+        data: {'expenseId': expenseId, 'error': e.message},
+      );
       return Left(ServerFailure(message: e.message));
     } catch (e) {
+      _log.error(
+        'Unexpected error uploading receipt',
+        tag: LogTags.expenses,
+        data: {'expenseId': expenseId, 'error': e.toString()},
+      );
       return Left(ServerFailure(message: e.toString()));
     }
   }
@@ -206,12 +365,32 @@ class ExpenseRepositoryImpl implements ExpenseRepository {
     required String expenseId,
     required String receiptUrl,
   }) async {
+    _log.info(
+      'Deleting receipt',
+      tag: LogTags.expenses,
+      data: {'groupId': groupId, 'expenseId': expenseId},
+    );
     try {
       await _datasource.deleteReceipt(receiptUrl);
+      _log.info(
+        'Receipt deleted',
+        tag: LogTags.expenses,
+        data: {'expenseId': expenseId},
+      );
       return const Right(null);
     } on ServerException catch (e) {
+      _log.error(
+        'Server error deleting receipt',
+        tag: LogTags.expenses,
+        data: {'expenseId': expenseId, 'error': e.message},
+      );
       return Left(ServerFailure(message: e.message));
     } catch (e) {
+      _log.error(
+        'Unexpected error deleting receipt',
+        tag: LogTags.expenses,
+        data: {'expenseId': expenseId, 'error': e.toString()},
+      );
       return Left(ServerFailure(message: e.toString()));
     }
   }
@@ -221,16 +400,36 @@ class ExpenseRepositoryImpl implements ExpenseRepository {
     String groupId,
     ExpenseCategory category,
   ) async {
+    _log.debug(
+      'Getting expenses by category',
+      tag: LogTags.expenses,
+      data: {'groupId': groupId, 'category': category.name},
+    );
     try {
       final expenses = await _datasource.getExpenses(groupId);
       final filtered = expenses
           .where((e) => e.category == category)
           .map((e) => e.toEntity())
           .toList();
+      _log.info(
+        'Expenses by category fetched',
+        tag: LogTags.expenses,
+        data: {'category': category.name, 'count': filtered.length},
+      );
       return Right(filtered);
     } on ServerException catch (e) {
+      _log.error(
+        'Server error getting expenses by category',
+        tag: LogTags.expenses,
+        data: {'error': e.message},
+      );
       return Left(ServerFailure(message: e.message));
     } catch (e) {
+      _log.error(
+        'Unexpected error getting expenses by category',
+        tag: LogTags.expenses,
+        data: {'error': e.toString()},
+      );
       return Left(ServerFailure(message: e.toString()));
     }
   }
@@ -241,6 +440,15 @@ class ExpenseRepositoryImpl implements ExpenseRepository {
     DateTime startDate,
     DateTime endDate,
   ) async {
+    _log.debug(
+      'Getting expenses by date range',
+      tag: LogTags.expenses,
+      data: {
+        'groupId': groupId,
+        'startDate': startDate.toIso8601String(),
+        'endDate': endDate.toIso8601String(),
+      },
+    );
     try {
       final expenses = await _datasource.getExpenses(groupId);
       final filtered = expenses
@@ -251,10 +459,25 @@ class ExpenseRepositoryImpl implements ExpenseRepository {
           )
           .map((e) => e.toEntity())
           .toList();
+      _log.info(
+        'Expenses by date range fetched',
+        tag: LogTags.expenses,
+        data: {'count': filtered.length},
+      );
       return Right(filtered);
     } on ServerException catch (e) {
+      _log.error(
+        'Server error getting expenses by date range',
+        tag: LogTags.expenses,
+        data: {'error': e.message},
+      );
       return Left(ServerFailure(message: e.message));
     } catch (e) {
+      _log.error(
+        'Unexpected error getting expenses by date range',
+        tag: LogTags.expenses,
+        data: {'error': e.toString()},
+      );
       return Left(ServerFailure(message: e.toString()));
     }
   }
@@ -263,6 +486,11 @@ class ExpenseRepositoryImpl implements ExpenseRepository {
   Future<Either<Failure, List<ExpenseEntity>>> getRecentExpenses({
     int limit = 10,
   }) async {
+    _log.debug(
+      'Getting recent expenses',
+      tag: LogTags.expenses,
+      data: {'limit': limit},
+    );
     // This would require a different query across all groups
     // For now, return empty list - implement when needed
     return const Right([]);
@@ -270,13 +498,33 @@ class ExpenseRepositoryImpl implements ExpenseRepository {
 
   @override
   Future<Either<Failure, int>> getTotalExpenses(String groupId) async {
+    _log.debug(
+      'Getting total expenses',
+      tag: LogTags.expenses,
+      data: {'groupId': groupId},
+    );
     try {
       final expenses = await _datasource.getExpenses(groupId);
       final total = expenses.fold(0, (sum, e) => sum + e.amount);
+      _log.info(
+        'Total expenses calculated',
+        tag: LogTags.expenses,
+        data: {'groupId': groupId, 'total': total},
+      );
       return Right(total);
     } on ServerException catch (e) {
+      _log.error(
+        'Server error getting total expenses',
+        tag: LogTags.expenses,
+        data: {'groupId': groupId, 'error': e.message},
+      );
       return Left(ServerFailure(message: e.message));
     } catch (e) {
+      _log.error(
+        'Unexpected error getting total expenses',
+        tag: LogTags.expenses,
+        data: {'groupId': groupId, 'error': e.toString()},
+      );
       return Left(ServerFailure(message: e.toString()));
     }
   }
@@ -285,10 +533,20 @@ class ExpenseRepositoryImpl implements ExpenseRepository {
   Future<Either<Failure, ExpenseStatistics>> getExpenseStatistics(
     String groupId,
   ) async {
+    _log.debug(
+      'Getting expense statistics',
+      tag: LogTags.expenses,
+      data: {'groupId': groupId},
+    );
     try {
       final expenses = await _datasource.getExpenses(groupId);
 
       if (expenses.isEmpty) {
+        _log.debug(
+          'No expenses found for statistics',
+          tag: LogTags.expenses,
+          data: {'groupId': groupId},
+        );
         return const Right(
           ExpenseStatistics(
             totalAmount: 0,
@@ -320,6 +578,15 @@ class ExpenseRepositoryImpl implements ExpenseRepository {
       final sorted = expenses.toList()
         ..sort((a, b) => a.date.compareTo(b.date));
 
+      _log.info(
+        'Expense statistics calculated',
+        tag: LogTags.expenses,
+        data: {
+          'groupId': groupId,
+          'totalAmount': totalAmount,
+          'expenseCount': expenses.length,
+        },
+      );
       return Right(
         ExpenseStatistics(
           totalAmount: totalAmount,
@@ -331,8 +598,18 @@ class ExpenseRepositoryImpl implements ExpenseRepository {
         ),
       );
     } on ServerException catch (e) {
+      _log.error(
+        'Server error getting expense statistics',
+        tag: LogTags.expenses,
+        data: {'groupId': groupId, 'error': e.message},
+      );
       return Left(ServerFailure(message: e.message));
     } catch (e) {
+      _log.error(
+        'Unexpected error getting expense statistics',
+        tag: LogTags.expenses,
+        data: {'groupId': groupId, 'error': e.toString()},
+      );
       return Left(ServerFailure(message: e.toString()));
     }
   }
