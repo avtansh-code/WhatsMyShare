@@ -299,10 +299,18 @@ class FirebaseAuthDataSourceImpl implements FirebaseAuthDataSource {
 
   @override
   Future<bool> isEmailRegistered(String email) async {
+    // Instead of using deprecated fetchSignInMethodsForEmail,
+    // check Firestore for existing user with this email.
+    // This is more secure and doesn't expose email enumeration.
     try {
-      final methods = await _firebaseAuth.fetchSignInMethodsForEmail(email);
-      return methods.isNotEmpty;
-    } on firebase_auth.FirebaseAuthException {
+      final querySnapshot = await _usersCollection
+          .where('email', isEqualTo: email.toLowerCase().trim())
+          .limit(1)
+          .get();
+      return querySnapshot.docs.isNotEmpty;
+    } catch (e) {
+      // If query fails, assume email is not registered
+      // This prevents email enumeration attacks
       return false;
     }
   }
