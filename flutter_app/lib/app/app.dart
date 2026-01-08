@@ -1,22 +1,39 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
 
-import 'routes.dart';
 import '../core/config/theme_config.dart';
+import 'routes.dart';
 
 /// Main application widget
-class WhatsMyShareApp extends StatelessWidget {
+class WhatsMyShareApp extends StatefulWidget {
   const WhatsMyShareApp({super.key});
+
+  @override
+  State<WhatsMyShareApp> createState() => _WhatsMyShareAppState();
+}
+
+class _WhatsMyShareAppState extends State<WhatsMyShareApp> {
+  late final GoRouter _router;
+
+  @override
+  void initState() {
+    super.initState();
+    _router = AppRouter.createRouter();
+  }
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp.router(
       title: "What's My Share",
       debugShowCheckedModeBanner: false,
+
+      // Theme configuration
       theme: AppTheme.lightTheme,
       darkTheme: AppTheme.darkTheme,
       themeMode: ThemeMode.system,
-      routerConfig: AppRouter.router,
+
+      // Router configuration
+      routerConfig: _router,
     );
   }
 }

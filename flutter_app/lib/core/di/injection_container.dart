@@ -1,259 +1,92 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:firebase_storage/firebase_storage.dart';
 import 'package:get_it/get_it.dart';
+import 'package:google_sign_in/google_sign_in.dart';
+
+import '../../features/auth/data/datasources/firebase_auth_datasource.dart';
+import '../../features/auth/data/repositories/auth_repository_impl.dart';
+import '../../features/auth/domain/repositories/auth_repository.dart';
+import '../../features/auth/domain/usecases/get_current_user.dart';
+import '../../features/auth/domain/usecases/reset_password.dart';
+import '../../features/auth/domain/usecases/sign_in_with_email.dart';
+import '../../features/auth/domain/usecases/sign_in_with_google.dart';
+import '../../features/auth/domain/usecases/sign_out.dart';
+import '../../features/auth/domain/usecases/sign_up_with_email.dart';
+import '../../features/auth/presentation/bloc/auth_bloc.dart';
 
 /// Global service locator instance
-final GetIt sl = GetIt.instance;
+final sl = GetIt.instance;
 
 /// Initialize all dependencies
-Future<void> initDependencies() async {
-  // Firebase instances
-  _initFirebase();
-  
-  // Core services
-  _initCoreServices();
-  
-  // Feature: Auth
-  _initAuth();
-  
-  // Feature: Groups
-  _initGroups();
-  
-  // Feature: Expenses
-  _initExpenses();
-  
-  // Feature: Settlements
-  _initSettlements();
-  
-  // Feature: Friends
-  _initFriends();
-  
-  // Feature: Notifications
-  _initNotifications();
+Future<void> initializeDependencies() async {
+  // ==================== External ====================
+  _initExternal();
+
+  // ==================== Core ====================
+  _initCore();
+
+  // ==================== Features ====================
+  await _initAuthFeature();
 }
 
-/// Initialize Firebase instances
-void _initFirebase() {
+/// Initialize external dependencies (Firebase, etc.)
+void _initExternal() {
   // Firebase Auth
-  sl.registerLazySingleton<FirebaseAuth>(
-    () => FirebaseAuth.instance,
-  );
-  
-  // Cloud Firestore
-  sl.registerLazySingleton<FirebaseFirestore>(
-    () => FirebaseFirestore.instance,
-  );
-  
-  // Firebase Storage
-  sl.registerLazySingleton<FirebaseStorage>(
-    () => FirebaseStorage.instance,
-  );
+  sl.registerLazySingleton<FirebaseAuth>(() => FirebaseAuth.instance);
+
+  // Firestore
+  sl.registerLazySingleton<FirebaseFirestore>(() => FirebaseFirestore.instance);
+
+  // Google Sign In
+  sl.registerLazySingleton<GoogleSignIn>(() => GoogleSignIn(
+        scopes: ['email', 'profile'],
+      ));
 }
 
 /// Initialize core services
-void _initCoreServices() {
-  // Network info service
-  // sl.registerLazySingleton<NetworkInfo>(
-  //   () => NetworkInfoImpl(sl()),
-  // );
-  
-  // Local storage service
-  // sl.registerLazySingleton<LocalStorage>(
-  //   () => HiveLocalStorage(),
-  // );
+void _initCore() {
+  // Network info, local storage, etc. can be added here
 }
 
-/// Initialize Auth feature dependencies
-void _initAuth() {
-  // Data sources
-  // sl.registerLazySingleton<AuthRemoteDataSource>(
-  //   () => AuthRemoteDataSourceImpl(
-  //     firebaseAuth: sl(),
-  //     firestore: sl(),
-  //   ),
-  // );
-  
-  // Repository
-  // sl.registerLazySingleton<AuthRepository>(
-  //   () => AuthRepositoryImpl(
-  //     remoteDataSource: sl(),
-  //     networkInfo: sl(),
-  //   ),
-  // );
-  
-  // Use cases
-  // sl.registerLazySingleton(() => SignInWithEmail(sl()));
-  // sl.registerLazySingleton(() => SignUpWithEmail(sl()));
-  // sl.registerLazySingleton(() => SignInWithGoogle(sl()));
-  // sl.registerLazySingleton(() => SignOut(sl()));
-  // sl.registerLazySingleton(() => GetCurrentUser(sl()));
-  // sl.registerLazySingleton(() => ResetPassword(sl()));
-  
+/// Initialize authentication feature
+Future<void> _initAuthFeature() async {
+  // Data Sources
+  sl.registerLazySingleton<FirebaseAuthDataSource>(
+    () => FirebaseAuthDataSourceImpl(
+      firebaseAuth: sl<FirebaseAuth>(),
+      firestore: sl<FirebaseFirestore>(),
+      googleSignIn: sl<GoogleSignIn>(),
+    ),
+  );
+
+  // Repositories
+  sl.registerLazySingleton<AuthRepository>(
+    () => AuthRepositoryImpl(dataSource: sl<FirebaseAuthDataSource>()),
+  );
+
+  // Use Cases
+  sl.registerLazySingleton(() => SignInWithEmail(sl<AuthRepository>()));
+  sl.registerLazySingleton(() => SignUpWithEmail(sl<AuthRepository>()));
+  sl.registerLazySingleton(() => SignInWithGoogle(sl<AuthRepository>()));
+  sl.registerLazySingleton(() => SignOut(sl<AuthRepository>()));
+  sl.registerLazySingleton(() => GetCurrentUser(sl<AuthRepository>()));
+  sl.registerLazySingleton(() => ResetPassword(sl<AuthRepository>()));
+
   // BLoC
-  // sl.registerFactory(
-  //   () => AuthBloc(
-  //     signInWithEmail: sl(),
-  //     signUpWithEmail: sl(),
-  //     signInWithGoogle: sl(),
-  //     signOut: sl(),
-  //     getCurrentUser: sl(),
-  //   ),
-  // );
+  sl.registerFactory<AuthBloc>(
+    () => AuthBloc(
+      signInWithEmail: sl<SignInWithEmail>(),
+      signUpWithEmail: sl<SignUpWithEmail>(),
+      signInWithGoogle: sl<SignInWithGoogle>(),
+      signOut: sl<SignOut>(),
+      getCurrentUser: sl<GetCurrentUser>(),
+      resetPassword: sl<ResetPassword>(),
+    ),
+  );
 }
 
-/// Initialize Groups feature dependencies
-void _initGroups() {
-  // Data sources
-  // sl.registerLazySingleton<GroupRemoteDataSource>(
-  //   () => GroupRemoteDataSourceImpl(firestore: sl()),
-  // );
-  
-  // Repository
-  // sl.registerLazySingleton<GroupRepository>(
-  //   () => GroupRepositoryImpl(
-  //     remoteDataSource: sl(),
-  //     networkInfo: sl(),
-  //   ),
-  // );
-  
-  // Use cases
-  // sl.registerLazySingleton(() => CreateGroup(sl()));
-  // sl.registerLazySingleton(() => GetGroups(sl()));
-  // sl.registerLazySingleton(() => GetGroupById(sl()));
-  // sl.registerLazySingleton(() => UpdateGroup(sl()));
-  // sl.registerLazySingleton(() => DeleteGroup(sl()));
-  // sl.registerLazySingleton(() => AddGroupMember(sl()));
-  // sl.registerLazySingleton(() => RemoveGroupMember(sl()));
-  
-  // BLoC
-  // sl.registerFactory(
-  //   () => GroupBloc(
-  //     createGroup: sl(),
-  //     getGroups: sl(),
-  //     updateGroup: sl(),
-  //     deleteGroup: sl(),
-  //   ),
-  // );
-}
-
-/// Initialize Expenses feature dependencies
-void _initExpenses() {
-  // Data sources
-  // sl.registerLazySingleton<ExpenseRemoteDataSource>(
-  //   () => ExpenseRemoteDataSourceImpl(firestore: sl()),
-  // );
-  
-  // Repository
-  // sl.registerLazySingleton<ExpenseRepository>(
-  //   () => ExpenseRepositoryImpl(
-  //     remoteDataSource: sl(),
-  //     networkInfo: sl(),
-  //   ),
-  // );
-  
-  // Use cases
-  // sl.registerLazySingleton(() => CreateExpense(sl()));
-  // sl.registerLazySingleton(() => GetExpenses(sl()));
-  // sl.registerLazySingleton(() => UpdateExpense(sl()));
-  // sl.registerLazySingleton(() => DeleteExpense(sl()));
-  
-  // BLoC
-  // sl.registerFactory(
-  //   () => ExpenseBloc(
-  //     createExpense: sl(),
-  //     getExpenses: sl(),
-  //     updateExpense: sl(),
-  //     deleteExpense: sl(),
-  //   ),
-  // );
-}
-
-/// Initialize Settlements feature dependencies
-void _initSettlements() {
-  // Data sources
-  // sl.registerLazySingleton<SettlementRemoteDataSource>(
-  //   () => SettlementRemoteDataSourceImpl(firestore: sl()),
-  // );
-  
-  // Repository
-  // sl.registerLazySingleton<SettlementRepository>(
-  //   () => SettlementRepositoryImpl(
-  //     remoteDataSource: sl(),
-  //     networkInfo: sl(),
-  //   ),
-  // );
-  
-  // Use cases
-  // sl.registerLazySingleton(() => CreateSettlement(sl()));
-  // sl.registerLazySingleton(() => GetSettlements(sl()));
-  // sl.registerLazySingleton(() => ConfirmSettlement(sl()));
-  // sl.registerLazySingleton(() => SimplifyDebts(sl()));
-  
-  // BLoC
-  // sl.registerFactory(
-  //   () => SettlementBloc(
-  //     createSettlement: sl(),
-  //     getSettlements: sl(),
-  //     confirmSettlement: sl(),
-  //     simplifyDebts: sl(),
-  //   ),
-  // );
-}
-
-/// Initialize Friends feature dependencies
-void _initFriends() {
-  // Data sources
-  // sl.registerLazySingleton<FriendRemoteDataSource>(
-  //   () => FriendRemoteDataSourceImpl(firestore: sl()),
-  // );
-  
-  // Repository
-  // sl.registerLazySingleton<FriendRepository>(
-  //   () => FriendRepositoryImpl(
-  //     remoteDataSource: sl(),
-  //     networkInfo: sl(),
-  //   ),
-  // );
-  
-  // Use cases
-  // sl.registerLazySingleton(() => AddFriend(sl()));
-  // sl.registerLazySingleton(() => GetFriends(sl()));
-  // sl.registerLazySingleton(() => GetFriendBalance(sl()));
-  
-  // BLoC
-  // sl.registerFactory(
-  //   () => FriendBloc(
-  //     addFriend: sl(),
-  //     getFriends: sl(),
-  //     getFriendBalance: sl(),
-  //   ),
-  // );
-}
-
-/// Initialize Notifications feature dependencies
-void _initNotifications() {
-  // Data sources
-  // sl.registerLazySingleton<NotificationRemoteDataSource>(
-  //   () => NotificationRemoteDataSourceImpl(firestore: sl()),
-  // );
-  
-  // Repository
-  // sl.registerLazySingleton<NotificationRepository>(
-  //   () => NotificationRepositoryImpl(
-  //     remoteDataSource: sl(),
-  //   ),
-  // );
-  
-  // Use cases
-  // sl.registerLazySingleton(() => GetNotifications(sl()));
-  // sl.registerLazySingleton(() => MarkNotificationRead(sl()));
-  
-  // BLoC
-  // sl.registerFactory(
-  //   () => NotificationBloc(
-  //     getNotifications: sl(),
-  //     markNotificationRead: sl(),
-  //   ),
-  // );
-}
+/// Reset all dependencies (useful for testing)
+Future<void> resetDependencies() async {
+  await sl.reset();
+  await initializeDependencies();
+}  // BLoC
