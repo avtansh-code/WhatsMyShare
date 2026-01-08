@@ -14,8 +14,8 @@ class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
   final UserProfileRepository _repository;
 
   ProfileBloc({required UserProfileRepository repository})
-      : _repository = repository,
-        super(const ProfileState()) {
+    : _repository = repository,
+      super(const ProfileState()) {
     on<ProfileLoadRequested>(_onLoadRequested);
     on<ProfileUpdateRequested>(_onUpdateRequested);
     on<ProfilePhotoUpdateRequested>(_onPhotoUpdateRequested);
@@ -32,14 +32,14 @@ class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
     final result = await _repository.getCurrentUserProfile();
 
     result.fold(
-      (failure) => emit(state.copyWith(
-        status: ProfileStatus.error,
-        errorMessage: failure.message,
-      )),
-      (profile) => emit(state.copyWith(
-        status: ProfileStatus.loaded,
-        profile: profile,
-      )),
+      (failure) => emit(
+        state.copyWith(
+          status: ProfileStatus.error,
+          errorMessage: failure.message,
+        ),
+      ),
+      (profile) =>
+          emit(state.copyWith(status: ProfileStatus.loaded, profile: profile)),
     );
   }
 
@@ -62,14 +62,14 @@ class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
     );
 
     result.fold(
-      (failure) => emit(state.copyWith(
-        status: ProfileStatus.error,
-        errorMessage: failure.message,
-      )),
-      (profile) => emit(state.copyWith(
-        status: ProfileStatus.updated,
-        profile: profile,
-      )),
+      (failure) => emit(
+        state.copyWith(
+          status: ProfileStatus.error,
+          errorMessage: failure.message,
+        ),
+      ),
+      (profile) =>
+          emit(state.copyWith(status: ProfileStatus.updated, profile: profile)),
     );
   }
 
@@ -87,16 +87,20 @@ class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
     );
 
     result.fold(
-      (failure) => emit(state.copyWith(
-        status: ProfileStatus.error,
-        errorMessage: failure.message,
-      )),
+      (failure) => emit(
+        state.copyWith(
+          status: ProfileStatus.error,
+          errorMessage: failure.message,
+        ),
+      ),
       (photoUrl) {
         final updatedProfile = state.profile!.copyWith(photoUrl: photoUrl);
-        emit(state.copyWith(
-          status: ProfileStatus.photoUpdated,
-          profile: updatedProfile,
-        ));
+        emit(
+          state.copyWith(
+            status: ProfileStatus.photoUpdated,
+            profile: updatedProfile,
+          ),
+        );
       },
     );
   }
@@ -112,10 +116,12 @@ class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
     final result = await _repository.deleteProfilePhoto(state.profile!.id);
 
     result.fold(
-      (failure) => emit(state.copyWith(
-        status: ProfileStatus.error,
-        errorMessage: failure.message,
-      )),
+      (failure) => emit(
+        state.copyWith(
+          status: ProfileStatus.error,
+          errorMessage: failure.message,
+        ),
+      ),
       (_) {
         final updatedProfile = UserProfileEntity(
           id: state.profile!.id,
@@ -137,10 +143,12 @@ class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
           updatedAt: DateTime.now(),
           lastActiveAt: state.profile!.lastActiveAt,
         );
-        emit(state.copyWith(
-          status: ProfileStatus.updated,
-          profile: updatedProfile,
-        ));
+        emit(
+          state.copyWith(
+            status: ProfileStatus.updated,
+            profile: updatedProfile,
+          ),
+        );
       },
     );
   }
@@ -154,21 +162,21 @@ class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
     emit(state.copyWith(status: ProfileStatus.updating));
 
     final userId = state.profile!.id;
-    
+
     if (event.notificationsEnabled != null) {
       await _repository.updateNotificationSettings(
         userId: userId,
         enabled: event.notificationsEnabled!,
       );
     }
-    
+
     if (event.contactSyncEnabled != null) {
       await _repository.updateContactSyncSettings(
         userId: userId,
         enabled: event.contactSyncEnabled!,
       );
     }
-    
+
     if (event.biometricAuthEnabled != null) {
       await _repository.updateBiometricAuthSettings(
         userId: userId,
@@ -180,14 +188,14 @@ class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
     final result = await _repository.getCurrentUserProfile();
 
     result.fold(
-      (failure) => emit(state.copyWith(
-        status: ProfileStatus.error,
-        errorMessage: failure.message,
-      )),
-      (profile) => emit(state.copyWith(
-        status: ProfileStatus.updated,
-        profile: profile,
-      )),
+      (failure) => emit(
+        state.copyWith(
+          status: ProfileStatus.error,
+          errorMessage: failure.message,
+        ),
+      ),
+      (profile) =>
+          emit(state.copyWith(status: ProfileStatus.updated, profile: profile)),
     );
   }
 }

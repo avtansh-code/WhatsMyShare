@@ -34,9 +34,7 @@ abstract class AuthRepository {
   Future<Either<Failure, void>> signOut();
 
   /// Send password reset email
-  Future<Either<Failure, void>> resetPassword({
-    required String email,
-  });
+  Future<Either<Failure, void>> resetPassword({required String email});
 
   /// Update user profile
   Future<Either<Failure, UserEntity>> updateProfile({

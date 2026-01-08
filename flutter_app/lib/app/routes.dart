@@ -12,6 +12,11 @@ import '../features/dashboard/presentation/pages/dashboard_page.dart';
 import '../features/profile/presentation/bloc/profile_bloc.dart';
 import '../features/profile/presentation/pages/edit_profile_page.dart';
 import '../features/profile/presentation/pages/profile_page.dart';
+import '../features/groups/presentation/bloc/group_bloc.dart';
+import '../features/groups/presentation/bloc/group_event.dart';
+import '../features/groups/presentation/pages/group_list_page.dart';
+import '../features/groups/presentation/pages/create_group_page.dart';
+import '../features/groups/presentation/pages/group_detail_page.dart';
 
 /// App router configuration with auth-aware navigation
 class AppRouter {
@@ -32,7 +37,8 @@ class AppRouter {
   /// Handle authentication-based redirects
   static String? _handleRedirect(BuildContext context, GoRouterState state) {
     final isLoggedIn = FirebaseAuth.instance.currentUser != null;
-    final isAuthRoute = state.matchedLocation == '/login' ||
+    final isAuthRoute =
+        state.matchedLocation == '/login' ||
         state.matchedLocation == '/signup' ||
         state.matchedLocation == '/forgot-password';
 
@@ -103,6 +109,35 @@ class AppRouter {
         create: (_) => sl<ProfileBloc>()..add(const ProfileLoadRequested()),
         child: const EditProfilePage(),
       ),
+    ),
+
+    // Group Routes
+    GoRoute(
+      path: '/groups',
+      name: 'groups',
+      builder: (context, state) => BlocProvider(
+        create: (_) => sl<GroupBloc>()..add(const GroupLoadAllRequested()),
+        child: const GroupListPage(),
+      ),
+    ),
+    GoRoute(
+      path: '/groups/create',
+      name: 'create-group',
+      builder: (context, state) => BlocProvider(
+        create: (_) => sl<GroupBloc>(),
+        child: const CreateGroupPage(),
+      ),
+    ),
+    GoRoute(
+      path: '/groups/:groupId',
+      name: 'group-detail',
+      builder: (context, state) {
+        final groupId = state.pathParameters['groupId']!;
+        return BlocProvider(
+          create: (_) => sl<GroupBloc>()..add(GroupLoadByIdRequested(groupId)),
+          child: GroupDetailPage(groupId: groupId),
+        );
+      },
     ),
 
     // Redirect root to appropriate page

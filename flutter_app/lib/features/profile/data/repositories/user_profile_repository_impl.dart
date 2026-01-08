@@ -1,7 +1,6 @@
 import 'dart:io';
 
 import 'package:dartz/dartz.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 
 import '../../../../core/errors/exceptions.dart';
 import '../../../../core/errors/failures.dart';
@@ -12,16 +11,14 @@ import '../datasources/user_profile_datasource.dart';
 /// Implementation of UserProfileRepository
 class UserProfileRepositoryImpl implements UserProfileRepository {
   final UserProfileDataSource _dataSource;
-  final FirebaseAuth _auth;
 
-  UserProfileRepositoryImpl({
-    required UserProfileDataSource dataSource,
-    FirebaseAuth? auth,
-  })  : _dataSource = dataSource,
-        _auth = auth ?? FirebaseAuth.instance;
+  UserProfileRepositoryImpl({required UserProfileDataSource dataSource})
+    : _dataSource = dataSource;
 
   @override
-  Future<Either<Failure, UserProfileEntity>> getUserProfile(String userId) async {
+  Future<Either<Failure, UserProfileEntity>> getUserProfile(
+    String userId,
+  ) async {
     try {
       final profile = await _dataSource.getUserProfile(userId);
       return Right(profile.toEntity());
@@ -50,7 +47,9 @@ class UserProfileRepositoryImpl implements UserProfileRepository {
 
   @override
   Stream<UserProfileEntity?> watchCurrentUserProfile() {
-    return _dataSource.watchCurrentUserProfile().map((model) => model?.toEntity());
+    return _dataSource.watchCurrentUserProfile().map(
+      (model) => model?.toEntity(),
+    );
   }
 
   @override

@@ -115,10 +115,7 @@ class CurrencyUtils {
           decimalDigits: 2,
         );
       default:
-        return NumberFormat.currency(
-          symbol: currencyCode,
-          decimalDigits: 2,
-        );
+        return NumberFormat.currency(symbol: currencyCode, decimalDigits: 2);
     }
   }
 }

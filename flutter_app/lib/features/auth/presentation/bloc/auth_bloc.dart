@@ -32,13 +32,13 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     required SignOut signOut,
     required GetCurrentUser getCurrentUser,
     required ResetPassword resetPassword,
-  })  : _signInWithEmail = signInWithEmail,
-        _signUpWithEmail = signUpWithEmail,
-        _signInWithGoogle = signInWithGoogle,
-        _signOut = signOut,
-        _getCurrentUser = getCurrentUser,
-        _resetPassword = resetPassword,
-        super(AuthInitial()) {
+  }) : _signInWithEmail = signInWithEmail,
+       _signUpWithEmail = signUpWithEmail,
+       _signInWithGoogle = signInWithGoogle,
+       _signOut = signOut,
+       _getCurrentUser = getCurrentUser,
+       _resetPassword = resetPassword,
+       super(AuthInitial()) {
     on<AuthCheckRequested>(_onAuthCheckRequested);
     on<AuthSignInWithEmailRequested>(_onSignInWithEmailRequested);
     on<AuthSignUpWithEmailRequested>(_onSignUpWithEmailRequested);
@@ -136,10 +136,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     );
   }
 
-  void _onUserChanged(
-    AuthUserChanged event,
-    Emitter<AuthState> emit,
-  ) {
+  void _onUserChanged(AuthUserChanged event, Emitter<AuthState> emit) {
     if (event.user != null) {
       emit(AuthAuthenticated(event.user!));
     } else {

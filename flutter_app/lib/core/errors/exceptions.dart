@@ -68,39 +68,37 @@ class AuthException extends AppException {
   });
 
   factory AuthException.invalidCredentials() => const AuthException(
-        message: 'Invalid email or password',
-        code: 'INVALID_CREDENTIALS',
-      );
+    message: 'Invalid email or password',
+    code: 'INVALID_CREDENTIALS',
+  );
 
-  factory AuthException.userNotFound() => const AuthException(
-        message: 'User not found',
-        code: 'USER_NOT_FOUND',
-      );
+  factory AuthException.userNotFound() =>
+      const AuthException(message: 'User not found', code: 'USER_NOT_FOUND');
 
   factory AuthException.emailAlreadyInUse() => const AuthException(
-        message: 'Email is already registered',
-        code: 'EMAIL_ALREADY_IN_USE',
-      );
+    message: 'Email is already registered',
+    code: 'EMAIL_ALREADY_IN_USE',
+  );
 
   factory AuthException.weakPassword() => const AuthException(
-        message: 'Password is too weak',
-        code: 'WEAK_PASSWORD',
-      );
+    message: 'Password is too weak',
+    code: 'WEAK_PASSWORD',
+  );
 
   factory AuthException.invalidEmail() => const AuthException(
-        message: 'Invalid email address',
-        code: 'INVALID_EMAIL',
-      );
+    message: 'Invalid email address',
+    code: 'INVALID_EMAIL',
+  );
 
   factory AuthException.sessionExpired() => const AuthException(
-        message: 'Session expired. Please login again',
-        code: 'SESSION_EXPIRED',
-      );
+    message: 'Session expired. Please login again',
+    code: 'SESSION_EXPIRED',
+  );
 
   factory AuthException.unauthorized() => const AuthException(
-        message: 'You are not authorized to perform this action',
-        code: 'UNAUTHORIZED',
-      );
+    message: 'You are not authorized to perform this action',
+    code: 'UNAUTHORIZED',
+  );
 
   @override
   String toString() => 'AuthException: $message (code: $code)';
@@ -115,17 +113,16 @@ class FirestoreException extends AppException {
     super.stackTrace,
   });
 
-  factory FirestoreException.notFound(String document) => FirestoreException(
-        message: '$document not found',
-        code: 'NOT_FOUND',
-      );
+  factory FirestoreException.notFound(String document) =>
+      FirestoreException(message: '$document not found', code: 'NOT_FOUND');
 
   factory FirestoreException.permissionDenied() => const FirestoreException(
-        message: 'Permission denied',
-        code: 'PERMISSION_DENIED',
-      );
+    message: 'Permission denied',
+    code: 'PERMISSION_DENIED',
+  );
 
-  factory FirestoreException.alreadyExists(String document) => FirestoreException(
+  factory FirestoreException.alreadyExists(String document) =>
+      FirestoreException(
         message: '$document already exists',
         code: 'ALREADY_EXISTS',
       );
@@ -160,19 +157,19 @@ class StorageException extends AppException {
   });
 
   factory StorageException.uploadFailed() => const StorageException(
-        message: 'Failed to upload file',
-        code: 'UPLOAD_FAILED',
-      );
+    message: 'Failed to upload file',
+    code: 'UPLOAD_FAILED',
+  );
 
   factory StorageException.downloadFailed() => const StorageException(
-        message: 'Failed to download file',
-        code: 'DOWNLOAD_FAILED',
-      );
+    message: 'Failed to download file',
+    code: 'DOWNLOAD_FAILED',
+  );
 
   factory StorageException.fileTooLarge() => const StorageException(
-        message: 'File size exceeds limit',
-        code: 'FILE_TOO_LARGE',
-      );
+    message: 'File size exceeds limit',
+    code: 'FILE_TOO_LARGE',
+  );
 
   @override
   String toString() => 'StorageException: $message (code: $code)';
@@ -201,19 +198,19 @@ class BiometricException extends AppException {
   });
 
   factory BiometricException.notAvailable() => const BiometricException(
-        message: 'Biometric authentication not available',
-        code: 'NOT_AVAILABLE',
-      );
+    message: 'Biometric authentication not available',
+    code: 'NOT_AVAILABLE',
+  );
 
   factory BiometricException.notEnrolled() => const BiometricException(
-        message: 'No biometrics enrolled on device',
-        code: 'NOT_ENROLLED',
-      );
+    message: 'No biometrics enrolled on device',
+    code: 'NOT_ENROLLED',
+  );
 
   factory BiometricException.failed() => const BiometricException(
-        message: 'Biometric authentication failed',
-        code: 'AUTH_FAILED',
-      );
+    message: 'Biometric authentication failed',
+    code: 'AUTH_FAILED',
+  );
 
   @override
   String toString() => 'BiometricException: $message (code: $code)';

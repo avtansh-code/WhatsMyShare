@@ -42,7 +42,7 @@ class DashboardPage extends StatelessWidget {
                             width: 32,
                             height: 32,
                             fit: BoxFit.cover,
-                            errorBuilder: (_, __, ___) => Text(
+                            errorBuilder: (_, error, stackTrace) => Text(
                               user.initials,
                               style: TextStyle(
                                 color: theme.colorScheme.onPrimaryContainer,
@@ -170,7 +170,11 @@ class DashboardPage extends StatelessWidget {
     );
   }
 
-  Widget _buildWelcomeCard(BuildContext context, ThemeData theme, dynamic user) {
+  Widget _buildWelcomeCard(
+    BuildContext context,
+    ThemeData theme,
+    dynamic user,
+  ) {
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -214,7 +218,11 @@ class DashboardPage extends StatelessWidget {
     );
   }
 
-  Widget _buildBalanceSummary(BuildContext context, ThemeData theme, dynamic user) {
+  Widget _buildBalanceSummary(
+    BuildContext context,
+    ThemeData theme,
+    dynamic user,
+  ) {
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -367,11 +375,7 @@ class DashboardPage extends StatelessWidget {
           padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 8),
           child: Column(
             children: [
-              Icon(
-                icon,
-                size: 28,
-                color: theme.colorScheme.primary,
-              ),
+              Icon(icon, size: 28, color: theme.colorScheme.primary),
               const SizedBox(height: 8),
               Text(
                 label,
@@ -418,7 +422,9 @@ class DashboardPage extends StatelessWidget {
                   Icon(
                     Icons.receipt_long_outlined,
                     size: 48,
-                    color: theme.colorScheme.onSurfaceVariant.withOpacity(0.5),
+                    color: theme.colorScheme.onSurfaceVariant.withValues(
+                      alpha: 0.5,
+                    ),
                   ),
                   const SizedBox(height: 8),
                   Text(
@@ -431,7 +437,9 @@ class DashboardPage extends StatelessWidget {
                   Text(
                     'Add an expense to get started',
                     style: theme.textTheme.bodySmall?.copyWith(
-                      color: theme.colorScheme.onSurfaceVariant.withOpacity(0.7),
+                      color: theme.colorScheme.onSurfaceVariant.withValues(
+                        alpha: 0.7,
+                      ),
                     ),
                   ),
                 ],
@@ -474,7 +482,9 @@ class DashboardPage extends StatelessWidget {
                   Icon(
                     Icons.group_outlined,
                     size: 48,
-                    color: theme.colorScheme.onSurfaceVariant.withOpacity(0.5),
+                    color: theme.colorScheme.onSurfaceVariant.withValues(
+                      alpha: 0.5,
+                    ),
                   ),
                   const SizedBox(height: 8),
                   Text(
@@ -504,7 +514,6 @@ class DashboardPage extends StatelessWidget {
     showModalBottomSheet(
       context: context,
       builder: (context) {
-        final theme = Theme.of(context);
         return SafeArea(
           child: Padding(
             padding: const EdgeInsets.all(16),

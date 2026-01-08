@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../../../core/config/theme_config.dart';
 import '../bloc/auth_bloc.dart';
 
 /// Login page for email/password and Google authentication
@@ -30,11 +29,11 @@ class _LoginPageState extends State<LoginPage> {
   void _onSignIn() {
     if (_formKey.currentState?.validate() ?? false) {
       context.read<AuthBloc>().add(
-            AuthSignInWithEmailRequested(
-              email: _emailController.text.trim(),
-              password: _passwordController.text,
-            ),
-          );
+        AuthSignInWithEmailRequested(
+          email: _emailController.text.trim(),
+          password: _passwordController.text,
+        ),
+      );
     }
   }
 
@@ -164,7 +163,9 @@ class _LoginPageState extends State<LoginPage> {
               if (value == null || value.isEmpty) {
                 return 'Email is required';
               }
-              if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(value)) {
+              if (!RegExp(
+                r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$',
+              ).hasMatch(value)) {
                 return 'Enter a valid email';
               }
               return null;
@@ -239,9 +240,7 @@ class _LoginPageState extends State<LoginPage> {
         onPressed: _isLoading ? null : () => context.push('/forgot-password'),
         child: Text(
           'Forgot password?',
-          style: TextStyle(
-            color: theme.colorScheme.primary,
-          ),
+          style: TextStyle(color: theme.colorScheme.primary),
         ),
       ),
     );
@@ -250,9 +249,7 @@ class _LoginPageState extends State<LoginPage> {
   Widget _buildDivider(ThemeData theme) {
     return Row(
       children: [
-        Expanded(
-          child: Divider(color: theme.colorScheme.outlineVariant),
-        ),
+        Expanded(child: Divider(color: theme.colorScheme.outlineVariant)),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16),
           child: Text(
@@ -262,9 +259,7 @@ class _LoginPageState extends State<LoginPage> {
             ),
           ),
         ),
-        Expanded(
-          child: Divider(color: theme.colorScheme.outlineVariant),
-        ),
+        Expanded(child: Divider(color: theme.colorScheme.outlineVariant)),
       ],
     );
   }
@@ -279,15 +274,10 @@ class _LoginPageState extends State<LoginPage> {
         'https://www.google.com/favicon.ico',
         height: 20,
         width: 20,
-        errorBuilder: (context, error, stackTrace) => const Icon(
-          Icons.g_mobiledata,
-          size: 24,
-        ),
+        errorBuilder: (context, error, stackTrace) =>
+            const Icon(Icons.g_mobiledata, size: 24),
       ),
-      label: const Text(
-        'Sign in with Google',
-        style: TextStyle(fontSize: 16),
-      ),
+      label: const Text('Sign in with Google', style: TextStyle(fontSize: 16)),
     );
   }
 
@@ -295,10 +285,7 @@ class _LoginPageState extends State<LoginPage> {
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        Text(
-          "Don't have an account? ",
-          style: theme.textTheme.bodyMedium,
-        ),
+        Text("Don't have an account? ", style: theme.textTheme.bodyMedium),
         TextButton(
           onPressed: _isLoading ? null : () => context.push('/signup'),
           child: Text(

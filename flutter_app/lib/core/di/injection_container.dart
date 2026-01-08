@@ -18,6 +18,10 @@ import '../../features/profile/data/datasources/user_profile_datasource.dart';
 import '../../features/profile/data/repositories/user_profile_repository_impl.dart';
 import '../../features/profile/domain/repositories/user_profile_repository.dart';
 import '../../features/profile/presentation/bloc/profile_bloc.dart';
+import '../../features/groups/data/datasources/group_datasource.dart';
+import '../../features/groups/data/repositories/group_repository_impl.dart';
+import '../../features/groups/domain/repositories/group_repository.dart';
+import '../../features/groups/presentation/bloc/group_bloc.dart';
 
 /// Global service locator instance
 final sl = GetIt.instance;
@@ -32,6 +36,7 @@ Future<void> initializeDependencies() async {
 
   // ==================== Features ====================
   await _initAuthFeature();
+  await _initGroupFeature();
 }
 
 /// Initialize external dependencies (Firebase, etc.)
@@ -46,9 +51,9 @@ void _initExternal() {
   sl.registerLazySingleton<FirebaseStorage>(() => FirebaseStorage.instance);
 
   // Google Sign In
-  sl.registerLazySingleton<GoogleSignIn>(() => GoogleSignIn(
-        scopes: ['email', 'profile'],
-      ));
+  sl.registerLazySingleton<GoogleSignIn>(
+    () => GoogleSignIn(scopes: ['email', 'profile']),
+  );
 }
 
 /// Initialize core services
@@ -59,7 +64,7 @@ void _initCore() {
 /// Initialize authentication feature
 Future<void> _initAuthFeature() async {
   await _initProfileFeature();
-  
+
   // Data Sources
   sl.registerLazySingleton<FirebaseAuthDataSource>(
     () => FirebaseAuthDataSourceImpl(
@@ -108,16 +113,34 @@ Future<void> _initProfileFeature() async {
 
   // Repositories
   sl.registerLazySingleton<UserProfileRepository>(
-    () => UserProfileRepositoryImpl(
-      dataSource: sl<UserProfileDataSource>(),
-    ),
+    () => UserProfileRepositoryImpl(dataSource: sl<UserProfileDataSource>()),
   );
 
   // BLoC
   sl.registerFactory<ProfileBloc>(
-    () => ProfileBloc(
-      repository: sl<UserProfileRepository>(),
+    () => ProfileBloc(repository: sl<UserProfileRepository>()),
+  );
+}
+
+/// Initialize groups feature
+Future<void> _initGroupFeature() async {
+  // Data Sources
+  sl.registerLazySingleton<GroupDataSource>(
+    () => GroupDataSourceImpl(
+      firestore: sl<FirebaseFirestore>(),
+      storage: sl<FirebaseStorage>(),
+      auth: sl<FirebaseAuth>(),
     ),
+  );
+
+  // Repositories
+  sl.registerLazySingleton<GroupRepository>(
+    () => GroupRepositoryImpl(dataSource: sl<GroupDataSource>()),
+  );
+
+  // BLoC
+  sl.registerFactory<GroupBloc>(
+    () => GroupBloc(groupRepository: sl<GroupRepository>()),
   );
 }
 

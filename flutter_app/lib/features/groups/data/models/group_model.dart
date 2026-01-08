@@ -233,9 +233,7 @@ class GroupModel extends GroupEntity {
     String? currency,
     bool? simplifyDebts,
   }) {
-    final map = <String, dynamic>{
-      'updatedAt': FieldValue.serverTimestamp(),
-    };
+    final map = <String, dynamic>{'updatedAt': FieldValue.serverTimestamp()};
 
     if (name != null) map['name'] = name;
     if (description != null) map['description'] = description;

@@ -1,18 +1,10 @@
 import 'package:equatable/equatable.dart';
 
 /// Group type enumeration
-enum GroupType {
-  trip,
-  home,
-  couple,
-  other,
-}
+enum GroupType { trip, home, couple, other }
 
 /// Member role enumeration
-enum MemberRole {
-  admin,
-  member,
-}
+enum MemberRole { admin, member }
 
 /// Group member entity
 class GroupMember extends Equatable {
@@ -228,12 +220,12 @@ class GroupEntity extends Equatable {
 
   @override
   List<Object?> get props => [
-        id,
-        name,
-        type,
-        memberIds,
-        balances,
-        totalExpenses,
-        expenseCount,
-      ];
+    id,
+    name,
+    type,
+    memberIds,
+    balances,
+    totalExpenses,
+    expenseCount,
+  ];
 }

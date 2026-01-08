@@ -78,7 +78,9 @@ abstract class GroupRepository {
   Future<Either<Failure, void>> leaveGroup(String groupId);
 
   /// Get simplified debts for a group
-  Future<Either<Failure, List<SimplifiedDebt>>> getSimplifiedDebts(String groupId);
+  Future<Either<Failure, List<SimplifiedDebt>>> getSimplifiedDebts(
+    String groupId,
+  );
 
   /// Check if current user can edit group
   Future<Either<Failure, bool>> canEditGroup(String groupId);
@@ -118,12 +120,12 @@ class GroupStatistics {
 
   /// Create empty statistics
   factory GroupStatistics.empty() => const GroupStatistics(
-        totalGroups: 0,
-        totalOwed: 0,
-        totalOwing: 0,
-        netBalance: 0,
-        groupsWhereYouOwe: 0,
-        groupsWhereYouAreOwed: 0,
-        settledGroups: 0,
-      );
+    totalGroups: 0,
+    totalOwed: 0,
+    totalOwing: 0,
+    netBalance: 0,
+    groupsWhereYouOwe: 0,
+    groupsWhereYouAreOwed: 0,
+    settledGroups: 0,
+  );
 }

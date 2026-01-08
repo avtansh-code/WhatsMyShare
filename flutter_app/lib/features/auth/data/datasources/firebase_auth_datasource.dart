@@ -17,7 +17,11 @@ abstract class FirebaseAuthDataSource {
   Future<UserModel> signInWithEmail(String email, String password);
 
   /// Sign up with email and password
-  Future<UserModel> signUpWithEmail(String email, String password, String displayName);
+  Future<UserModel> signUpWithEmail(
+    String email,
+    String password,
+    String displayName,
+  );
 
   /// Sign in with Google
   Future<UserModel> signInWithGoogle();
@@ -67,9 +71,9 @@ class FirebaseAuthDataSourceImpl implements FirebaseAuthDataSource {
     required firebase_auth.FirebaseAuth firebaseAuth,
     required FirebaseFirestore firestore,
     required GoogleSignIn googleSignIn,
-  })  : _firebaseAuth = firebaseAuth,
-        _firestore = firestore,
-        _googleSignIn = googleSignIn;
+  }) : _firebaseAuth = firebaseAuth,
+       _firestore = firestore,
+       _googleSignIn = googleSignIn;
 
   /// Reference to users collection
   CollectionReference<Map<String, dynamic>> get _usersCollection =>
@@ -167,7 +171,9 @@ class FirebaseAuthDataSourceImpl implements FirebaseAuthDataSource {
       );
 
       // Sign in to Firebase with the Google credential
-      final userCredential = await _firebaseAuth.signInWithCredential(credential);
+      final userCredential = await _firebaseAuth.signInWithCredential(
+        credential,
+      );
       final user = userCredential.user;
 
       if (user == null) {
@@ -321,7 +327,10 @@ class FirebaseAuthDataSourceImpl implements FirebaseAuthDataSource {
   }
 
   @override
-  Future<void> updatePassword(String currentPassword, String newPassword) async {
+  Future<void> updatePassword(
+    String currentPassword,
+    String newPassword,
+  ) async {
     final user = _firebaseAuth.currentUser;
     if (user == null || user.email == null) {
       throw const AuthException(message: 'User not authenticated');
@@ -359,7 +368,9 @@ class FirebaseAuthDataSourceImpl implements FirebaseAuthDataSource {
   }
 
   /// Map Firebase Auth exceptions to custom exceptions
-  AuthException _mapFirebaseAuthException(firebase_auth.FirebaseAuthException e) {
+  AuthException _mapFirebaseAuthException(
+    firebase_auth.FirebaseAuthException e,
+  ) {
     switch (e.code) {
       case 'user-not-found':
         return const AuthException(

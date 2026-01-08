@@ -11,7 +11,7 @@ class AuthRepositoryImpl implements AuthRepository {
   final FirebaseAuthDataSource _dataSource;
 
   AuthRepositoryImpl({required FirebaseAuthDataSource dataSource})
-      : _dataSource = dataSource;
+    : _dataSource = dataSource;
 
   @override
   Stream<UserEntity?> get authStateChanges => _dataSource.authStateChanges;
@@ -45,7 +45,11 @@ class AuthRepositoryImpl implements AuthRepository {
     required String displayName,
   }) async {
     try {
-      final user = await _dataSource.signUpWithEmail(email, password, displayName);
+      final user = await _dataSource.signUpWithEmail(
+        email,
+        password,
+        displayName,
+      );
       return Right(user);
     } on AuthException catch (e) {
       return Left(AuthFailure(message: e.message, code: e.code));

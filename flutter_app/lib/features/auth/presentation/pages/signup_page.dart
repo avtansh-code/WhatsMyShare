@@ -34,12 +34,12 @@ class _SignUpPageState extends State<SignUpPage> {
   void _onSignUp() {
     if (_formKey.currentState?.validate() ?? false) {
       context.read<AuthBloc>().add(
-            AuthSignUpWithEmailRequested(
-              email: _emailController.text.trim(),
-              password: _passwordController.text,
-              displayName: _nameController.text.trim(),
-            ),
-          );
+        AuthSignUpWithEmailRequested(
+          email: _emailController.text.trim(),
+          password: _passwordController.text,
+          displayName: _nameController.text.trim(),
+        ),
+      );
     }
   }
 
@@ -168,7 +168,9 @@ class _SignUpPageState extends State<SignUpPage> {
               if (value == null || value.isEmpty) {
                 return 'Email is required';
               }
-              if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(value)) {
+              if (!RegExp(
+                r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$',
+              ).hasMatch(value)) {
                 return 'Enter a valid email';
               }
               return null;
@@ -284,10 +286,7 @@ class _SignUpPageState extends State<SignUpPage> {
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        Text(
-          'Already have an account? ',
-          style: theme.textTheme.bodyMedium,
-        ),
+        Text('Already have an account? ', style: theme.textTheme.bodyMedium),
         TextButton(
           onPressed: _isLoading ? null : () => context.pop(),
           child: Text(

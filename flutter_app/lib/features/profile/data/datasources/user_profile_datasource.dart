@@ -61,9 +61,9 @@ class UserProfileDataSourceImpl implements UserProfileDataSource {
     FirebaseFirestore? firestore,
     FirebaseAuth? auth,
     FirebaseStorage? storage,
-  })  : _firestore = firestore ?? FirebaseFirestore.instance,
-        _auth = auth ?? FirebaseAuth.instance,
-        _storage = storage ?? FirebaseStorage.instance;
+  }) : _firestore = firestore ?? FirebaseFirestore.instance,
+       _auth = auth ?? FirebaseAuth.instance,
+       _storage = storage ?? FirebaseStorage.instance;
 
   /// Reference to users collection
   CollectionReference<Map<String, dynamic>> get _usersCollection =>
@@ -123,12 +123,14 @@ class UserProfileDataSourceImpl implements UserProfileDataSource {
       );
 
       await _usersCollection.doc(userId).set(model.toCreateFirestore());
-      
+
       // Fetch the created document to get server timestamps
       final doc = await _usersCollection.doc(userId).get();
       return UserProfileModel.fromFirestore(doc);
     } on FirebaseException catch (e) {
-      throw ServerException(message: e.message ?? 'Failed to create user profile');
+      throw ServerException(
+        message: e.message ?? 'Failed to create user profile',
+      );
     }
   }
 
@@ -138,18 +140,17 @@ class UserProfileDataSourceImpl implements UserProfileDataSource {
     Map<String, dynamic>? data,
   }) async {
     try {
-      final updateData = {
-        ...?data,
-        'updatedAt': FieldValue.serverTimestamp(),
-      };
+      final updateData = {...?data, 'updatedAt': FieldValue.serverTimestamp()};
 
       await _usersCollection.doc(userId).update(updateData);
-      
+
       // Fetch updated document
       final doc = await _usersCollection.doc(userId).get();
       return UserProfileModel.fromFirestore(doc);
     } on FirebaseException catch (e) {
-      throw ServerException(message: e.message ?? 'Failed to update user profile');
+      throw ServerException(
+        message: e.message ?? 'Failed to update user profile',
+      );
     }
   }
 
@@ -161,30 +162,32 @@ class UserProfileDataSourceImpl implements UserProfileDataSource {
     try {
       // Create storage reference
       final ref = _storage.ref().child('users/$userId/profile/avatar.jpg');
-      
+
       // Upload with metadata
       final metadata = SettableMetadata(
         contentType: 'image/jpeg',
         customMetadata: {'userId': userId},
       );
-      
+
       final uploadTask = ref.putFile(imageFile, metadata);
-      
+
       // Wait for upload to complete
       final snapshot = await uploadTask;
-      
+
       // Get download URL
       final downloadUrl = await snapshot.ref.getDownloadURL();
-      
+
       // Update user profile with new photo URL
       await _usersCollection.doc(userId).update({
         'photoUrl': downloadUrl,
         'updatedAt': FieldValue.serverTimestamp(),
       });
-      
+
       return downloadUrl;
     } on FirebaseException catch (e) {
-      throw ServerException(message: e.message ?? 'Failed to upload profile photo');
+      throw ServerException(
+        message: e.message ?? 'Failed to upload profile photo',
+      );
     }
   }
 
@@ -198,14 +201,16 @@ class UserProfileDataSourceImpl implements UserProfileDataSource {
       } catch (_) {
         // File might not exist, continue
       }
-      
+
       // Update user profile
       await _usersCollection.doc(userId).update({
         'photoUrl': FieldValue.delete(),
         'updatedAt': FieldValue.serverTimestamp(),
       });
     } on FirebaseException catch (e) {
-      throw ServerException(message: e.message ?? 'Failed to delete profile photo');
+      throw ServerException(
+        message: e.message ?? 'Failed to delete profile photo',
+      );
     }
   }
 
@@ -215,7 +220,9 @@ class UserProfileDataSourceImpl implements UserProfileDataSource {
       final doc = await _usersCollection.doc(userId).get();
       return doc.exists;
     } on FirebaseException catch (e) {
-      throw ServerException(message: e.message ?? 'Failed to check profile existence');
+      throw ServerException(
+        message: e.message ?? 'Failed to check profile existence',
+      );
     }
   }
 
@@ -233,7 +240,9 @@ class UserProfileDataSourceImpl implements UserProfileDataSource {
       // Delete user document
       await _usersCollection.doc(userId).delete();
     } on FirebaseException catch (e) {
-      throw ServerException(message: e.message ?? 'Failed to delete user profile');
+      throw ServerException(
+        message: e.message ?? 'Failed to delete user profile',
+      );
     }
   }
 
@@ -244,7 +253,9 @@ class UserProfileDataSourceImpl implements UserProfileDataSource {
         'lastActiveAt': FieldValue.serverTimestamp(),
       });
     } on FirebaseException catch (e) {
-      throw ServerException(message: e.message ?? 'Failed to update last active');
+      throw ServerException(
+        message: e.message ?? 'Failed to update last active',
+      );
     }
   }
 }

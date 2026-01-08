@@ -26,7 +26,9 @@ class _EditProfilePageState extends State<EditProfilePage> {
   void initState() {
     super.initState();
     final profile = context.read<ProfileBloc>().state.profile;
-    _displayNameController = TextEditingController(text: profile?.displayName ?? '');
+    _displayNameController = TextEditingController(
+      text: profile?.displayName ?? '',
+    );
     _phoneController = TextEditingController(text: profile?.phone ?? '');
     _selectedCurrency = profile?.defaultCurrency ?? 'INR';
 
@@ -159,7 +161,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
 
                   // Currency
                   DropdownButtonFormField<String>(
-                    value: _selectedCurrency,
+                    initialValue: _selectedCurrency,
                     decoration: const InputDecoration(
                       labelText: 'Default Currency',
                       prefixIcon: Icon(Icons.currency_exchange),
@@ -218,8 +220,8 @@ class _EditProfilePageState extends State<EditProfilePage> {
                 backgroundImage: _selectedImage != null
                     ? FileImage(_selectedImage!)
                     : (profile?.photoUrl != null
-                        ? NetworkImage(profile!.photoUrl!) as ImageProvider
-                        : null),
+                          ? NetworkImage(profile!.photoUrl!) as ImageProvider
+                          : null),
                 child: (_selectedImage == null && profile?.photoUrl == null)
                     ? Text(
                         profile?.initials ?? '?',
@@ -259,8 +261,8 @@ class _EditProfilePageState extends State<EditProfilePage> {
           Text(
             'Tap to change photo',
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: Theme.of(context).colorScheme.onSurfaceVariant,
-                ),
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+            ),
           ),
         ],
       ),
@@ -328,20 +330,20 @@ class _EditProfilePageState extends State<EditProfilePage> {
     // Upload photo first if selected
     if (_selectedImage != null) {
       context.read<ProfileBloc>().add(
-            ProfilePhotoUpdateRequested(imageFile: _selectedImage!),
-          );
+        ProfilePhotoUpdateRequested(imageFile: _selectedImage!),
+      );
     }
 
     // Update profile info
     context.read<ProfileBloc>().add(
-          ProfileUpdateRequested(
-            displayName: _displayNameController.text.trim(),
-            phone: _phoneController.text.trim().isEmpty
-                ? null
-                : _phoneController.text.trim(),
-            defaultCurrency: _selectedCurrency,
-          ),
-        );
+      ProfileUpdateRequested(
+        displayName: _displayNameController.text.trim(),
+        phone: _phoneController.text.trim().isEmpty
+            ? null
+            : _phoneController.text.trim(),
+        defaultCurrency: _selectedCurrency,
+      ),
+    );
   }
 
   void _deletePhoto() {
@@ -349,7 +351,9 @@ class _EditProfilePageState extends State<EditProfilePage> {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Remove Photo'),
-        content: const Text('Are you sure you want to remove your profile photo?'),
+        content: const Text(
+          'Are you sure you want to remove your profile photo?',
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
@@ -358,7 +362,9 @@ class _EditProfilePageState extends State<EditProfilePage> {
           TextButton(
             onPressed: () {
               Navigator.pop(context);
-              context.read<ProfileBloc>().add(const ProfilePhotoDeleteRequested());
+              context.read<ProfileBloc>().add(
+                const ProfilePhotoDeleteRequested(),
+              );
             },
             child: Text(
               'Remove',

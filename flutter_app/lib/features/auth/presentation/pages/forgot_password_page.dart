@@ -27,10 +27,8 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
   void _onResetPassword() {
     if (_formKey.currentState?.validate() ?? false) {
       context.read<AuthBloc>().add(
-            AuthResetPasswordRequested(
-              email: _emailController.text.trim(),
-            ),
-          );
+        AuthResetPasswordRequested(email: _emailController.text.trim()),
+      );
     }
   }
 
@@ -82,11 +80,7 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         // Icon
-        Icon(
-          Icons.lock_reset,
-          size: 80,
-          color: theme.colorScheme.primary,
-        ),
+        Icon(Icons.lock_reset, size: 80, color: theme.colorScheme.primary),
         const SizedBox(height: 24),
 
         // Header
@@ -125,7 +119,9 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
               if (value == null || value.isEmpty) {
                 return 'Email is required';
               }
-              if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(value)) {
+              if (!RegExp(
+                r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$',
+              ).hasMatch(value)) {
                 return 'Enter a valid email';
               }
               return null;
@@ -161,9 +157,7 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
           onPressed: _isLoading ? null : () => context.pop(),
           child: Text(
             'Back to Sign In',
-            style: TextStyle(
-              color: theme.colorScheme.primary,
-            ),
+            style: TextStyle(color: theme.colorScheme.primary),
           ),
         ),
       ],
@@ -291,9 +285,7 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
           },
           child: Text(
             'Didn\'t receive the email? Try again',
-            style: TextStyle(
-              color: theme.colorScheme.primary,
-            ),
+            style: TextStyle(color: theme.colorScheme.primary),
           ),
         ),
       ],

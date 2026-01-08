@@ -58,7 +58,9 @@ class GroupState extends Equatable {
     return GroupState(
       status: status ?? this.status,
       groups: groups ?? this.groups,
-      selectedGroup: clearSelectedGroup ? null : (selectedGroup ?? this.selectedGroup),
+      selectedGroup: clearSelectedGroup
+          ? null
+          : (selectedGroup ?? this.selectedGroup),
       statistics: statistics ?? this.statistics,
       errorMessage: clearError ? null : (errorMessage ?? this.errorMessage),
       isCreating: isCreating ?? this.isCreating,
@@ -96,9 +98,7 @@ class GroupState extends Equatable {
 
   /// Get settled groups
   List<GroupEntity> get settledGroups {
-    return groups.where((g) => 
-      g.balances.values.every((b) => b == 0)
-    ).toList();
+    return groups.where((g) => g.balances.values.every((b) => b == 0)).toList();
   }
 
   /// Get recent groups (sorted by last activity)
@@ -114,13 +114,13 @@ class GroupState extends Equatable {
 
   @override
   List<Object?> get props => [
-        status,
-        groups,
-        selectedGroup,
-        statistics,
-        errorMessage,
-        isCreating,
-        isUpdating,
-        isDeleting,
-      ];
+    status,
+    groups,
+    selectedGroup,
+    statistics,
+    errorMessage,
+    isCreating,
+    isUpdating,
+    isDeleting,
+  ];
 }

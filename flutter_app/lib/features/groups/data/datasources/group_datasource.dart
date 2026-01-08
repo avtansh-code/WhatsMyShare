@@ -91,9 +91,9 @@ class GroupDataSourceImpl implements GroupDataSource {
     required FirebaseFirestore firestore,
     required FirebaseStorage storage,
     required FirebaseAuth auth,
-  })  : _firestore = firestore,
-        _storage = storage,
-        _auth = auth;
+  }) : _firestore = firestore,
+       _storage = storage,
+       _auth = auth;
 
   /// Get current user ID or throw exception
   String get _currentUserId {
@@ -131,8 +131,11 @@ class GroupDataSourceImpl implements GroupDataSource {
           .where('memberIds', arrayContains: userId)
           .orderBy('lastActivityAt', descending: true)
           .snapshots()
-          .map((snapshot) =>
-              snapshot.docs.map((doc) => GroupModel.fromFirestore(doc)).toList());
+          .map(
+            (snapshot) => snapshot.docs
+                .map((doc) => GroupModel.fromFirestore(doc))
+                .toList(),
+          );
     } on FirebaseException catch (e) {
       throw ServerException(message: 'Failed to watch groups: ${e.message}');
     }
@@ -272,7 +275,9 @@ class GroupDataSourceImpl implements GroupDataSource {
 
       return downloadUrl;
     } on FirebaseException catch (e) {
-      throw ServerException(message: 'Failed to update group image: ${e.message}');
+      throw ServerException(
+        message: 'Failed to update group image: ${e.message}',
+      );
     }
   }
 
@@ -287,7 +292,9 @@ class GroupDataSourceImpl implements GroupDataSource {
         'updatedAt': FieldValue.serverTimestamp(),
       });
     } on FirebaseException catch (e) {
-      throw ServerException(message: 'Failed to delete group image: ${e.message}');
+      throw ServerException(
+        message: 'Failed to delete group image: ${e.message}',
+      );
     }
   }
 
@@ -350,7 +357,8 @@ class GroupDataSourceImpl implements GroupDataSource {
       final group = await getGroupById(groupId);
       final member = group.members.firstWhere(
         (m) => m.userId == userId,
-        orElse: () => throw const NotFoundException(message: 'Member not found'),
+        orElse: () =>
+            throw const NotFoundException(message: 'Member not found'),
       );
 
       final memberModel = GroupMemberModel.fromEntity(member);
@@ -379,7 +387,7 @@ class GroupDataSourceImpl implements GroupDataSource {
     try {
       // Get current group
       final group = await getGroupById(groupId);
-      
+
       // Find and update the member
       final updatedMembers = group.members.map((m) {
         if (m.userId == userId) {
@@ -413,7 +421,9 @@ class GroupDataSourceImpl implements GroupDataSource {
 
       return await getGroupById(groupId);
     } on FirebaseException catch (e) {
-      throw ServerException(message: 'Failed to update member role: ${e.message}');
+      throw ServerException(
+        message: 'Failed to update member role: ${e.message}',
+      );
     }
   }
 

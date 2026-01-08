@@ -48,7 +48,8 @@ class UserModel extends UserEntity {
       totalOwing: data['totalOwing'] as int? ?? 0,
       groupCount: data['groupCount'] as int? ?? 0,
       countryCode: data['countryCode'] as String? ?? 'IN',
-      fcmTokens: (data['fcmTokens'] as List<dynamic>?)
+      fcmTokens:
+          (data['fcmTokens'] as List<dynamic>?)
               ?.map((e) => e as String)
               .toList() ??
           [],
@@ -82,7 +83,8 @@ class UserModel extends UserEntity {
       totalOwing: map['totalOwing'] as int? ?? 0,
       groupCount: map['groupCount'] as int? ?? 0,
       countryCode: map['countryCode'] as String? ?? 'IN',
-      fcmTokens: (map['fcmTokens'] as List<dynamic>?)
+      fcmTokens:
+          (map['fcmTokens'] as List<dynamic>?)
               ?.map((e) => e as String)
               .toList() ??
           [],

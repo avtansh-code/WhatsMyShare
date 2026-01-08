@@ -45,7 +45,9 @@ class ProfilePage extends StatelessWidget {
                   const SizedBox(height: 16),
                   ElevatedButton(
                     onPressed: () {
-                      context.read<ProfileBloc>().add(const ProfileLoadRequested());
+                      context.read<ProfileBloc>().add(
+                        const ProfileLoadRequested(),
+                      );
                     },
                     child: const Text('Retry'),
                   ),
@@ -101,8 +103,9 @@ class ProfilePage extends StatelessWidget {
           children: [
             CircleAvatar(
               radius: 50,
-              backgroundImage:
-                  profile.photoUrl != null ? NetworkImage(profile.photoUrl!) : null,
+              backgroundImage: profile.photoUrl != null
+                  ? NetworkImage(profile.photoUrl!)
+                  : null,
               child: profile.photoUrl == null
                   ? Text(
                       profile.initials,
@@ -131,8 +134,8 @@ class ProfilePage extends StatelessWidget {
         Text(
           profile.email,
           style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
-              ),
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
+          ),
         ),
 
         // Phone
@@ -141,8 +144,8 @@ class ProfilePage extends StatelessWidget {
           Text(
             profile.phone!,
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: Theme.of(context).colorScheme.onSurfaceVariant,
-                ),
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+            ),
           ),
         ],
       ],
@@ -174,10 +177,13 @@ class ProfilePage extends StatelessWidget {
                         style: Theme.of(context).textTheme.bodySmall,
                       ),
                       Text(
-                        CurrencyUtils.format(profile.totalOwed, profile.defaultCurrency),
+                        CurrencyUtils.format(
+                          profile.totalOwed,
+                          profile.defaultCurrency,
+                        ),
                         style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                              color: colorScheme.primary,
-                            ),
+                          color: colorScheme.primary,
+                        ),
                       ),
                     ],
                   ),
@@ -191,10 +197,13 @@ class ProfilePage extends StatelessWidget {
                         style: Theme.of(context).textTheme.bodySmall,
                       ),
                       Text(
-                        CurrencyUtils.format(profile.totalOwing, profile.defaultCurrency),
+                        CurrencyUtils.format(
+                          profile.totalOwing,
+                          profile.defaultCurrency,
+                        ),
                         style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                              color: colorScheme.error,
-                            ),
+                          color: colorScheme.error,
+                        ),
                       ),
                     ],
                   ),
@@ -215,10 +224,10 @@ class ProfilePage extends StatelessWidget {
                     profile.defaultCurrency,
                   ),
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        color: profile.netBalance >= 0
-                            ? colorScheme.primary
-                            : colorScheme.error,
-                      ),
+                    color: profile.netBalance >= 0
+                        ? colorScheme.primary
+                        : colorScheme.error,
+                  ),
                 ),
               ],
             ),
@@ -242,12 +251,14 @@ class ProfilePage extends StatelessWidget {
           ),
           SwitchListTile(
             title: const Text('Push Notifications'),
-            subtitle: const Text('Receive updates about expenses and settlements'),
+            subtitle: const Text(
+              'Receive updates about expenses and settlements',
+            ),
             value: profile.notificationsEnabled,
             onChanged: (value) {
               context.read<ProfileBloc>().add(
-                    ProfileSettingsChanged(notificationsEnabled: value),
-                  );
+                ProfileSettingsChanged(notificationsEnabled: value),
+              );
             },
           ),
           SwitchListTile(
@@ -256,18 +267,20 @@ class ProfilePage extends StatelessWidget {
             value: profile.contactSyncEnabled,
             onChanged: (value) {
               context.read<ProfileBloc>().add(
-                    ProfileSettingsChanged(contactSyncEnabled: value),
-                  );
+                ProfileSettingsChanged(contactSyncEnabled: value),
+              );
             },
           ),
           SwitchListTile(
             title: const Text('Biometric Authentication'),
-            subtitle: const Text('Use fingerprint or face ID for large transactions'),
+            subtitle: const Text(
+              'Use fingerprint or face ID for large transactions',
+            ),
             value: profile.biometricAuthEnabled,
             onChanged: (value) {
               context.read<ProfileBloc>().add(
-                    ProfileSettingsChanged(biometricAuthEnabled: value),
-                  );
+                ProfileSettingsChanged(biometricAuthEnabled: value),
+              );
             },
           ),
           ListTile(
@@ -350,12 +363,15 @@ class ProfilePage extends StatelessWidget {
           return ListTile(
             title: Text(currency),
             trailing: currency == currentCurrency
-                ? Icon(Icons.check, color: Theme.of(context).colorScheme.primary)
+                ? Icon(
+                    Icons.check,
+                    color: Theme.of(context).colorScheme.primary,
+                  )
                 : null,
             onTap: () {
               context.read<ProfileBloc>().add(
-                    ProfileUpdateRequested(defaultCurrency: currency),
-                  );
+                ProfileUpdateRequested(defaultCurrency: currency),
+              );
               Navigator.pop(context);
             },
           );

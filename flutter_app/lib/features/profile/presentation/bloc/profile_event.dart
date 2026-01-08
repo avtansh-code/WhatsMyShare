@@ -33,13 +33,13 @@ class ProfileUpdateRequested extends ProfileEvent {
 
   @override
   List<Object?> get props => [
-        displayName,
-        phone,
-        defaultCurrency,
-        locale,
-        timezone,
-        countryCode,
-      ];
+    displayName,
+    phone,
+    defaultCurrency,
+    locale,
+    timezone,
+    countryCode,
+  ];
 }
 
 /// Event to update profile photo
@@ -71,8 +71,8 @@ class ProfileSettingsChanged extends ProfileEvent {
 
   @override
   List<Object?> get props => [
-        notificationsEnabled,
-        contactSyncEnabled,
-        biometricAuthEnabled,
-      ];
+    notificationsEnabled,
+    contactSyncEnabled,
+    biometricAuthEnabled,
+  ];
 }

@@ -46,7 +46,14 @@ class GroupCreateRequested extends GroupEvent {
   });
 
   @override
-  List<Object?> get props => [name, description, type, currency, simplifyDebts, initialMemberIds];
+  List<Object?> get props => [
+    name,
+    description,
+    type,
+    currency,
+    simplifyDebts,
+    initialMemberIds,
+  ];
 }
 
 /// Event to update a group
@@ -68,7 +75,14 @@ class GroupUpdateRequested extends GroupEvent {
   });
 
   @override
-  List<Object?> get props => [groupId, name, description, type, currency, simplifyDebts];
+  List<Object?> get props => [
+    groupId,
+    name,
+    description,
+    type,
+    currency,
+    simplifyDebts,
+  ];
 }
 
 /// Event to update group image
@@ -124,7 +138,14 @@ class GroupMemberAddRequested extends GroupEvent {
   });
 
   @override
-  List<Object?> get props => [groupId, userId, displayName, email, photoUrl, role];
+  List<Object?> get props => [
+    groupId,
+    userId,
+    displayName,
+    email,
+    photoUrl,
+    role,
+  ];
 }
 
 /// Event to remove a member from a group

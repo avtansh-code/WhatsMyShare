@@ -45,7 +45,8 @@ class UserEntity extends Equatable {
   });
 
   /// Check if user has completed profile setup
-  bool get hasCompletedProfile => displayName != null && displayName!.isNotEmpty;
+  bool get hasCompletedProfile =>
+      displayName != null && displayName!.isNotEmpty;
 
   /// Get display name or email as fallback
   String get displayNameOrEmail => displayName ?? email.split('@').first;
@@ -70,26 +71,26 @@ class UserEntity extends Equatable {
 
   @override
   List<Object?> get props => [
-        id,
-        email,
-        displayName,
-        photoUrl,
-        phone,
-        defaultCurrency,
-        locale,
-        timezone,
-        notificationsEnabled,
-        contactSyncEnabled,
-        biometricAuthEnabled,
-        createdAt,
-        updatedAt,
-        lastActiveAt,
-        totalOwed,
-        totalOwing,
-        groupCount,
-        countryCode,
-        fcmTokens,
-      ];
+    id,
+    email,
+    displayName,
+    photoUrl,
+    phone,
+    defaultCurrency,
+    locale,
+    timezone,
+    notificationsEnabled,
+    contactSyncEnabled,
+    biometricAuthEnabled,
+    createdAt,
+    updatedAt,
+    lastActiveAt,
+    totalOwed,
+    totalOwing,
+    groupCount,
+    countryCode,
+    fcmTokens,
+  ];
 
   /// Create a copy with updated fields
   UserEntity copyWith({
