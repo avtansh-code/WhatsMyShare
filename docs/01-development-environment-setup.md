@@ -3,6 +3,8 @@
 ## Overview
 This document outlines the steps to set up the development environment for the "What's My Share" bill-splitting application.
 
+> **Note**: This project supports **iOS and Android platforms only**. Web, Linux, macOS, and Windows desktop platforms are not supported.
+
 ---
 
 ## 1. Prerequisites
@@ -117,14 +119,16 @@ firebase login
 ### 3.1 Create Flutter Project
 
 ```bash
-# Create new Flutter project
-flutter create --org com.whatsmyshare --project-name whatsmyshare whatsmyshare_app
+# Create new Flutter project (iOS and Android only)
+flutter create --org com.<your_org> --project-name whats_my_share --platforms=ios,android flutter_app
 
-cd whatsmyshare_app
+cd flutter_app
 
 # Get dependencies
 flutter pub get
 ```
+
+> **Note**: The `--platforms=ios,android` flag ensures only iOS and Android platform support is generated. If you already have a project with other platforms, you can remove the `linux/`, `macos/`, `web/`, and `windows/` directories.
 
 ### 3.2 Configure Firebase/GCP
 

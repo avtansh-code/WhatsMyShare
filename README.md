@@ -1,6 +1,6 @@
 # What's My Share - Development Plan
 
-A comprehensive bill-splitting mobile application built with Flutter and Google Cloud Platform, designed for the Indian market with global scalability in mind.
+A comprehensive bill-splitting mobile application built with Flutter and Google Cloud Platform, designed for the Indian market with global scalability in mind. **Supported platforms: iOS and Android only.**
 
 ## 📱 App Overview
 
@@ -22,7 +22,7 @@ A comprehensive bill-splitting mobile application built with Flutter and Google 
 ## 📁 Project Structure
 
 ```
-whatsmyshare-app/
+WhatsMyShare/
 ├── README.md                    # This file
 ├── docs/                        # Planning documentation
 │   ├── 01-development-environment-setup.md
@@ -33,10 +33,17 @@ whatsmyshare-app/
 │   ├── 06-testing-strategy.md
 │   ├── 07-deployment-guide.md
 │   └── 08-manual-steps-summary.md
-└── database/                    # Database configuration
-    ├── firestore.rules          # Security rules
-    └── firestore.indexes.json   # Index definitions
+├── firestore-database/          # Database configuration
+│   ├── firestore.rules          # Security rules
+│   └── firestore.indexes.json   # Index definitions
+└── flutter_app/                 # Flutter application (iOS & Android only)
+    ├── android/                 # Android platform files
+    ├── ios/                     # iOS platform files
+    ├── lib/                     # Dart source code
+    └── test/                    # Test files
 ```
+
+> **Note**: This project supports **iOS and Android platforms only**. Web, Linux, macOS, and Windows platforms have been removed.
 
 ---
 
@@ -59,6 +66,7 @@ whatsmyshare-app/
 
 ### Frontend
 - **Framework**: Flutter 3.24+
+- **Platforms**: iOS and Android only
 - **State Management**: BLoC (flutter_bloc)
 - **Navigation**: GoRouter
 - **Local Storage**: Hive, SharedPreferences
@@ -134,22 +142,8 @@ See [08 - Manual Steps Summary](docs/08-manual-steps-summary.md) for complete de
 
 2. **Install Flutter dependencies**
    ```bash
+   cd flutter_app
    flutter pub get
-   ```
-
-3. **Configure Firebase**
-   ```bash
-   dart pub global activate flutterfire_cli
-   flutterfire configure --project=your-project-id
-   ```
-
-4. **Run the app**
-   ```bash
-   # Development
-   flutter run --flavor dev -t lib/main_dev.dart
-   
-   # Production
-   flutter run --flavor prod -t lib/main_prod.dart
    ```
 
 ---
