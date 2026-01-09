@@ -43,7 +43,7 @@ class AppRouter {
     _log.info('Creating app router', tag: LogTags.navigation);
     return GoRouter(
       navigatorKey: _rootNavigatorKey,
-      initialLocation: '/splash',
+      initialLocation: '/',
       debugLogDiagnostics: true,
       redirect: _handleRedirect,
       routes: _routes,

@@ -2,15 +2,12 @@ import 'dart:async';
 
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_native_splash/flutter_native_splash.dart';
 import 'package:go_router/go_router.dart';
 
 /// Animated splash screen that displays after the native splash
-/// Features:
-/// - App logo with scale and fade animation
-/// - App name with slide-up animation
-/// - Tagline with fade animation
-/// - Smooth transition to login/home
+/// Note: This page is now optional and not used as the initial route.
+/// The native splash is removed by app.dart after auth initialization.
+/// This page can still be navigated to via /splash if needed.
 class SplashPage extends StatefulWidget {
   const SplashPage({super.key});
 
@@ -30,9 +27,6 @@ class _SplashPageState extends State<SplashPage>
   @override
   void initState() {
     super.initState();
-
-    // Remove the native splash screen now that Flutter is ready
-    FlutterNativeSplash.remove();
 
     // Set up animations
     _animationController = AnimationController(
