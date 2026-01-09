@@ -9,6 +9,8 @@ enum ProfileStatus {
   updated,
   uploadingPhoto,
   photoUpdated,
+  deletingPhoto,
+  photoDeleted,
   error,
 }
 
@@ -28,7 +30,8 @@ class ProfileState extends Equatable {
   bool get isLoading =>
       status == ProfileStatus.loading ||
       status == ProfileStatus.updating ||
-      status == ProfileStatus.uploadingPhoto;
+      status == ProfileStatus.uploadingPhoto ||
+      status == ProfileStatus.deletingPhoto;
 
   /// Whether the profile is loaded
   bool get isLoaded => profile != null;

@@ -16,11 +16,24 @@ class NetworkAvatar extends StatefulWidget {
   /// Clear cached image for a specific URL
   static void clearCacheForUrl(String url) {
     _NetworkAvatarState._decryptedCache.remove(url);
+    // Also clear from Flutter's image cache
+    try {
+      PaintingBinding.instance.imageCache.evict(NetworkImage(url).toString());
+    } catch (_) {
+      // Ignore errors if binding not initialized
+    }
   }
 
-  /// Clear all cached decrypted images
+  /// Clear all cached decrypted images and Flutter's image cache
   static void clearAllCache() {
     _NetworkAvatarState._decryptedCache.clear();
+    // Also clear Flutter's entire image cache to ensure no stale images
+    try {
+      PaintingBinding.instance.imageCache.clear();
+      PaintingBinding.instance.imageCache.clearLiveImages();
+    } catch (_) {
+      // Ignore errors if binding not initialized
+    }
   }
 
   /// The URL of the image to load
@@ -79,7 +92,18 @@ class _NetworkAvatarState extends State<NetworkAvatar> {
   void didUpdateWidget(NetworkAvatar oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.imageUrl != widget.imageUrl) {
-      _loadImageIfNeeded();
+      // Reset state when URL changes
+      if (widget.imageUrl == null || widget.imageUrl!.isEmpty) {
+        // URL is now null/empty - reset cached data
+        setState(() {
+          _decryptedImageData = null;
+          _lastLoadedUrl = null;
+          _hasError = false;
+          _isLoading = false;
+        });
+      } else {
+        _loadImageIfNeeded();
+      }
     }
   }
 
@@ -163,16 +187,6 @@ class _NetworkAvatarState extends State<NetworkAvatar> {
         widget.onError?.call();
       }
     }
-  }
-
-  /// Clear cached image for a specific URL
-  static void clearCacheForUrl(String url) {
-    _decryptedCache.remove(url);
-  }
-
-  /// Clear all cached decrypted images
-  static void clearAllCache() {
-    _decryptedCache.clear();
   }
 
   @override

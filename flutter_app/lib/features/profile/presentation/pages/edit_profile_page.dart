@@ -115,6 +115,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
         // Handle status changes when saving
         if (_isSaving) {
           if (state.status == ProfileStatus.photoUpdated ||
+              state.status == ProfileStatus.photoDeleted ||
               state.status == ProfileStatus.updated) {
             // Success - hide loader and navigate back
             _log.info(
@@ -122,11 +123,13 @@ class _EditProfilePageState extends State<EditProfilePage> {
               tag: LogTags.ui,
             );
 
-            // Clear the avatar image cache so the new image is fetched
-            if (state.status == ProfileStatus.photoUpdated) {
+            // Clear the avatar image cache so the new/deleted image is properly reflected
+            if (state.status == ProfileStatus.photoUpdated ||
+                state.status == ProfileStatus.photoDeleted) {
               _log.debug(
-                'Clearing NetworkAvatar cache for new photo',
+                'Clearing NetworkAvatar cache for photo change',
                 tag: LogTags.ui,
+                data: {'status': state.status.toString()},
               );
               NetworkAvatar.clearAllCache();
             }
@@ -146,13 +149,19 @@ class _EditProfilePageState extends State<EditProfilePage> {
             setState(() {
               _isSaving = false;
             });
+
+            String successMessage;
+            if (state.status == ProfileStatus.photoUpdated) {
+              successMessage = 'Profile photo updated successfully';
+            } else if (state.status == ProfileStatus.photoDeleted) {
+              successMessage = 'Profile photo removed successfully';
+            } else {
+              successMessage = 'Profile updated successfully';
+            }
+
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
-                content: Text(
-                  state.status == ProfileStatus.photoUpdated
-                      ? 'Profile photo updated successfully'
-                      : 'Profile updated successfully',
-                ),
+                content: Text(successMessage),
                 backgroundColor: Colors.green,
               ),
             );

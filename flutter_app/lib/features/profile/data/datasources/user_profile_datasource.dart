@@ -502,22 +502,62 @@ class UserProfileDataSourceImpl implements UserProfileDataSource {
     );
     try {
       // Try to delete all possible avatar file extensions
-      final extensions = ['jpg', 'png', 'gif', 'webp', 'heic'];
+      // Include both short and full extension variants
+      final extensions = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'heic', 'heif'];
+      bool deletedAny = false;
+
+      // Process deletions sequentially to avoid concurrent Firebase Storage operations
+      // which can cause "GTMSessionFetcher was already running" warnings on iOS
       for (final ext in extensions) {
         try {
           final ref = _storage.ref().child('users/$userId/profile/avatar.$ext');
+          // Try to delete directly - if file doesn't exist, it will throw object-not-found
+          // This avoids the getMetadata() call which can cause concurrent operation issues
           await ref.delete();
-          _log.debug(
+          _log.info(
             'Profile photo deleted from storage',
             tag: LogTags.profile,
-            data: {'extension': ext},
+            data: {'extension': ext, 'path': 'users/$userId/profile/avatar.$ext'},
           );
-        } catch (_) {
-          // File with this extension doesn't exist, continue to next
+          deletedAny = true;
+          // Once we successfully delete a file, we can stop trying other extensions
+          // since typically there's only one avatar file
+          break;
+        } on FirebaseException catch (e) {
+          if (e.code == 'object-not-found') {
+            // File doesn't exist, continue to next extension
+            _log.debug(
+              'No avatar file found with extension',
+              tag: LogTags.profile,
+              data: {'extension': ext},
+            );
+          } else {
+            // Other error, log it but continue trying other extensions
+            _log.warning(
+              'Error deleting avatar file',
+              tag: LogTags.profile,
+              data: {'extension': ext, 'error': e.message, 'code': e.code},
+            );
+          }
+        } catch (e) {
+          // Unexpected error, log and continue
+          _log.warning(
+            'Unexpected error deleting avatar file',
+            tag: LogTags.profile,
+            data: {'extension': ext, 'error': e.toString()},
+          );
         }
       }
 
-      // Update user profile
+      if (!deletedAny) {
+        _log.warning(
+          'No profile photo files were found to delete',
+          tag: LogTags.profile,
+          data: {'userId': userId},
+        );
+      }
+
+      // Update user profile to remove photoUrl
       await _usersCollection.doc(userId).update({
         'photoUrl': FieldValue.delete(),
         'updatedAt': FieldValue.serverTimestamp(),
@@ -525,13 +565,13 @@ class UserProfileDataSourceImpl implements UserProfileDataSource {
       _log.info(
         'Profile photo deleted successfully',
         tag: LogTags.profile,
-        data: {'userId': userId},
+        data: {'userId': userId, 'storageFilesDeleted': deletedAny},
       );
     } on FirebaseException catch (e) {
       _log.error(
         'Failed to delete profile photo',
         tag: LogTags.profile,
-        data: {'userId': userId, 'error': e.message},
+        data: {'userId': userId, 'error': e.message, 'code': e.code},
       );
       throw ServerException(
         message: e.message ?? 'Failed to delete profile photo',

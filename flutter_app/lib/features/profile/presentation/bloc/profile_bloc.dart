@@ -240,7 +240,7 @@ class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
       tag: LogTags.profile,
       data: {'userId': state.profile!.id},
     );
-    emit(state.copyWith(status: ProfileStatus.updating));
+    emit(state.copyWith(status: ProfileStatus.deletingPhoto));
 
     final result = await _repository.deleteProfilePhoto(state.profile!.id);
 
@@ -282,7 +282,7 @@ class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
         );
         emit(
           state.copyWith(
-            status: ProfileStatus.updated,
+            status: ProfileStatus.photoDeleted,
             profile: updatedProfile,
           ),
         );
