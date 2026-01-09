@@ -167,7 +167,7 @@ class DebtSimplifier {
       runningBalances[settlement.toUserId] =
           (runningBalances[settlement.toUserId] ?? 0) - settlement.amount;
 
-      final formattedAmount = CurrencyUtils.format(settlement.amount, currency);
+      final formattedAmount = CurrencyUtils.format(settlement.amount);
 
       steps.add(
         SimplificationStep(
@@ -234,9 +234,9 @@ class DebtSimplifier {
       total += amount;
 
       if (amount > 0) {
-        lines.add('$name is owed ${CurrencyUtils.format(amount, currency)}');
+        lines.add('$name is owed ${CurrencyUtils.format(amount)}');
       } else if (amount < 0) {
-        lines.add('$name owes ${CurrencyUtils.format(-amount, currency)}');
+        lines.add('$name owes ${CurrencyUtils.format(-amount)}');
       } else {
         lines.add('$name is settled');
       }
@@ -245,11 +245,9 @@ class DebtSimplifier {
     // Add total check
     lines.add('─────────────────');
     if (total == 0) {
-      lines.add('Total: ${CurrencyUtils.format(0, currency)} ✓');
+      lines.add('Total: ${CurrencyUtils.format(0)} ✓');
     } else {
-      lines.add(
-        'Total: ${CurrencyUtils.format(total, currency)} (should be 0)',
-      );
+      lines.add('Total: ${CurrencyUtils.format(total)} (should be 0)');
     }
 
     return lines.join('\n');

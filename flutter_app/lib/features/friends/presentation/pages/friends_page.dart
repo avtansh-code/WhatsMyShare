@@ -401,7 +401,7 @@ class _FriendsPageState extends State<FriendsPage> {
           _buildSectionHeader(
             theme,
             'Owed to you',
-            CurrencyUtils.format(totalOwedToYou, 'INR'),
+            CurrencyUtils.format(totalOwedToYou),
             Colors.green,
           ),
           const SizedBox(height: 8),
@@ -416,7 +416,7 @@ class _FriendsPageState extends State<FriendsPage> {
           _buildSectionHeader(
             theme,
             'You owe',
-            CurrencyUtils.format(totalYouOwe, 'INR'),
+            CurrencyUtils.format(totalYouOwe),
             Colors.red,
           ),
           const SizedBox(height: 8),
@@ -456,7 +456,7 @@ class _FriendsPageState extends State<FriendsPage> {
                   child: _buildBalanceItem(
                     theme,
                     'You are owed',
-                    CurrencyUtils.format(owedToYou, 'INR'),
+                    CurrencyUtils.format(owedToYou),
                     Colors.green,
                     Icons.arrow_downward,
                   ),
@@ -470,7 +470,7 @@ class _FriendsPageState extends State<FriendsPage> {
                   child: _buildBalanceItem(
                     theme,
                     'You owe',
-                    CurrencyUtils.format(youOwe, 'INR'),
+                    CurrencyUtils.format(youOwe),
                     Colors.red,
                     Icons.arrow_upward,
                   ),
@@ -487,7 +487,7 @@ class _FriendsPageState extends State<FriendsPage> {
                     style: theme.textTheme.bodyMedium,
                   ),
                   Text(
-                    CurrencyUtils.format(netBalance.abs(), 'INR'),
+                    CurrencyUtils.format(netBalance.abs()),
                     style: theme.textTheme.titleMedium?.copyWith(
                       fontWeight: FontWeight.bold,
                       color: netBalance > 0 ? Colors.green : Colors.red,
@@ -637,7 +637,7 @@ class _FriendsPageState extends State<FriendsPage> {
                       ),
                     ),
                     Text(
-                      CurrencyUtils.format(friend.totalBalance.abs(), 'INR'),
+                      CurrencyUtils.format(friend.totalBalance.abs()),
                       style: theme.textTheme.titleMedium?.copyWith(
                         fontWeight: FontWeight.bold,
                         color: isOwedToYou ? Colors.green : Colors.red,
@@ -754,10 +754,7 @@ class _FriendsPageState extends State<FriendsPage> {
                             style: theme.textTheme.titleMedium,
                           ),
                           Text(
-                            CurrencyUtils.format(
-                              friend.totalBalance.abs(),
-                              'INR',
-                            ),
+                            CurrencyUtils.format(friend.totalBalance.abs()),
                             style: theme.textTheme.titleLarge?.copyWith(
                               fontWeight: FontWeight.bold,
                               color: friend.totalBalance > 0
@@ -823,7 +820,6 @@ class _FriendsPageState extends State<FriendsPage> {
                                 trailing: Text(
                                   CurrencyUtils.format(
                                     groupBalance.balance.abs(),
-                                    'INR',
                                   ),
                                   style: theme.textTheme.titleMedium?.copyWith(
                                     fontWeight: FontWeight.bold,

@@ -138,8 +138,7 @@ class _SettleUpPageState extends State<SettleUpPage> {
                 ),
                 decoration: InputDecoration(
                   labelText: 'Amount',
-                  prefixText:
-                      '${CurrencyUtils.getSymbol(widget.group.currency)} ',
+                  prefixText: '${CurrencyUtils.getSymbol()} ',
                   border: const OutlineInputBorder(),
                 ),
                 validator: (value) {
@@ -229,7 +228,7 @@ class _SettleUpPageState extends State<SettleUpPage> {
                           const SizedBox(width: 12),
                           Expanded(
                             child: Text(
-                              'Amounts over ${CurrencyUtils.format((AppConstants.biometricThresholdPaisa / 100).round(), widget.group.currency)} require biometric verification',
+                              'Amounts over ${CurrencyUtils.format((AppConstants.biometricThresholdPaisa / 100).round())} require biometric verification',
                               style: TextStyle(color: Colors.amber.shade900),
                             ),
                           ),

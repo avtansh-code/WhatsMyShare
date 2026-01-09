@@ -182,10 +182,7 @@ class _ProfilePageState extends State<ProfilePage> {
                         style: Theme.of(context).textTheme.bodySmall,
                       ),
                       Text(
-                        CurrencyUtils.format(
-                          profile.totalOwed,
-                          profile.defaultCurrency,
-                        ),
+                        CurrencyUtils.format(profile.totalOwed),
                         style: Theme.of(context).textTheme.titleLarge?.copyWith(
                           color: colorScheme.primary,
                         ),
@@ -202,10 +199,7 @@ class _ProfilePageState extends State<ProfilePage> {
                         style: Theme.of(context).textTheme.bodySmall,
                       ),
                       Text(
-                        CurrencyUtils.format(
-                          profile.totalOwing,
-                          profile.defaultCurrency,
-                        ),
+                        CurrencyUtils.format(profile.totalOwing),
                         style: Theme.of(context).textTheme.titleLarge?.copyWith(
                           color: colorScheme.error,
                         ),
@@ -224,10 +218,7 @@ class _ProfilePageState extends State<ProfilePage> {
                   style: Theme.of(context).textTheme.titleSmall,
                 ),
                 Text(
-                  CurrencyUtils.format(
-                    profile.netBalance.abs(),
-                    profile.defaultCurrency,
-                  ),
+                  CurrencyUtils.format(profile.netBalance.abs()),
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
                     color: profile.netBalance >= 0
                         ? colorScheme.primary
@@ -288,11 +279,10 @@ class _ProfilePageState extends State<ProfilePage> {
               );
             },
           ),
-          ListTile(
-            title: const Text('Default Currency'),
-            subtitle: Text(profile.defaultCurrency),
-            trailing: const Icon(Icons.chevron_right),
-            onTap: () => _showCurrencyPicker(context, profile.defaultCurrency),
+          // Currency is fixed to INR for India-only app
+          const ListTile(
+            title: Text('Currency'),
+            subtitle: Text('INR (₹) - India'),
           ),
         ],
       ),
@@ -353,36 +343,6 @@ class _ProfilePageState extends State<ProfilePage> {
 
   void _navigateToEditProfile(BuildContext context) {
     context.push('/profile/edit');
-  }
-
-  void _showCurrencyPicker(BuildContext context, String currentCurrency) {
-    final currencies = ['INR', 'USD', 'EUR', 'GBP', 'AUD', 'CAD'];
-
-    showModalBottomSheet(
-      context: context,
-      builder: (context) => ListView.builder(
-        shrinkWrap: true,
-        itemCount: currencies.length,
-        itemBuilder: (context, index) {
-          final currency = currencies[index];
-          return ListTile(
-            title: Text(currency),
-            trailing: currency == currentCurrency
-                ? Icon(
-                    Icons.check,
-                    color: Theme.of(context).colorScheme.primary,
-                  )
-                : null,
-            onTap: () {
-              context.read<ProfileBloc>().add(
-                ProfileUpdateRequested(defaultCurrency: currency),
-              );
-              Navigator.pop(context);
-            },
-          );
-        },
-      ),
-    );
   }
 
   void _showSignOutDialog(BuildContext context) {

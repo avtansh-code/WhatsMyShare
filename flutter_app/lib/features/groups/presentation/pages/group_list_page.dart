@@ -281,7 +281,7 @@ class _GroupCard extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.end,
       children: [
         Text(
-          CurrencyUtils.format(totalExpenses, group.currency),
+          CurrencyUtils.format(totalExpenses),
           style: theme.textTheme.titleSmall?.copyWith(
             fontWeight: FontWeight.w600,
           ),

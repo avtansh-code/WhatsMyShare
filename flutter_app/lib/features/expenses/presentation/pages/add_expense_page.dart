@@ -186,7 +186,7 @@ class _AddExpenseFormState extends State<_AddExpenseForm> {
           ],
           style: Theme.of(context).textTheme.headlineMedium,
           decoration: InputDecoration(
-            prefixText: '${CurrencyUtils.getSymbol(widget.currency)} ',
+            prefixText: '${CurrencyUtils.getSymbol()} ',
             prefixStyle: Theme.of(context).textTheme.headlineMedium,
             hintText: '0.00',
             border: const OutlineInputBorder(),

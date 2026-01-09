@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../core/constants/app_constants.dart';
 import '../../../../core/services/logging_service.dart';
 
 /// Callback type for verification received
@@ -69,21 +70,7 @@ class _PhoneLoginPageState extends State<PhoneLoginPage> {
   final _phoneController = TextEditingController();
   final LoggingService _log = LoggingService();
   bool _isLoading = false;
-  String _selectedCountryCode = '+91'; // Default to India
   bool _hasNavigatedToOtp = false;
-
-  final List<Map<String, String>> _countryCodes = [
-    {'code': '+91', 'country': 'India'},
-    {'code': '+1', 'country': 'USA'},
-    {'code': '+44', 'country': 'UK'},
-    {'code': '+61', 'country': 'Australia'},
-    {'code': '+971', 'country': 'UAE'},
-    {'code': '+65', 'country': 'Singapore'},
-    {'code': '+60', 'country': 'Malaysia'},
-    {'code': '+49', 'country': 'Germany'},
-    {'code': '+33', 'country': 'France'},
-    {'code': '+81', 'country': 'Japan'},
-  ];
 
   @override
   void initState() {
@@ -170,7 +157,7 @@ class _PhoneLoginPageState extends State<PhoneLoginPage> {
   }
 
   String get _fullPhoneNumber {
-    return '$_selectedCountryCode${_phoneController.text.trim()}';
+    return '${AppConstants.countryCode}${_phoneController.text.trim()}';
   }
 
   Future<void> _handleAutoVerification(
@@ -421,46 +408,28 @@ class _PhoneLoginPageState extends State<PhoneLoginPage> {
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Country Code Dropdown
+                    // Country Code (India only - hardcoded +91)
                     Container(
+                      height: 56,
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
                       decoration: BoxDecoration(
                         border: Border.all(color: theme.colorScheme.outline),
                         borderRadius: BorderRadius.circular(12),
+                        color: theme.colorScheme.surfaceContainerHighest
+                            .withValues(alpha: 0.5),
                       ),
-                      child: DropdownButtonHideUnderline(
-                        child: DropdownButton<String>(
-                          value: _selectedCountryCode,
-                          padding: const EdgeInsets.symmetric(horizontal: 12),
-                          borderRadius: BorderRadius.circular(12),
-                          items: _countryCodes.map((country) {
-                            return DropdownMenuItem<String>(
-                              value: country['code'],
-                              child: Text(
-                                '${country['code']} ${country['country']}',
-                                style: theme.textTheme.bodyMedium,
-                              ),
-                            );
-                          }).toList(),
-                          onChanged: _isLoading
-                              ? null
-                              : (value) {
-                                  if (value != null) {
-                                    setState(
-                                      () => _selectedCountryCode = value,
-                                    );
-                                  }
-                                },
-                          selectedItemBuilder: (context) {
-                            return _countryCodes.map((country) {
-                              return Center(
-                                child: Text(
-                                  country['code']!,
-                                  style: theme.textTheme.bodyLarge,
-                                ),
-                              );
-                            }).toList();
-                          },
-                        ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Text('🇮🇳', style: TextStyle(fontSize: 20)),
+                          const SizedBox(width: 8),
+                          Text(
+                            AppConstants.countryCode,
+                            style: theme.textTheme.bodyLarge?.copyWith(
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                     const SizedBox(width: 12),
@@ -488,7 +457,7 @@ class _PhoneLoginPageState extends State<PhoneLoginPage> {
                             return 'Phone number is required';
                           }
                           if (value.length < 10) {
-                            return 'Enter a valid phone number';
+                            return 'Enter a valid 10 digit phone number';
                           }
                           return null;
                         },

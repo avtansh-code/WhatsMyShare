@@ -24,7 +24,6 @@ class _CreateGroupPageState extends State<CreateGroupPage> {
   final LoggingService _log = LoggingService();
 
   GroupType _selectedType = GroupType.other;
-  String _selectedCurrency = AppConstants.defaultCurrency;
   bool _simplifyDebts = true;
 
   @override
@@ -48,7 +47,7 @@ class _CreateGroupPageState extends State<CreateGroupPage> {
         data: {
           'name': _nameController.text.trim(),
           'type': _selectedType.name,
-          'currency': _selectedCurrency,
+          'currency': AppConstants.currency,
         },
       );
       context.read<GroupBloc>().add(
@@ -58,7 +57,7 @@ class _CreateGroupPageState extends State<CreateGroupPage> {
               ? null
               : _descriptionController.text.trim(),
           type: _selectedType,
-          currency: _selectedCurrency,
+          currency: AppConstants.currency, // India-only app uses INR
           simplifyDebts: _simplifyDebts,
         ),
       );
@@ -155,27 +154,33 @@ class _CreateGroupPageState extends State<CreateGroupPage> {
                 ),
                 const SizedBox(height: 24),
 
-                // Currency
+                // Currency (India-only app - INR only)
                 Text('Currency', style: Theme.of(context).textTheme.titleSmall),
                 const SizedBox(height: 8),
-                DropdownButtonFormField<String>(
-                  initialValue: _selectedCurrency,
-                  decoration: const InputDecoration(
-                    prefixIcon: Icon(Icons.currency_rupee),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 12,
                   ),
-                  items: AppConstants.supportedCurrencies.map((currency) {
-                    return DropdownMenuItem(
-                      value: currency,
-                      child: Text(
-                        '$currency (${_getCurrencySymbol(currency)})',
+                  decoration: BoxDecoration(
+                    border: Border.all(
+                      color: Theme.of(context).colorScheme.outline,
+                    ),
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.currency_rupee,
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
                       ),
-                    );
-                  }).toList(),
-                  onChanged: (value) {
-                    if (value != null) {
-                      setState(() => _selectedCurrency = value);
-                    }
-                  },
+                      const SizedBox(width: 12),
+                      Text(
+                        'INR (${AppConstants.currencySymbol})',
+                        style: Theme.of(context).textTheme.bodyLarge,
+                      ),
+                    ],
+                  ),
                 ),
                 const SizedBox(height: 24),
 
@@ -250,21 +255,6 @@ class _CreateGroupPageState extends State<CreateGroupPage> {
         return 'Couple';
       case GroupType.other:
         return 'Other';
-    }
-  }
-
-  String _getCurrencySymbol(String currency) {
-    switch (currency) {
-      case 'INR':
-        return '₹';
-      case 'USD':
-        return '\$';
-      case 'EUR':
-        return '€';
-      case 'GBP':
-        return '£';
-      default:
-        return currency;
     }
   }
 }

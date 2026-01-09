@@ -6,20 +6,16 @@ void main() {
   group('UserModel', () {
     const testUserModel = UserModel(
       id: 'user-123',
-      email: 'test@example.com',
+      phone: '+919876543210',
       displayName: 'Test User',
       photoUrl: 'https://example.com/photo.jpg',
-      phone: '+1234567890',
-      defaultCurrency: 'USD',
-      locale: 'en-US',
-      timezone: 'America/New_York',
+      isPhoneVerified: true,
       notificationsEnabled: true,
       contactSyncEnabled: false,
       biometricAuthEnabled: true,
       totalOwed: 1000,
       totalOwing: 500,
       groupCount: 3,
-      countryCode: 'US',
       fcmTokens: ['token1', 'token2'],
     );
 
@@ -28,20 +24,16 @@ void main() {
         // Arrange
         final map = {
           'id': 'user-123',
-          'email': 'test@example.com',
+          'phone': '+919876543210',
           'displayName': 'Test User',
           'photoUrl': 'https://example.com/photo.jpg',
-          'phone': '+1234567890',
-          'defaultCurrency': 'USD',
-          'locale': 'en-US',
-          'timezone': 'America/New_York',
+          'isPhoneVerified': true,
           'notificationsEnabled': true,
           'contactSyncEnabled': false,
           'biometricAuthEnabled': true,
           'totalOwed': 1000,
           'totalOwing': 500,
           'groupCount': 3,
-          'countryCode': 'US',
           'fcmTokens': ['token1', 'token2'],
         };
 
@@ -50,43 +42,38 @@ void main() {
 
         // Assert
         expect(result.id, 'user-123');
-        expect(result.email, 'test@example.com');
+        expect(result.phone, '+919876543210');
         expect(result.displayName, 'Test User');
         expect(result.photoUrl, 'https://example.com/photo.jpg');
-        expect(result.phone, '+1234567890');
-        expect(result.defaultCurrency, 'USD');
-        expect(result.locale, 'en-US');
-        expect(result.timezone, 'America/New_York');
+        expect(result.isPhoneVerified, true);
         expect(result.notificationsEnabled, true);
         expect(result.contactSyncEnabled, false);
         expect(result.biometricAuthEnabled, true);
         expect(result.totalOwed, 1000);
         expect(result.totalOwing, 500);
         expect(result.groupCount, 3);
-        expect(result.countryCode, 'US');
         expect(result.fcmTokens, ['token1', 'token2']);
       });
 
       test('uses default values for missing optional fields', () {
         // Arrange
-        final minimalMap = {'id': 'user-123', 'email': 'test@example.com'};
+        final minimalMap = {'id': 'user-123', 'phone': '+919876543210'};
 
         // Act
         final result = UserModel.fromMap(minimalMap);
 
         // Assert
         expect(result.id, 'user-123');
-        expect(result.email, 'test@example.com');
-        expect(result.defaultCurrency, 'INR');
-        expect(result.locale, 'en-IN');
-        expect(result.timezone, 'Asia/Kolkata');
+        expect(result.phone, '+919876543210');
+        expect(result.displayName, isNull);
+        expect(result.photoUrl, isNull);
+        expect(result.isPhoneVerified, false);
         expect(result.notificationsEnabled, true);
         expect(result.contactSyncEnabled, false);
         expect(result.biometricAuthEnabled, false);
         expect(result.totalOwed, 0);
         expect(result.totalOwing, 0);
         expect(result.groupCount, 0);
-        expect(result.countryCode, 'IN');
         expect(result.fcmTokens, []);
       });
 
@@ -94,7 +81,7 @@ void main() {
         // Arrange
         final mapWithDates = {
           'id': 'user-123',
-          'email': 'test@example.com',
+          'phone': '+919876543210',
           'createdAt': '2024-01-15T10:30:00.000Z',
           'updatedAt': '2024-06-20T15:45:00.000Z',
           'lastActiveAt': '2024-12-01T08:00:00.000Z',
@@ -116,7 +103,7 @@ void main() {
         // Arrange
         final mapWithNullDates = {
           'id': 'user-123',
-          'email': 'test@example.com',
+          'phone': '+919876543210',
           'createdAt': null,
           'updatedAt': null,
           'lastActiveAt': null,
@@ -139,21 +126,28 @@ void main() {
 
         // Assert
         expect(result['id'], 'user-123');
-        expect(result['email'], 'test@example.com');
+        expect(result['phone'], '+919876543210');
         expect(result['displayName'], 'Test User');
         expect(result['photoUrl'], 'https://example.com/photo.jpg');
-        expect(result['phone'], '+1234567890');
-        expect(result['defaultCurrency'], 'USD');
-        expect(result['locale'], 'en-US');
-        expect(result['timezone'], 'America/New_York');
+        expect(result['isPhoneVerified'], true);
         expect(result['notificationsEnabled'], true);
         expect(result['contactSyncEnabled'], false);
         expect(result['biometricAuthEnabled'], true);
         expect(result['totalOwed'], 1000);
         expect(result['totalOwing'], 500);
         expect(result['groupCount'], 3);
-        expect(result['countryCode'], 'US');
         expect(result['fcmTokens'], ['token1', 'token2']);
+      });
+
+      test('includes India-specific hardcoded values', () {
+        // Act
+        final result = testUserModel.toMap();
+
+        // Assert - India-only app hardcoded values
+        expect(result['currency'], 'INR');
+        expect(result['locale'], 'en_IN');
+        expect(result['timezone'], 'Asia/Kolkata');
+        expect(result['countryCode'], '+91');
       });
 
       test('includes all fields in map', () {
@@ -162,13 +156,10 @@ void main() {
 
         // Assert
         expect(result.containsKey('id'), isTrue);
-        expect(result.containsKey('email'), isTrue);
+        expect(result.containsKey('phone'), isTrue);
         expect(result.containsKey('displayName'), isTrue);
         expect(result.containsKey('photoUrl'), isTrue);
-        expect(result.containsKey('phone'), isTrue);
-        expect(result.containsKey('defaultCurrency'), isTrue);
-        expect(result.containsKey('locale'), isTrue);
-        expect(result.containsKey('timezone'), isTrue);
+        expect(result.containsKey('isPhoneVerified'), isTrue);
         expect(result.containsKey('notificationsEnabled'), isTrue);
         expect(result.containsKey('contactSyncEnabled'), isTrue);
         expect(result.containsKey('biometricAuthEnabled'), isTrue);
@@ -178,7 +169,6 @@ void main() {
         expect(result.containsKey('totalOwed'), isTrue);
         expect(result.containsKey('totalOwing'), isTrue);
         expect(result.containsKey('groupCount'), isTrue);
-        expect(result.containsKey('countryCode'), isTrue);
         expect(result.containsKey('fcmTokens'), isTrue);
       });
 
@@ -186,7 +176,7 @@ void main() {
         // Arrange
         final modelWithDates = UserModel(
           id: 'user-123',
-          email: 'test@example.com',
+          phone: '+919876543210',
           createdAt: DateTime(2024, 1, 15, 10, 30),
           updatedAt: DateTime(2024, 6, 20, 15, 45),
         );
@@ -205,20 +195,16 @@ void main() {
         // Arrange
         final entity = UserEntity(
           id: 'user-456',
-          email: 'entity@example.com',
+          phone: '+919123456789',
           displayName: 'Entity User',
           photoUrl: 'https://example.com/entity.jpg',
-          phone: '+9876543210',
-          defaultCurrency: 'EUR',
-          locale: 'de-DE',
-          timezone: 'Europe/Berlin',
+          isPhoneVerified: true,
           notificationsEnabled: false,
           contactSyncEnabled: true,
           biometricAuthEnabled: false,
           totalOwed: 2000,
           totalOwing: 1500,
           groupCount: 5,
-          countryCode: 'DE',
           fcmTokens: ['token3'],
           createdAt: DateTime(2024, 1, 1),
         );
@@ -229,31 +215,27 @@ void main() {
         // Assert
         expect(result, isA<UserModel>());
         expect(result.id, entity.id);
-        expect(result.email, entity.email);
+        expect(result.phone, entity.phone);
         expect(result.displayName, entity.displayName);
         expect(result.photoUrl, entity.photoUrl);
-        expect(result.phone, entity.phone);
-        expect(result.defaultCurrency, entity.defaultCurrency);
-        expect(result.locale, entity.locale);
-        expect(result.timezone, entity.timezone);
+        expect(result.isPhoneVerified, entity.isPhoneVerified);
         expect(result.notificationsEnabled, entity.notificationsEnabled);
         expect(result.contactSyncEnabled, entity.contactSyncEnabled);
         expect(result.biometricAuthEnabled, entity.biometricAuthEnabled);
         expect(result.totalOwed, entity.totalOwed);
         expect(result.totalOwing, entity.totalOwing);
         expect(result.groupCount, entity.groupCount);
-        expect(result.countryCode, entity.countryCode);
         expect(result.fcmTokens, entity.fcmTokens);
       });
     });
 
     group('copyWithModel', () {
-      test('creates copy with updated email', () {
+      test('creates copy with updated phone', () {
         // Act
-        final result = testUserModel.copyWithModel(email: 'new@example.com');
+        final result = testUserModel.copyWithModel(phone: '+919999999999');
 
         // Assert
-        expect(result.email, 'new@example.com');
+        expect(result.phone, '+919999999999');
         expect(result.id, testUserModel.id);
         expect(result.displayName, testUserModel.displayName);
       });
@@ -265,7 +247,7 @@ void main() {
         // Assert
         expect(result.displayName, 'New Name');
         expect(result.id, testUserModel.id);
-        expect(result.email, testUserModel.email);
+        expect(result.phone, testUserModel.phone);
       });
 
       test('creates copy with updated settings', () {
@@ -273,13 +255,11 @@ void main() {
         final result = testUserModel.copyWithModel(
           notificationsEnabled: false,
           biometricAuthEnabled: false,
-          defaultCurrency: 'GBP',
         );
 
         // Assert
         expect(result.notificationsEnabled, false);
         expect(result.biometricAuthEnabled, false);
-        expect(result.defaultCurrency, 'GBP');
       });
 
       test('creates copy with updated financial data', () {
@@ -319,7 +299,7 @@ void main() {
 
         // Assert
         expect(entity.id, testUserModel.id);
-        expect(entity.email, testUserModel.email);
+        expect(entity.phone, testUserModel.phone);
       });
     });
 
@@ -328,20 +308,16 @@ void main() {
         // Arrange
         final modelWithDates = UserModel(
           id: 'user-123',
-          email: 'test@example.com',
+          phone: '+919876543210',
           displayName: 'Test User',
           photoUrl: 'https://example.com/photo.jpg',
-          phone: '+1234567890',
-          defaultCurrency: 'USD',
-          locale: 'en-US',
-          timezone: 'America/New_York',
+          isPhoneVerified: true,
           notificationsEnabled: true,
           contactSyncEnabled: false,
           biometricAuthEnabled: true,
           totalOwed: 1000,
           totalOwing: 500,
           groupCount: 3,
-          countryCode: 'US',
           fcmTokens: ['token1', 'token2'],
           createdAt: DateTime(2024, 1, 15, 10, 30),
         );
@@ -352,17 +328,13 @@ void main() {
 
         // Assert
         expect(result.id, modelWithDates.id);
-        expect(result.email, modelWithDates.email);
+        expect(result.phone, modelWithDates.phone);
         expect(result.displayName, modelWithDates.displayName);
         expect(result.photoUrl, modelWithDates.photoUrl);
-        expect(result.phone, modelWithDates.phone);
-        expect(result.defaultCurrency, modelWithDates.defaultCurrency);
-        expect(result.locale, modelWithDates.locale);
-        expect(result.timezone, modelWithDates.timezone);
+        expect(result.isPhoneVerified, modelWithDates.isPhoneVerified);
         expect(result.totalOwed, modelWithDates.totalOwed);
         expect(result.totalOwing, modelWithDates.totalOwing);
         expect(result.groupCount, modelWithDates.groupCount);
-        expect(result.countryCode, modelWithDates.countryCode);
         expect(result.fcmTokens, modelWithDates.fcmTokens);
       });
     });

@@ -53,9 +53,12 @@ class AppConstants {
   static const String boxOfflineQueue = 'offline_queue';
   static const String boxCache = 'cache';
 
-  // Currency
-  static const String defaultCurrency = 'INR';
-  static const List<String> supportedCurrencies = ['INR', 'USD', 'EUR', 'GBP'];
+  // Currency - India only app, INR is the only supported currency
+  static const String currency = 'INR';
+  static const String currencySymbol = '₹';
+  static const String locale = 'en_IN';
+  static const String timezone = 'Asia/Kolkata';
+  static const String countryCode = '+91';
 
   // Region
   static const String defaultLocale = 'en-IN';

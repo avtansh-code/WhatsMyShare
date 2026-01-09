@@ -238,7 +238,7 @@ class _ExpenseListView extends StatelessWidget {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    CurrencyUtils.format(state.totalAmount, currency),
+                    CurrencyUtils.format(state.totalAmount),
                     style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                       fontWeight: FontWeight.bold,
                       color: Theme.of(context).colorScheme.primary,
@@ -351,7 +351,7 @@ class _ExpenseListView extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.end,
           children: [
             Text(
-              CurrencyUtils.format(expense.amount, expense.currency),
+              CurrencyUtils.format(expense.amount),
               style: Theme.of(
                 context,
               ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),

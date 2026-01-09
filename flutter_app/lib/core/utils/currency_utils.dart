@@ -1,21 +1,29 @@
 import 'package:intl/intl.dart';
 
+import '../constants/app_constants.dart';
+
 /// Utility class for currency formatting and calculations
+/// India-only app - supports only INR (Indian Rupee)
 class CurrencyUtils {
   CurrencyUtils._();
 
+  static final _numberFormat = NumberFormat.currency(
+    locale: AppConstants.locale,
+    symbol: AppConstants.currencySymbol,
+    decimalDigits: 2,
+  );
+
   /// Format amount from smallest unit (paisa) to display string
   /// Example: 10050 paisa -> ₹100.50
-  static String format(int amountInSmallestUnit, String currencyCode) {
+  static String format(int amountInSmallestUnit) {
     final amount = amountInSmallestUnit / 100;
-    final format = _getNumberFormat(currencyCode);
-    return format.format(amount);
+    return _numberFormat.format(amount);
   }
 
   /// Format amount with sign (+ or -)
   /// Positive = you're owed, Negative = you owe
-  static String formatWithSign(int amountInSmallestUnit, String currencyCode) {
-    final formatted = format(amountInSmallestUnit.abs(), currencyCode);
+  static String formatWithSign(int amountInSmallestUnit) {
+    final formatted = format(amountInSmallestUnit.abs());
     if (amountInSmallestUnit > 0) {
       return '+$formatted';
     } else if (amountInSmallestUnit < 0) {
@@ -32,103 +40,31 @@ class CurrencyUtils {
     return (parsed * 100).round();
   }
 
-  /// Get currency symbol
-  static String getSymbol(String currencyCode) {
-    switch (currencyCode.toUpperCase()) {
-      case 'INR':
-        return '₹';
-      case 'USD':
-        return '\$';
-      case 'EUR':
-        return '€';
-      case 'GBP':
-        return '£';
-      case 'JPY':
-        return '¥';
-      default:
-        return currencyCode;
-    }
-  }
+  /// Get currency symbol (always ₹ for India-only app)
+  static String getSymbol() => AppConstants.currencySymbol;
 
   /// Get currency name
-  static String getName(String currencyCode) {
-    switch (currencyCode.toUpperCase()) {
-      case 'INR':
-        return 'Indian Rupee';
-      case 'USD':
-        return 'US Dollar';
-      case 'EUR':
-        return 'Euro';
-      case 'GBP':
-        return 'British Pound';
-      case 'JPY':
-        return 'Japanese Yen';
-      default:
-        return currencyCode;
-    }
-  }
+  static String getName() => 'Indian Rupee';
 
-  /// Get decimal places for currency
-  static int getDecimalPlaces(String currencyCode) {
-    switch (currencyCode.toUpperCase()) {
-      case 'JPY':
-        return 0;
-      default:
-        return 2;
-    }
-  }
+  /// Get currency code
+  static String getCode() => AppConstants.currency;
 
-  /// Get smallest unit for currency
-  static int getSmallestUnit(String currencyCode) {
-    switch (currencyCode.toUpperCase()) {
-      case 'JPY':
-        return 1;
-      default:
-        return 100; // paisa, cents, etc.
-    }
-  }
+  /// Get decimal places for currency (2 for INR)
+  static int getDecimalPlaces() => 2;
 
-  static NumberFormat _getNumberFormat(String currencyCode) {
-    switch (currencyCode.toUpperCase()) {
-      case 'INR':
-        return NumberFormat.currency(
-          locale: 'en_IN',
-          symbol: '₹',
-          decimalDigits: 2,
-        );
-      case 'USD':
-        return NumberFormat.currency(
-          locale: 'en_US',
-          symbol: '\$',
-          decimalDigits: 2,
-        );
-      case 'EUR':
-        return NumberFormat.currency(
-          locale: 'de_DE',
-          symbol: '€',
-          decimalDigits: 2,
-        );
-      case 'GBP':
-        return NumberFormat.currency(
-          locale: 'en_GB',
-          symbol: '£',
-          decimalDigits: 2,
-        );
-      default:
-        return NumberFormat.currency(symbol: currencyCode, decimalDigits: 2);
-    }
-  }
+  /// Get smallest unit for currency (100 paisa = 1 rupee)
+  static int getSmallestUnit() => 100;
 }
 
 /// Extension on int for easy currency formatting
 extension CurrencyExtension on int {
-  /// Format this amount (in smallest unit) as currency
-  String toCurrency(String currencyCode) {
-    return CurrencyUtils.format(this, currencyCode);
+  /// Format this amount (in smallest unit / paisa) as currency
+  String toCurrency() {
+    return CurrencyUtils.format(this);
   }
 
   /// Format this amount with sign
-  String toCurrencyWithSign(String currencyCode) {
-    return CurrencyUtils.formatWithSign(this, currencyCode);
+  String toCurrencyWithSign() {
+    return CurrencyUtils.formatWithSign(this);
   }
 }

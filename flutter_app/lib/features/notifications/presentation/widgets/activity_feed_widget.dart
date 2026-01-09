@@ -245,10 +245,7 @@ class _ActivityTile extends StatelessWidget {
           if (activity.amount != null) ...[
             const TextSpan(text: ' for '),
             TextSpan(
-              text: CurrencyUtils.format(
-                activity.amount!,
-                activity.currency ?? 'INR',
-              ),
+              text: CurrencyUtils.format(activity.amount!),
               style: boldStyle,
             ),
           ],
@@ -272,10 +269,7 @@ class _ActivityTile extends StatelessWidget {
           if (activity.amount != null) ...[
             const TextSpan(text: ' of '),
             TextSpan(
-              text: CurrencyUtils.format(
-                activity.amount!,
-                activity.currency ?? 'INR',
-              ),
+              text: CurrencyUtils.format(activity.amount!),
               style: boldStyle,
             ),
           ],

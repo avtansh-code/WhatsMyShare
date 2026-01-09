@@ -1,16 +1,16 @@
 import 'package:equatable/equatable.dart';
 
+import '../../../../core/constants/app_constants.dart';
+
 /// User entity representing authenticated user
 /// Authentication is ONLY via phone number
+/// India-only app - currency, timezone, locale are hardcoded
 class UserEntity extends Equatable {
   final String id;
   final String? displayName;
   final String? photoUrl;
   final String phone;
   final bool isPhoneVerified;
-  final String defaultCurrency;
-  final String locale;
-  final String timezone;
   final bool notificationsEnabled;
   final bool contactSyncEnabled;
   final bool biometricAuthEnabled;
@@ -20,7 +20,6 @@ class UserEntity extends Equatable {
   final int totalOwed;
   final int totalOwing;
   final int groupCount;
-  final String countryCode;
   final List<String> fcmTokens;
 
   const UserEntity({
@@ -29,9 +28,6 @@ class UserEntity extends Equatable {
     this.displayName,
     this.photoUrl,
     this.isPhoneVerified = false,
-    this.defaultCurrency = 'INR',
-    this.locale = 'en-IN',
-    this.timezone = 'Asia/Kolkata',
     this.notificationsEnabled = true,
     this.contactSyncEnabled = false,
     this.biometricAuthEnabled = false,
@@ -41,9 +37,20 @@ class UserEntity extends Equatable {
     this.totalOwed = 0,
     this.totalOwing = 0,
     this.groupCount = 0,
-    this.countryCode = 'IN',
     this.fcmTokens = const [],
   });
+
+  /// Currency is always INR (India-only app)
+  String get currency => AppConstants.currency;
+
+  /// Locale is always en_IN (India-only app)
+  String get locale => AppConstants.locale;
+
+  /// Timezone is always Asia/Kolkata (India-only app)
+  String get timezone => AppConstants.timezone;
+
+  /// Country code is always +91 (India-only app)
+  String get countryCode => AppConstants.countryCode;
 
   /// Check if user has completed profile setup (must have name and verified phone)
   bool get hasCompletedProfile =>
@@ -97,9 +104,6 @@ class UserEntity extends Equatable {
     photoUrl,
     phone,
     isPhoneVerified,
-    defaultCurrency,
-    locale,
-    timezone,
     notificationsEnabled,
     contactSyncEnabled,
     biometricAuthEnabled,
@@ -109,7 +113,6 @@ class UserEntity extends Equatable {
     totalOwed,
     totalOwing,
     groupCount,
-    countryCode,
     fcmTokens,
   ];
 
@@ -120,9 +123,6 @@ class UserEntity extends Equatable {
     String? photoUrl,
     String? phone,
     bool? isPhoneVerified,
-    String? defaultCurrency,
-    String? locale,
-    String? timezone,
     bool? notificationsEnabled,
     bool? contactSyncEnabled,
     bool? biometricAuthEnabled,
@@ -132,7 +132,6 @@ class UserEntity extends Equatable {
     int? totalOwed,
     int? totalOwing,
     int? groupCount,
-    String? countryCode,
     List<String>? fcmTokens,
   }) {
     return UserEntity(
@@ -141,9 +140,6 @@ class UserEntity extends Equatable {
       photoUrl: photoUrl ?? this.photoUrl,
       phone: phone ?? this.phone,
       isPhoneVerified: isPhoneVerified ?? this.isPhoneVerified,
-      defaultCurrency: defaultCurrency ?? this.defaultCurrency,
-      locale: locale ?? this.locale,
-      timezone: timezone ?? this.timezone,
       notificationsEnabled: notificationsEnabled ?? this.notificationsEnabled,
       contactSyncEnabled: contactSyncEnabled ?? this.contactSyncEnabled,
       biometricAuthEnabled: biometricAuthEnabled ?? this.biometricAuthEnabled,
@@ -153,7 +149,6 @@ class UserEntity extends Equatable {
       totalOwed: totalOwed ?? this.totalOwed,
       totalOwing: totalOwing ?? this.totalOwing,
       groupCount: groupCount ?? this.groupCount,
-      countryCode: countryCode ?? this.countryCode,
       fcmTokens: fcmTokens ?? this.fcmTokens,
     );
   }

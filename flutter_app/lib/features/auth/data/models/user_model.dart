@@ -1,9 +1,11 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
+import '../../../../core/constants/app_constants.dart';
 import '../../domain/entities/user_entity.dart';
 
 /// User model for data layer - handles Firestore serialization
 /// Phone number is the primary identifier (phone-only authentication)
+/// India-only app - currency, timezone, locale are hardcoded
 class UserModel extends UserEntity {
   const UserModel({
     required super.id,
@@ -11,9 +13,6 @@ class UserModel extends UserEntity {
     super.displayName,
     super.photoUrl,
     super.isPhoneVerified,
-    super.defaultCurrency,
-    super.locale,
-    super.timezone,
     super.notificationsEnabled,
     super.contactSyncEnabled,
     super.biometricAuthEnabled,
@@ -23,7 +22,6 @@ class UserModel extends UserEntity {
     super.totalOwed,
     super.totalOwing,
     super.groupCount,
-    super.countryCode,
     super.fcmTokens,
   });
 
@@ -36,9 +34,6 @@ class UserModel extends UserEntity {
       displayName: data['displayName'] as String?,
       photoUrl: data['photoUrl'] as String?,
       isPhoneVerified: data['isPhoneVerified'] as bool? ?? false,
-      defaultCurrency: data['defaultCurrency'] as String? ?? 'INR',
-      locale: data['locale'] as String? ?? 'en-IN',
-      timezone: data['timezone'] as String? ?? 'Asia/Kolkata',
       notificationsEnabled: data['notificationsEnabled'] as bool? ?? true,
       contactSyncEnabled: data['contactSyncEnabled'] as bool? ?? false,
       biometricAuthEnabled: data['biometricAuthEnabled'] as bool? ?? false,
@@ -48,7 +43,6 @@ class UserModel extends UserEntity {
       totalOwed: data['totalOwed'] as int? ?? 0,
       totalOwing: data['totalOwing'] as int? ?? 0,
       groupCount: data['groupCount'] as int? ?? 0,
-      countryCode: data['countryCode'] as String? ?? 'IN',
       fcmTokens:
           (data['fcmTokens'] as List<dynamic>?)
               ?.map((e) => e as String)
@@ -65,9 +59,6 @@ class UserModel extends UserEntity {
       displayName: map['displayName'] as String?,
       photoUrl: map['photoUrl'] as String?,
       isPhoneVerified: map['isPhoneVerified'] as bool? ?? false,
-      defaultCurrency: map['defaultCurrency'] as String? ?? 'INR',
-      locale: map['locale'] as String? ?? 'en-IN',
-      timezone: map['timezone'] as String? ?? 'Asia/Kolkata',
       notificationsEnabled: map['notificationsEnabled'] as bool? ?? true,
       contactSyncEnabled: map['contactSyncEnabled'] as bool? ?? false,
       biometricAuthEnabled: map['biometricAuthEnabled'] as bool? ?? false,
@@ -83,7 +74,6 @@ class UserModel extends UserEntity {
       totalOwed: map['totalOwed'] as int? ?? 0,
       totalOwing: map['totalOwing'] as int? ?? 0,
       groupCount: map['groupCount'] as int? ?? 0,
-      countryCode: map['countryCode'] as String? ?? 'IN',
       fcmTokens:
           (map['fcmTokens'] as List<dynamic>?)
               ?.map((e) => e as String)
@@ -100,9 +90,6 @@ class UserModel extends UserEntity {
       displayName: entity.displayName,
       photoUrl: entity.photoUrl,
       isPhoneVerified: entity.isPhoneVerified,
-      defaultCurrency: entity.defaultCurrency,
-      locale: entity.locale,
-      timezone: entity.timezone,
       notificationsEnabled: entity.notificationsEnabled,
       contactSyncEnabled: entity.contactSyncEnabled,
       biometricAuthEnabled: entity.biometricAuthEnabled,
@@ -112,7 +99,6 @@ class UserModel extends UserEntity {
       totalOwed: entity.totalOwed,
       totalOwing: entity.totalOwing,
       groupCount: entity.groupCount,
-      countryCode: entity.countryCode,
       fcmTokens: entity.fcmTokens,
     );
   }
@@ -124,9 +110,6 @@ class UserModel extends UserEntity {
       'displayName': displayName,
       'photoUrl': photoUrl,
       'isPhoneVerified': isPhoneVerified,
-      'defaultCurrency': defaultCurrency,
-      'locale': locale,
-      'timezone': timezone,
       'notificationsEnabled': notificationsEnabled,
       'contactSyncEnabled': contactSyncEnabled,
       'biometricAuthEnabled': biometricAuthEnabled,
@@ -135,8 +118,12 @@ class UserModel extends UserEntity {
       'totalOwed': totalOwed,
       'totalOwing': totalOwing,
       'groupCount': groupCount,
-      'countryCode': countryCode,
       'fcmTokens': fcmTokens,
+      // Store hardcoded India values for reference
+      'currency': AppConstants.currency,
+      'locale': AppConstants.locale,
+      'timezone': AppConstants.timezone,
+      'countryCode': AppConstants.countryCode,
     };
   }
 
@@ -147,9 +134,6 @@ class UserModel extends UserEntity {
       'displayName': displayName,
       'photoUrl': photoUrl,
       'isPhoneVerified': isPhoneVerified,
-      'defaultCurrency': defaultCurrency,
-      'locale': locale,
-      'timezone': timezone,
       'notificationsEnabled': notificationsEnabled,
       'contactSyncEnabled': contactSyncEnabled,
       'biometricAuthEnabled': biometricAuthEnabled,
@@ -159,8 +143,12 @@ class UserModel extends UserEntity {
       'totalOwed': 0,
       'totalOwing': 0,
       'groupCount': 0,
-      'countryCode': countryCode,
       'fcmTokens': fcmTokens,
+      // Store hardcoded India values for reference
+      'currency': AppConstants.currency,
+      'locale': AppConstants.locale,
+      'timezone': AppConstants.timezone,
+      'countryCode': AppConstants.countryCode,
     };
   }
 
@@ -172,9 +160,6 @@ class UserModel extends UserEntity {
       'displayName': displayName,
       'photoUrl': photoUrl,
       'isPhoneVerified': isPhoneVerified,
-      'defaultCurrency': defaultCurrency,
-      'locale': locale,
-      'timezone': timezone,
       'notificationsEnabled': notificationsEnabled,
       'contactSyncEnabled': contactSyncEnabled,
       'biometricAuthEnabled': biometricAuthEnabled,
@@ -184,8 +169,12 @@ class UserModel extends UserEntity {
       'totalOwed': totalOwed,
       'totalOwing': totalOwing,
       'groupCount': groupCount,
-      'countryCode': countryCode,
       'fcmTokens': fcmTokens,
+      // Store hardcoded India values for reference
+      'currency': AppConstants.currency,
+      'locale': AppConstants.locale,
+      'timezone': AppConstants.timezone,
+      'countryCode': AppConstants.countryCode,
     };
   }
 
@@ -196,9 +185,6 @@ class UserModel extends UserEntity {
     String? displayName,
     String? photoUrl,
     bool? isPhoneVerified,
-    String? defaultCurrency,
-    String? locale,
-    String? timezone,
     bool? notificationsEnabled,
     bool? contactSyncEnabled,
     bool? biometricAuthEnabled,
@@ -208,7 +194,6 @@ class UserModel extends UserEntity {
     int? totalOwed,
     int? totalOwing,
     int? groupCount,
-    String? countryCode,
     List<String>? fcmTokens,
   }) {
     return UserModel(
@@ -217,9 +202,6 @@ class UserModel extends UserEntity {
       displayName: displayName ?? this.displayName,
       photoUrl: photoUrl ?? this.photoUrl,
       isPhoneVerified: isPhoneVerified ?? this.isPhoneVerified,
-      defaultCurrency: defaultCurrency ?? this.defaultCurrency,
-      locale: locale ?? this.locale,
-      timezone: timezone ?? this.timezone,
       notificationsEnabled: notificationsEnabled ?? this.notificationsEnabled,
       contactSyncEnabled: contactSyncEnabled ?? this.contactSyncEnabled,
       biometricAuthEnabled: biometricAuthEnabled ?? this.biometricAuthEnabled,
@@ -229,7 +211,6 @@ class UserModel extends UserEntity {
       totalOwed: totalOwed ?? this.totalOwed,
       totalOwing: totalOwing ?? this.totalOwing,
       groupCount: groupCount ?? this.groupCount,
-      countryCode: countryCode ?? this.countryCode,
       fcmTokens: fcmTokens ?? this.fcmTokens,
     );
   }

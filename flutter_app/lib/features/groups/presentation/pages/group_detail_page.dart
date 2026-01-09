@@ -217,7 +217,7 @@ class _GroupDetailPageState extends State<GroupDetailPage>
               _buildStatItem(
                 context,
                 'Total',
-                CurrencyUtils.format(group.totalExpenses, group.currency),
+                CurrencyUtils.format(group.totalExpenses),
                 Icons.receipt_long,
               ),
               Container(
@@ -357,7 +357,7 @@ class _GroupDetailPageState extends State<GroupDetailPage>
             ),
             title: Text(displayName),
             trailing: Text(
-              CurrencyUtils.formatWithSign(balance, group.currency),
+              CurrencyUtils.formatWithSign(balance),
               style: TextStyle(
                 color: balance >= 0 ? Colors.green : Colors.red,
                 fontWeight: FontWeight.bold,
