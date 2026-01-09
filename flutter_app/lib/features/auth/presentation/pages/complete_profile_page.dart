@@ -43,8 +43,10 @@ class _CompleteProfilePageState extends State<CompleteProfilePage> {
     super.initState();
     _log.info('CompleteProfilePage opened', tag: LogTags.ui);
     _authDataSource = sl<FirebaseAuthDataSource>();
-    
-    _nameController = TextEditingController(text: widget.user.displayName ?? '');
+
+    _nameController = TextEditingController(
+      text: widget.user.displayName ?? '',
+    );
     _emailController = TextEditingController(text: widget.user.email);
     _phoneController = TextEditingController(text: widget.user.phone ?? '');
   }
@@ -177,7 +179,10 @@ class _CompleteProfilePageState extends State<CompleteProfilePage> {
     }
 
     if (_verificationId == null) {
-      setState(() => _errorMessage = 'Verification session expired. Please request a new OTP');
+      setState(
+        () => _errorMessage =
+            'Verification session expired. Please request a new OTP',
+      );
       return;
     }
 
@@ -200,7 +205,7 @@ class _CompleteProfilePageState extends State<CompleteProfilePage> {
       }
 
       _log.info('Profile completed successfully', tag: LogTags.auth);
-      
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -208,7 +213,7 @@ class _CompleteProfilePageState extends State<CompleteProfilePage> {
             backgroundColor: Colors.green,
           ),
         );
-        
+
         // Refresh auth state and navigate to dashboard
         context.read<AuthBloc>().add(const AuthCheckRequested());
         context.go('/dashboard');
@@ -221,7 +226,9 @@ class _CompleteProfilePageState extends State<CompleteProfilePage> {
     }
   }
 
-  Future<void> _verifyWithCredential(firebase_auth.PhoneAuthCredential credential) async {
+  Future<void> _verifyWithCredential(
+    firebase_auth.PhoneAuthCredential credential,
+  ) async {
     setState(() => _isLoading = true);
 
     try {
@@ -435,12 +442,14 @@ class _CompleteProfilePageState extends State<CompleteProfilePage> {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       TextButton(
-                        onPressed: _isVerifyingPhone ? null : () {
-                          setState(() {
-                            _isOtpSent = false;
-                            _otpController.clear();
-                          });
-                        },
+                        onPressed: _isVerifyingPhone
+                            ? null
+                            : () {
+                                setState(() {
+                                  _isOtpSent = false;
+                                  _otpController.clear();
+                                });
+                              },
                         child: const Text('Change Number'),
                       ),
                       TextButton(
@@ -462,7 +471,9 @@ class _CompleteProfilePageState extends State<CompleteProfilePage> {
                     ),
                     child: Text(
                       _errorMessage!,
-                      style: TextStyle(color: theme.colorScheme.onErrorContainer),
+                      style: TextStyle(
+                        color: theme.colorScheme.onErrorContainer,
+                      ),
                     ),
                   ),
                 const SizedBox(height: 24),
@@ -471,27 +482,31 @@ class _CompleteProfilePageState extends State<CompleteProfilePage> {
                 if (widget.user.isPhoneVerified) ...[
                   // Just update name
                   FilledButton(
-                    onPressed: _isLoading ? null : () async {
-                      if (!_formKey.currentState!.validate()) return;
-                      
-                      setState(() => _isLoading = true);
-                      
-                      try {
-                        await _authDataSource.updateProfile(
-                          displayName: _nameController.text.trim(),
-                        );
-                        
-                        if (mounted) {
-                          context.read<AuthBloc>().add(const AuthCheckRequested());
-                          context.go('/dashboard');
-                        }
-                      } catch (e) {
-                        setState(() {
-                          _isLoading = false;
-                          _errorMessage = e.toString();
-                        });
-                      }
-                    },
+                    onPressed: _isLoading
+                        ? null
+                        : () async {
+                            if (!_formKey.currentState!.validate()) return;
+
+                            setState(() => _isLoading = true);
+
+                            try {
+                              await _authDataSource.updateProfile(
+                                displayName: _nameController.text.trim(),
+                              );
+
+                              if (mounted) {
+                                context.read<AuthBloc>().add(
+                                  const AuthCheckRequested(),
+                                );
+                                context.go('/dashboard');
+                              }
+                            } catch (e) {
+                              setState(() {
+                                _isLoading = false;
+                                _errorMessage = e.toString();
+                              });
+                            }
+                          },
                     style: FilledButton.styleFrom(
                       padding: const EdgeInsets.symmetric(vertical: 16),
                     ),
@@ -506,8 +521,8 @@ class _CompleteProfilePageState extends State<CompleteProfilePage> {
                 ] else if (!_isOtpSent) ...[
                   // Send OTP
                   FilledButton(
-                    onPressed: (_isVerifyingPhone || _phoneWarning != null) 
-                        ? null 
+                    onPressed: (_isVerifyingPhone || _phoneWarning != null)
+                        ? null
                         : () {
                             if (!_formKey.currentState!.validate()) return;
                             _sendOtp();

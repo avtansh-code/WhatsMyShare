@@ -87,7 +87,7 @@ class _FriendsPageState extends State<FriendsPage> {
     for (final group in groups) {
       // Get current user's balance in this group
       final myBalance = group.balances[currentUserId] ?? 0;
-      
+
       // Process simplified debts if available
       if (group.simplifiedDebts != null && group.simplifiedDebts!.isNotEmpty) {
         for (final debt in group.simplifiedDebts!) {
@@ -143,30 +143,38 @@ class _FriendsPageState extends State<FriendsPage> {
           if (member.userId == currentUserId) continue;
 
           final memberBalance = group.balances[member.userId] ?? 0;
-          
+
           // Calculate relative balance between current user and this member
           // If my balance is positive (I'm owed) and their balance is negative (they owe),
           // we need to estimate how much they might owe me specifically
           // This is a simplified calculation when simplifiedDebts is not available
           int balanceWithFriend = 0;
-          
+
           if (myBalance > 0 && memberBalance < 0) {
             // I'm owed money and they owe money
             // They might owe me proportionally
             final totalOwed = groups.fold<int>(0, (sum, g) {
-              return sum + g.balances.values.where((b) => b < 0).fold(0, (s, b) => s + (-b));
+              return sum +
+                  g.balances.values
+                      .where((b) => b < 0)
+                      .fold(0, (s, b) => s + (-b));
             });
             if (totalOwed > 0) {
-              balanceWithFriend = (myBalance * (-memberBalance) / totalOwed).round();
+              balanceWithFriend = (myBalance * (-memberBalance) / totalOwed)
+                  .round();
             }
           } else if (myBalance < 0 && memberBalance > 0) {
             // I owe money and they're owed money
             // I might owe them proportionally
             final totalOwed = groups.fold<int>(0, (sum, g) {
-              return sum + g.balances.values.where((b) => b > 0).fold(0, (s, b) => s + b);
+              return sum +
+                  g.balances.values
+                      .where((b) => b > 0)
+                      .fold(0, (s, b) => s + b);
             });
             if (totalOwed > 0) {
-              balanceWithFriend = -((-myBalance) * memberBalance / totalOwed).round();
+              balanceWithFriend = -((-myBalance) * memberBalance / totalOwed)
+                  .round();
             }
           }
 
@@ -216,7 +224,9 @@ class _FriendsPageState extends State<FriendsPage> {
 
     // Sort by absolute balance (most significant first)
     final friends = friendMap.values.toList();
-    friends.sort((a, b) => b.totalBalance.abs().compareTo(a.totalBalance.abs()));
+    friends.sort(
+      (a, b) => b.totalBalance.abs().compareTo(a.totalBalance.abs()),
+    );
     return friends;
   }
 
@@ -226,96 +236,97 @@ class _FriendsPageState extends State<FriendsPage> {
     final currentUserId = FirebaseAuth.instance.currentUser?.uid ?? '';
 
     return BlocProvider.value(
-          value: _groupBloc,
-          child: Scaffold(
-            appBar: AppBar(
-              title: const Text('Friends'),
-              actions: [
-                IconButton(
-                  icon: const Icon(Icons.person_add),
-                  onPressed: _showAddFriendDialog,
-                  tooltip: 'Add Friend',
-                ),
-              ],
+      value: _groupBloc,
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text('Friends'),
+          actions: [
+            IconButton(
+              icon: const Icon(Icons.person_add),
+              onPressed: _showAddFriendDialog,
+              tooltip: 'Add Friend',
             ),
-            body: BlocBuilder<GroupBloc, GroupState>(
-              builder: (context, groupState) {
-                if (groupState.status == GroupStatus.loading) {
-                  return const Center(child: CircularProgressIndicator());
-                }
-
-                if (groupState.status == GroupStatus.failure) {
-                  return Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          Icons.error_outline,
-                          size: 64,
-                          color: theme.colorScheme.error,
-                        ),
-                        const SizedBox(height: 16),
-                        Text(
-                          'Failed to load friends',
-                          style: theme.textTheme.titleMedium,
-                        ),
-                        const SizedBox(height: 8),
-                        FilledButton(
-                          onPressed: () {
-                            _groupBloc.add(const GroupLoadAllRequested());
-                          },
-                          child: const Text('Retry'),
-                        ),
-                      ],
-                    ),
-                  );
-                }
-
-                final friends = _calculateFriendBalances(
-                  groupState.groups,
-                  currentUserId,
-                );
-
-                if (friends.isEmpty) {
-                  return _buildEmptyState(theme);
-                }
-
-                return RefreshIndicator(
-                  onRefresh: () async {
-                    _groupBloc.add(const GroupLoadAllRequested());
-                  },
-                  child: _buildFriendsList(context, theme, friends),
-                );
-              },
-            ),
-          bottomNavigationBar: NavigationBar(
-            selectedIndex: 2,
-            onDestinationSelected: (index) => _onDestinationSelected(context, index),
-            destinations: const [
-              NavigationDestination(
-                icon: Icon(Icons.home_outlined),
-                selectedIcon: Icon(Icons.home),
-                label: 'Home',
-              ),
-              NavigationDestination(
-                icon: Icon(Icons.group_outlined),
-                selectedIcon: Icon(Icons.group),
-                label: 'Groups',
-              ),
-              NavigationDestination(
-                icon: Icon(Icons.people_outline),
-                selectedIcon: Icon(Icons.people),
-                label: 'Friends',
-              ),
-              NavigationDestination(
-                icon: Icon(Icons.account_balance_wallet_outlined),
-                selectedIcon: Icon(Icons.account_balance_wallet),
-                label: 'Activity',
-              ),
-            ],
-          ),
+          ],
         ),
-      );
+        body: BlocBuilder<GroupBloc, GroupState>(
+          builder: (context, groupState) {
+            if (groupState.status == GroupStatus.loading) {
+              return const Center(child: CircularProgressIndicator());
+            }
+
+            if (groupState.status == GroupStatus.failure) {
+              return Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      Icons.error_outline,
+                      size: 64,
+                      color: theme.colorScheme.error,
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      'Failed to load friends',
+                      style: theme.textTheme.titleMedium,
+                    ),
+                    const SizedBox(height: 8),
+                    FilledButton(
+                      onPressed: () {
+                        _groupBloc.add(const GroupLoadAllRequested());
+                      },
+                      child: const Text('Retry'),
+                    ),
+                  ],
+                ),
+              );
+            }
+
+            final friends = _calculateFriendBalances(
+              groupState.groups,
+              currentUserId,
+            );
+
+            if (friends.isEmpty) {
+              return _buildEmptyState(theme);
+            }
+
+            return RefreshIndicator(
+              onRefresh: () async {
+                _groupBloc.add(const GroupLoadAllRequested());
+              },
+              child: _buildFriendsList(context, theme, friends),
+            );
+          },
+        ),
+        bottomNavigationBar: NavigationBar(
+          selectedIndex: 2,
+          onDestinationSelected: (index) =>
+              _onDestinationSelected(context, index),
+          destinations: const [
+            NavigationDestination(
+              icon: Icon(Icons.home_outlined),
+              selectedIcon: Icon(Icons.home),
+              label: 'Home',
+            ),
+            NavigationDestination(
+              icon: Icon(Icons.group_outlined),
+              selectedIcon: Icon(Icons.group),
+              label: 'Groups',
+            ),
+            NavigationDestination(
+              icon: Icon(Icons.people_outline),
+              selectedIcon: Icon(Icons.people),
+              label: 'Friends',
+            ),
+            NavigationDestination(
+              icon: Icon(Icons.account_balance_wallet_outlined),
+              selectedIcon: Icon(Icons.account_balance_wallet),
+              label: 'Activity',
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   Widget _buildEmptyState(ThemeData theme) {
@@ -368,8 +379,14 @@ class _FriendsPageState extends State<FriendsPage> {
     final settled = friends.where((f) => f.totalBalance == 0).toList();
 
     // Calculate totals
-    final totalOwedToYou = owedToYou.fold<int>(0, (sum, f) => sum + f.totalBalance);
-    final totalYouOwe = youOwe.fold<int>(0, (sum, f) => sum + f.totalBalance.abs());
+    final totalOwedToYou = owedToYou.fold<int>(
+      0,
+      (sum, f) => sum + f.totalBalance,
+    );
+    final totalYouOwe = youOwe.fold<int>(
+      0,
+      (sum, f) => sum + f.totalBalance.abs(),
+    );
 
     return ListView(
       padding: const EdgeInsets.all(16),
@@ -387,7 +404,9 @@ class _FriendsPageState extends State<FriendsPage> {
             Colors.green,
           ),
           const SizedBox(height: 8),
-          ...owedToYou.map((friend) => _buildFriendCard(context, theme, friend)),
+          ...owedToYou.map(
+            (friend) => _buildFriendCard(context, theme, friend),
+          ),
           const SizedBox(height: 16),
         ],
 
@@ -416,7 +435,7 @@ class _FriendsPageState extends State<FriendsPage> {
 
   Widget _buildSummaryCard(ThemeData theme, int owedToYou, int youOwe) {
     final netBalance = owedToYou - youOwe;
-    
+
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -564,8 +583,8 @@ class _FriendsPageState extends State<FriendsPage> {
               CircleAvatar(
                 radius: 24,
                 backgroundColor: theme.colorScheme.primaryContainer,
-                backgroundImage: friend.photoUrl != null 
-                    ? NetworkImage(friend.photoUrl!) 
+                backgroundImage: friend.photoUrl != null
+                    ? NetworkImage(friend.photoUrl!)
                     : null,
                 child: friend.photoUrl == null
                     ? Text(
@@ -646,13 +665,13 @@ class _FriendsPageState extends State<FriendsPage> {
 
   void _showFriendDetails(BuildContext context, FriendBalance friend) {
     _log.debug('Friend details opened: ${friend.displayName}', tag: LogTags.ui);
-    
+
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       builder: (context) {
         final theme = Theme.of(context);
-        
+
         return DraggableScrollableSheet(
           initialChildSize: 0.6,
           minChildSize: 0.3,
@@ -672,7 +691,7 @@ class _FriendsPageState extends State<FriendsPage> {
                       borderRadius: BorderRadius.circular(2),
                     ),
                   ),
-                  
+
                   // Header
                   Padding(
                     padding: const EdgeInsets.all(16),
@@ -681,8 +700,8 @@ class _FriendsPageState extends State<FriendsPage> {
                         CircleAvatar(
                           radius: 28,
                           backgroundColor: theme.colorScheme.primaryContainer,
-                          backgroundImage: friend.photoUrl != null 
-                              ? NetworkImage(friend.photoUrl!) 
+                          backgroundImage: friend.photoUrl != null
+                              ? NetworkImage(friend.photoUrl!)
                               : null,
                           child: friend.photoUrl == null
                               ? Text(
@@ -726,25 +745,29 @@ class _FriendsPageState extends State<FriendsPage> {
                       margin: const EdgeInsets.symmetric(horizontal: 16),
                       padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
-                        color: (friend.totalBalance > 0 ? Colors.green : Colors.red)
-                            .withValues(alpha: 0.1),
+                        color:
+                            (friend.totalBalance > 0
+                                    ? Colors.green
+                                    : Colors.red)
+                                .withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           Text(
-                            friend.totalBalance > 0 
-                                ? 'Owes you ' 
-                                : 'You owe ',
+                            friend.totalBalance > 0 ? 'Owes you ' : 'You owe ',
                             style: theme.textTheme.titleMedium,
                           ),
                           Text(
-                            CurrencyUtils.format(friend.totalBalance.abs(), 'INR'),
+                            CurrencyUtils.format(
+                              friend.totalBalance.abs(),
+                              'INR',
+                            ),
                             style: theme.textTheme.titleLarge?.copyWith(
                               fontWeight: FontWeight.bold,
-                              color: friend.totalBalance > 0 
-                                  ? Colors.green 
+                              color: friend.totalBalance > 0
+                                  ? Colors.green
                                   : Colors.red,
                             ),
                           ),
@@ -789,33 +812,40 @@ class _FriendsPageState extends State<FriendsPage> {
                               return ListTile(
                                 onTap: () {
                                   Navigator.pop(context);
-                                  context.push('/groups/${groupBalance.groupId}');
+                                  context.push(
+                                    '/groups/${groupBalance.groupId}',
+                                  );
                                 },
                                 leading: CircleAvatar(
-                                  backgroundColor: theme.colorScheme.secondaryContainer,
+                                  backgroundColor:
+                                      theme.colorScheme.secondaryContainer,
                                   child: Icon(
                                     Icons.group,
-                                    color: theme.colorScheme.onSecondaryContainer,
+                                    color:
+                                        theme.colorScheme.onSecondaryContainer,
                                   ),
                                 ),
                                 title: Text(groupBalance.groupName),
                                 trailing: Text(
-                                  CurrencyUtils.format(groupBalance.balance.abs(), 'INR'),
+                                  CurrencyUtils.format(
+                                    groupBalance.balance.abs(),
+                                    'INR',
+                                  ),
                                   style: theme.textTheme.titleMedium?.copyWith(
                                     fontWeight: FontWeight.bold,
-                                    color: groupBalance.balance > 0 
-                                        ? Colors.green 
-                                        : groupBalance.balance < 0 
-                                            ? Colors.red 
-                                            : theme.colorScheme.onSurface,
+                                    color: groupBalance.balance > 0
+                                        ? Colors.green
+                                        : groupBalance.balance < 0
+                                        ? Colors.red
+                                        : theme.colorScheme.onSurface,
                                   ),
                                 ),
                                 subtitle: Text(
-                                  groupBalance.balance > 0 
-                                      ? 'owes you' 
-                                      : groupBalance.balance < 0 
-                                          ? 'you owe' 
-                                          : 'settled',
+                                  groupBalance.balance > 0
+                                      ? 'owes you'
+                                      : groupBalance.balance < 0
+                                      ? 'you owe'
+                                      : 'settled',
                                   style: theme.textTheme.bodySmall?.copyWith(
                                     color: theme.colorScheme.onSurfaceVariant,
                                   ),
@@ -898,9 +928,9 @@ class _FriendsPageState extends State<FriendsPage> {
               children: [
                 Text(
                   'Add Friend',
-                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 16),
                 TextField(
@@ -919,9 +949,7 @@ class _FriendsPageState extends State<FriendsPage> {
                     onPressed: () {
                       Navigator.pop(context);
                       ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Friend invitation sent'),
-                        ),
+                        const SnackBar(content: Text('Friend invitation sent')),
                       );
                     },
                     child: const Text('Send Invitation'),

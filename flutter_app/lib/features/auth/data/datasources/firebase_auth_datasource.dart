@@ -33,8 +33,10 @@ abstract class FirebaseAuthDataSource {
   Future<void> signInWithPhone({
     required String phoneNumber,
     required void Function(String verificationId, int? resendToken) codeSent,
-    required void Function(firebase_auth.PhoneAuthCredential credential) verificationCompleted,
-    required void Function(firebase_auth.FirebaseAuthException error) verificationFailed,
+    required void Function(firebase_auth.PhoneAuthCredential credential)
+    verificationCompleted,
+    required void Function(firebase_auth.FirebaseAuthException error)
+    verificationFailed,
     required void Function(String verificationId) codeAutoRetrievalTimeout,
     int? resendToken,
   });
@@ -574,7 +576,7 @@ class FirebaseAuthDataSourceImpl implements FirebaseAuthDataSource {
         );
         throw const ServerException(message: 'User not authenticated');
       }
-      
+
       // Create a new user document
       final userModel = UserModel(
         id: uid,
@@ -582,14 +584,14 @@ class FirebaseAuthDataSourceImpl implements FirebaseAuthDataSource {
         displayName: firebaseUser.displayName,
         photoUrl: firebaseUser.photoURL,
       );
-      
+
       await _usersCollection.doc(uid).set(userModel.toFirestoreCreate());
       _log.info(
         'Created missing user document',
         tag: LogTags.auth,
         data: {'uid': uid},
       );
-      
+
       // Fetch the newly created document
       final newDoc = await _usersCollection.doc(uid).get();
       return UserModel.fromFirestore(newDoc);
@@ -613,8 +615,10 @@ class FirebaseAuthDataSourceImpl implements FirebaseAuthDataSource {
   Future<void> signInWithPhone({
     required String phoneNumber,
     required void Function(String verificationId, int? resendToken) codeSent,
-    required void Function(firebase_auth.PhoneAuthCredential credential) verificationCompleted,
-    required void Function(firebase_auth.FirebaseAuthException error) verificationFailed,
+    required void Function(firebase_auth.PhoneAuthCredential credential)
+    verificationCompleted,
+    required void Function(firebase_auth.FirebaseAuthException error)
+    verificationFailed,
     required void Function(String verificationId) codeAutoRetrievalTimeout,
     int? resendToken,
   }) async {
@@ -641,7 +645,7 @@ class FirebaseAuthDataSourceImpl implements FirebaseAuthDataSource {
     required String smsCode,
   }) async {
     _log.info('Verifying phone OTP', tag: LogTags.auth);
-    
+
     try {
       final credential = firebase_auth.PhoneAuthProvider.credential(
         verificationId: verificationId,
@@ -657,7 +661,9 @@ class FirebaseAuthDataSourceImpl implements FirebaseAuthDataSource {
       }
 
       // Otherwise, sign in with the phone credential
-      final userCredential = await _firebaseAuth.signInWithCredential(credential);
+      final userCredential = await _firebaseAuth.signInWithCredential(
+        credential,
+      );
       final user = userCredential.user;
 
       if (user == null) {
@@ -700,7 +706,7 @@ class FirebaseAuthDataSourceImpl implements FirebaseAuthDataSource {
     required String smsCode,
   }) async {
     _log.info('Linking phone number to user', tag: LogTags.auth);
-    
+
     final user = _firebaseAuth.currentUser;
     if (user == null) {
       throw const AuthException(message: 'User not authenticated');
@@ -713,7 +719,7 @@ class FirebaseAuthDataSourceImpl implements FirebaseAuthDataSource {
       );
 
       await user.linkWithCredential(credential);
-      
+
       // Update Firestore with the phone number
       await _usersCollection.doc(user.uid).update({
         'phone': user.phoneNumber,
@@ -755,16 +761,16 @@ class FirebaseAuthDataSourceImpl implements FirebaseAuthDataSource {
       );
       return isRegistered;
     } catch (e) {
-      _log.warning(
-        'Phone registration check failed',
-        tag: LogTags.auth,
-      );
+      _log.warning('Phone registration check failed', tag: LogTags.auth);
       return false;
     }
   }
 
   @override
-  Future<bool> isEmailRegisteredByOther(String email, String currentUserId) async {
+  Future<bool> isEmailRegisteredByOther(
+    String email,
+    String currentUserId,
+  ) async {
     _log.debug(
       'Checking if email is registered by another user',
       tag: LogTags.auth,
@@ -775,7 +781,7 @@ class FirebaseAuthDataSourceImpl implements FirebaseAuthDataSource {
           .where('email', isEqualTo: email.toLowerCase().trim())
           .limit(2)
           .get();
-      
+
       // Check if any user other than current user has this email
       for (final doc in querySnapshot.docs) {
         if (doc.id != currentUserId) {
@@ -784,16 +790,16 @@ class FirebaseAuthDataSourceImpl implements FirebaseAuthDataSource {
       }
       return false;
     } catch (e) {
-      _log.warning(
-        'Email registration check failed',
-        tag: LogTags.auth,
-      );
+      _log.warning('Email registration check failed', tag: LogTags.auth);
       return false;
     }
   }
 
   @override
-  Future<bool> isPhoneRegisteredByOther(String phone, String currentUserId) async {
+  Future<bool> isPhoneRegisteredByOther(
+    String phone,
+    String currentUserId,
+  ) async {
     _log.debug(
       'Checking if phone is registered by another user',
       tag: LogTags.auth,
@@ -806,7 +812,7 @@ class FirebaseAuthDataSourceImpl implements FirebaseAuthDataSource {
           .where('isPhoneVerified', isEqualTo: true)
           .limit(2)
           .get();
-      
+
       // Check if any user other than current user has this phone
       for (final doc in querySnapshot.docs) {
         if (doc.id != currentUserId) {
@@ -815,10 +821,7 @@ class FirebaseAuthDataSourceImpl implements FirebaseAuthDataSource {
       }
       return false;
     } catch (e) {
-      _log.warning(
-        'Phone registration check failed',
-        tag: LogTags.auth,
-      );
+      _log.warning('Phone registration check failed', tag: LogTags.auth);
       return false;
     }
   }
@@ -826,7 +829,7 @@ class FirebaseAuthDataSourceImpl implements FirebaseAuthDataSource {
   @override
   Future<UserModel> markPhoneVerified() async {
     _log.info('Marking phone as verified', tag: LogTags.auth);
-    
+
     final user = _firebaseAuth.currentUser;
     if (user == null) {
       throw const AuthException(message: 'User not authenticated');
@@ -851,7 +854,7 @@ class FirebaseAuthDataSourceImpl implements FirebaseAuthDataSource {
       tag: LogTags.auth,
       data: {'email': email, 'displayName': displayName, 'phone': phone},
     );
-    
+
     final user = _firebaseAuth.currentUser;
     if (user == null) {
       throw const AuthException(message: 'User not authenticated');
@@ -879,7 +882,7 @@ class FirebaseAuthDataSourceImpl implements FirebaseAuthDataSource {
   String _normalizePhoneNumber(String phone) {
     // Remove spaces and dashes
     String normalized = phone.replaceAll(RegExp(r'[\s\-\(\)]'), '');
-    
+
     // Ensure it starts with +
     if (!normalized.startsWith('+')) {
       // Assume Indian number if no country code
@@ -887,7 +890,7 @@ class FirebaseAuthDataSourceImpl implements FirebaseAuthDataSource {
         normalized = '+91$normalized';
       }
     }
-    
+
     return normalized;
   }
 

@@ -50,16 +50,16 @@ class UserEntity extends Equatable {
 
   /// Check if user has completed profile setup (must have name, email, and phone)
   bool get hasCompletedProfile =>
-      displayName != null && 
+      displayName != null &&
       displayName!.isNotEmpty &&
       email.isNotEmpty &&
-      phone != null && 
+      phone != null &&
       phone!.isNotEmpty &&
       isPhoneVerified;
 
   /// Check if profile is partially complete (has name but missing phone)
   bool get needsPhoneVerification =>
-      displayName != null && 
+      displayName != null &&
       displayName!.isNotEmpty &&
       (phone == null || phone!.isEmpty || !isPhoneVerified);
 

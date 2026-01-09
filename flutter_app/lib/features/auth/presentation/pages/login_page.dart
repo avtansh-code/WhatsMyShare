@@ -86,7 +86,7 @@ class _LoginPageState extends State<LoginPage> {
                 'hasCompletedProfile': user.hasCompletedProfile,
               },
             );
-            
+
             // Check if profile is complete (has name, email, and verified phone)
             if (user.hasCompletedProfile) {
               _log.info('Navigating to dashboard', tag: LogTags.ui);
@@ -130,6 +130,10 @@ class _LoginPageState extends State<LoginPage> {
 
                     // Google Sign In
                     _buildGoogleSignIn(theme),
+                    const SizedBox(height: 16),
+
+                    // Phone Sign In
+                    _buildPhoneSignIn(theme),
                     const SizedBox(height: 32),
 
                     // Sign Up Link
@@ -316,6 +320,17 @@ class _LoginPageState extends State<LoginPage> {
             const Icon(Icons.g_mobiledata, size: 24),
       ),
       label: const Text('Sign in with Google', style: TextStyle(fontSize: 16)),
+    );
+  }
+
+  Widget _buildPhoneSignIn(ThemeData theme) {
+    return OutlinedButton.icon(
+      onPressed: _isLoading ? null : () => context.push('/phone-login'),
+      style: OutlinedButton.styleFrom(
+        padding: const EdgeInsets.symmetric(vertical: 16),
+      ),
+      icon: const Icon(Icons.phone_outlined, size: 20),
+      label: const Text('Sign in with Phone', style: TextStyle(fontSize: 16)),
     );
   }
 

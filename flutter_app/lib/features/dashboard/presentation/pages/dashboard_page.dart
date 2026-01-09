@@ -25,16 +25,16 @@ class _DashboardPageState extends State<DashboardPage> {
 
   void _onDestinationSelected(int index) {
     _log.debug('Navigation destination selected: $index', tag: LogTags.ui);
-    
+
     // Only update state and navigate if switching to a different tab
     if (index == _selectedIndex) {
       return;
     }
-    
+
     setState(() {
       _selectedIndex = index;
     });
-    
+
     switch (index) {
       case 0:
         // Home - go to dashboard
@@ -77,13 +77,11 @@ class _DashboardPageState extends State<DashboardPage> {
       },
       builder: (context, state) {
         final user = state is AuthAuthenticated ? state.user : null;
-        
+
         // If profile is incomplete, show loading while redirecting
         if (user != null && !user.hasCompletedProfile) {
           return const Scaffold(
-            body: Center(
-              child: CircularProgressIndicator(),
-            ),
+            body: Center(child: CircularProgressIndicator()),
           );
         }
 
@@ -130,7 +128,9 @@ class _DashboardPageState extends State<DashboardPage> {
                   if (value == 'profile') {
                     context.push('/profile');
                   } else if (value == 'settings') {
-                    context.push('/profile');  // Settings is part of profile page
+                    context.push(
+                      '/profile',
+                    ); // Settings is part of profile page
                   } else if (value == 'logout') {
                     _log.info(
                       'Sign out requested from dashboard',
@@ -407,7 +407,7 @@ class _DashboardPageState extends State<DashboardPage> {
                 Icons.person_add,
                 'Add Friend',
                 () {
-                  context.push('/friends');  // Navigate to friends page
+                  context.push('/friends'); // Navigate to friends page
                 },
               ),
             ),
@@ -419,7 +419,9 @@ class _DashboardPageState extends State<DashboardPage> {
                 Icons.payments,
                 'Settle Up',
                 () {
-                  context.push('/groups');  // Navigate to groups to select for settle up
+                  context.push(
+                    '/groups',
+                  ); // Navigate to groups to select for settle up
                 },
               ),
             ),
@@ -596,7 +598,9 @@ class _DashboardPageState extends State<DashboardPage> {
                   subtitle: const Text('Split a bill with your group'),
                   onTap: () {
                     Navigator.pop(context);
-                    context.push('/groups');  // First select a group, then add expense
+                    context.push(
+                      '/groups',
+                    ); // First select a group, then add expense
                   },
                 ),
                 ListTile(
@@ -614,7 +618,9 @@ class _DashboardPageState extends State<DashboardPage> {
                   subtitle: const Text('Record a payment'),
                   onTap: () {
                     Navigator.pop(context);
-                    context.push('/groups');  // First select a group, then settle up
+                    context.push(
+                      '/groups',
+                    ); // First select a group, then settle up
                   },
                 ),
               ],

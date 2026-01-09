@@ -10,6 +10,8 @@ import '../features/auth/presentation/bloc/auth_bloc.dart';
 import '../features/auth/presentation/pages/complete_profile_page.dart';
 import '../features/auth/presentation/pages/forgot_password_page.dart';
 import '../features/auth/presentation/pages/login_page.dart';
+import '../features/auth/presentation/pages/phone_login_page.dart';
+import '../features/auth/presentation/pages/phone_verify_page.dart';
 import '../features/auth/presentation/pages/signup_page.dart';
 import '../features/dashboard/presentation/pages/dashboard_page.dart';
 import '../features/profile/presentation/bloc/profile_bloc.dart';
@@ -64,7 +66,9 @@ class AppRouter {
     final isAuthRoute =
         state.matchedLocation == '/login' ||
         state.matchedLocation == '/signup' ||
-        state.matchedLocation == '/forgot-password';
+        state.matchedLocation == '/forgot-password' ||
+        state.matchedLocation == '/phone-login' ||
+        state.matchedLocation == '/phone-verify';
 
     // Don't redirect if on splash screen
     if (isSplashRoute) {
@@ -157,11 +161,35 @@ class AppRouter {
       path: '/complete-profile',
       name: 'complete-profile',
       builder: (context, state) {
-        _log.debug('Navigating to complete profile page', tag: LogTags.navigation);
+        _log.debug(
+          'Navigating to complete profile page',
+          tag: LogTags.navigation,
+        );
         final user = state.extra as UserEntity;
         return BlocProvider(
           create: (_) => sl<AuthBloc>(),
           child: CompleteProfilePage(user: user),
+        );
+      },
+    ),
+    GoRoute(
+      path: '/phone-login',
+      name: 'phone-login',
+      builder: (context, state) {
+        _log.debug('Navigating to phone login page', tag: LogTags.navigation);
+        return const PhoneLoginPage();
+      },
+    ),
+    GoRoute(
+      path: '/phone-verify',
+      name: 'phone-verify',
+      builder: (context, state) {
+        _log.debug('Navigating to phone verify page', tag: LogTags.navigation);
+        final data = state.extra as Map<String, dynamic>;
+        return PhoneVerifyPage(
+          verificationId: data['verificationId'] as String,
+          phoneNumber: data['phoneNumber'] as String,
+          resendToken: data['resendToken'] as int?,
         );
       },
     ),
