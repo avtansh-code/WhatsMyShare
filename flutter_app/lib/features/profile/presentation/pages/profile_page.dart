@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../core/services/logging_service.dart';
 import '../../../../core/utils/currency_utils.dart';
+import '../../../../core/widgets/network_avatar.dart';
 import '../bloc/profile_bloc.dart';
 
 /// Profile page showing user information and settings
@@ -116,17 +117,13 @@ class _ProfilePageState extends State<ProfilePage> {
         Stack(
           alignment: Alignment.bottomRight,
           children: [
-            CircleAvatar(
+            NetworkAvatar(
+              imageUrl: profile.photoUrl,
               radius: 50,
-              backgroundImage: profile.photoUrl != null
-                  ? NetworkImage(profile.photoUrl!)
-                  : null,
-              child: profile.photoUrl == null
-                  ? Text(
-                      profile.initials,
-                      style: Theme.of(context).textTheme.headlineMedium,
-                    )
-                  : null,
+              child: Text(
+                profile.initials,
+                style: Theme.of(context).textTheme.headlineMedium,
+              ),
             ),
             if (state.status == ProfileStatus.uploadingPhoto)
               const Positioned.fill(

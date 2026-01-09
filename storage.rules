@@ -21,6 +21,16 @@ service firebase.storage {
       return request.resource.contentType.matches('image/.*');
     }
     
+    // Helper function to validate encrypted file (used for encrypted uploads)
+    function isEncryptedFile() {
+      return request.resource.contentType == 'application/octet-stream';
+    }
+    
+    // Helper function to check if file is either an image or encrypted
+    function isImageOrEncrypted() {
+      return isImage() || isEncryptedFile();
+    }
+    
     // ============================================
     // USER PROFILE PICTURES
     // ============================================
@@ -29,7 +39,8 @@ service firebase.storage {
       allow read: if isAuthenticated();
       
       // Only owner can upload/update/delete their profile picture
-      allow write: if isOwner(userId) && isImage() && isValidFileSize();
+      // Allow both image types and encrypted files (application/octet-stream)
+      allow write: if isOwner(userId) && isImageOrEncrypted() && isValidFileSize();
     }
     
     // ============================================

@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../core/services/logging_service.dart';
+import '../../../../core/widgets/network_avatar.dart';
 import '../../../auth/presentation/bloc/auth_bloc.dart';
 
 /// Main dashboard page for authenticated users
@@ -82,32 +83,18 @@ class _DashboardPageState extends State<DashboardPage> {
                 },
               ),
               PopupMenuButton<String>(
-                icon: CircleAvatar(
+                icon: NetworkAvatar(
+                  imageUrl: user?.photoUrl,
                   radius: 16,
                   backgroundColor: theme.colorScheme.primaryContainer,
-                  child: user?.photoUrl != null
-                      ? ClipOval(
-                          child: Image.network(
-                            user!.photoUrl!,
-                            width: 32,
-                            height: 32,
-                            fit: BoxFit.cover,
-                            errorBuilder: (_, error, stackTrace) => Text(
-                              user.initials,
-                              style: TextStyle(
-                                color: theme.colorScheme.onPrimaryContainer,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ),
-                        )
-                      : Text(
-                          user?.initials ?? '?',
-                          style: TextStyle(
-                            color: theme.colorScheme.onPrimaryContainer,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
+                  child: Text(
+                    user?.initials ?? '?',
+                    style: TextStyle(
+                      color: theme.colorScheme.onPrimaryContainer,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 12,
+                    ),
+                  ),
                 ),
                 onSelected: (value) {
                   _log.debug('Menu item selected: $value', tag: LogTags.ui);

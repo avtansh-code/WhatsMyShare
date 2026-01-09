@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import '../../../../core/di/injection_container.dart';
 import '../../../../core/services/logging_service.dart';
 import '../../../../core/utils/currency_utils.dart';
+import '../../../../core/widgets/network_avatar.dart';
 import '../../../groups/domain/entities/group_entity.dart';
 import '../../../groups/presentation/bloc/group_bloc.dart';
 import '../../../groups/presentation/bloc/group_event.dart';
@@ -580,21 +581,17 @@ class _FriendsPageState extends State<FriendsPage> {
           child: Row(
             children: [
               // Avatar
-              CircleAvatar(
+              NetworkAvatar(
+                imageUrl: friend.photoUrl,
                 radius: 24,
                 backgroundColor: theme.colorScheme.primaryContainer,
-                backgroundImage: friend.photoUrl != null
-                    ? NetworkImage(friend.photoUrl!)
-                    : null,
-                child: friend.photoUrl == null
-                    ? Text(
-                        friend.initials,
-                        style: TextStyle(
-                          color: theme.colorScheme.onPrimaryContainer,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      )
-                    : null,
+                child: Text(
+                  friend.initials,
+                  style: TextStyle(
+                    color: theme.colorScheme.onPrimaryContainer,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
               ),
               const SizedBox(width: 12),
 
@@ -697,22 +694,18 @@ class _FriendsPageState extends State<FriendsPage> {
                     padding: const EdgeInsets.all(16),
                     child: Row(
                       children: [
-                        CircleAvatar(
+                        NetworkAvatar(
+                          imageUrl: friend.photoUrl,
                           radius: 28,
                           backgroundColor: theme.colorScheme.primaryContainer,
-                          backgroundImage: friend.photoUrl != null
-                              ? NetworkImage(friend.photoUrl!)
-                              : null,
-                          child: friend.photoUrl == null
-                              ? Text(
-                                  friend.initials,
-                                  style: TextStyle(
-                                    fontSize: 18,
-                                    color: theme.colorScheme.onPrimaryContainer,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                )
-                              : null,
+                          child: Text(
+                            friend.initials,
+                            style: TextStyle(
+                              fontSize: 18,
+                              color: theme.colorScheme.onPrimaryContainer,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
                         ),
                         const SizedBox(width: 16),
                         Expanded(

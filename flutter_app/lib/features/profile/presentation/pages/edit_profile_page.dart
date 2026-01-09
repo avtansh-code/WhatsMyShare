@@ -559,31 +559,35 @@ class _EditProfilePageState extends State<EditProfilePage> {
   }
 
   void _deletePhoto() {
+    // Capture the ProfileBloc reference before showing the dialog
+    // because the dialog's BuildContext won't have access to it
+    final profileBloc = context.read<ProfileBloc>();
+    
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (dialogContext) => AlertDialog(
         title: const Text('Remove Photo'),
         content: const Text(
           'Are you sure you want to remove your profile photo?',
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: () => Navigator.pop(dialogContext),
             child: const Text('Cancel'),
           ),
           TextButton(
             onPressed: () {
-              Navigator.pop(context);
+              Navigator.pop(dialogContext);
               setState(() {
                 _isSaving = true;
               });
-              context.read<ProfileBloc>().add(
+              profileBloc.add(
                 const ProfilePhotoDeleteRequested(),
               );
             },
             child: Text(
               'Remove',
-              style: TextStyle(color: Theme.of(context).colorScheme.error),
+              style: TextStyle(color: Theme.of(dialogContext).colorScheme.error),
             ),
           ),
         ],
