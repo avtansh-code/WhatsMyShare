@@ -75,7 +75,10 @@ class UserEntity extends Equatable {
       }
       return displayName![0].toUpperCase();
     }
-    return email[0].toUpperCase();
+    if (email.isNotEmpty) {
+      return email[0].toUpperCase();
+    }
+    return '?';
   }
 
   /// Get net balance (positive = owed to user, negative = user owes)

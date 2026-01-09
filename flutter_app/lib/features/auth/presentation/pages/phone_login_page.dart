@@ -6,6 +6,59 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../core/services/logging_service.dart';
 
+/// Callback type for verification received
+typedef VerificationCallback = void Function(
+  String verificationId,
+  String phoneNumber,
+  int? resendToken,
+);
+
+/// Singleton to hold pending phone verification state
+/// This persists across page rebuilds when returning from reCAPTCHA
+class PendingPhoneVerification {
+  static final PendingPhoneVerification _instance =
+      PendingPhoneVerification._();
+  factory PendingPhoneVerification() => _instance;
+  PendingPhoneVerification._();
+
+  String? verificationId;
+  String? phoneNumber;
+  int? resendToken;
+  bool isVerifying = false;
+
+  // Listeners for when verification is received
+  final List<VerificationCallback> _listeners = [];
+
+  void addListener(VerificationCallback callback) {
+    _listeners.add(callback);
+  }
+
+  void removeListener(VerificationCallback callback) {
+    _listeners.remove(callback);
+  }
+
+  void notifyListeners() {
+    if (verificationId != null && phoneNumber != null) {
+      final vId = verificationId!;
+      final phone = phoneNumber!;
+      final token = resendToken;
+      for (final listener in _listeners.toList()) {
+        listener(vId, phone, token);
+      }
+    }
+  }
+
+  void clear() {
+    verificationId = null;
+    phoneNumber = null;
+    resendToken = null;
+    isVerifying = false;
+  }
+
+  bool get hasPendingVerification =>
+      verificationId != null && phoneNumber != null;
+}
+
 /// Phone login page for phone number authentication
 class PhoneLoginPage extends StatefulWidget {
   const PhoneLoginPage({super.key});
@@ -20,11 +73,7 @@ class _PhoneLoginPageState extends State<PhoneLoginPage> {
   final LoggingService _log = LoggingService();
   bool _isLoading = false;
   String _selectedCountryCode = '+91'; // Default to India
-
-  // Track the phone number that verification was initiated for
-  String? _verifyingPhoneNumber;
-  // Flag to track if we've navigated to OTP screen
-  bool _navigatedToOtp = false;
+  bool _hasNavigatedToOtp = false;
 
   final List<Map<String, String>> _countryCodes = [
     {'code': '+91', 'country': 'India'},
@@ -43,12 +92,84 @@ class _PhoneLoginPageState extends State<PhoneLoginPage> {
   void initState() {
     super.initState();
     _log.info('PhoneLoginPage opened', tag: LogTags.ui);
+
+    // Add listener for verification data
+    PendingPhoneVerification().addListener(_onVerificationReceived);
+
+    // Check if there's already pending verification from before reCAPTCHA
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _checkPendingVerification();
+    });
   }
 
   @override
   void dispose() {
+    PendingPhoneVerification().removeListener(_onVerificationReceived);
     _phoneController.dispose();
     super.dispose();
+  }
+
+  /// Called when verification data is received (from codeSent callback)
+  void _onVerificationReceived(
+    String verificationId,
+    String phoneNumber,
+    int? resendToken,
+  ) {
+    if (!mounted || _hasNavigatedToOtp) return;
+
+    _log.info(
+      'Verification received via listener - navigating to OTP screen',
+      tag: LogTags.auth,
+      data: {'phoneNumber': phoneNumber},
+    );
+
+    _hasNavigatedToOtp = true;
+    PendingPhoneVerification().clear();
+
+    setState(() {
+      _isLoading = false;
+    });
+
+    context.push(
+      '/phone-verify',
+      extra: {
+        'verificationId': verificationId,
+        'phoneNumber': phoneNumber,
+        'resendToken': resendToken,
+      },
+    );
+  }
+
+  /// Check if there's a pending verification and navigate to OTP screen
+  void _checkPendingVerification() {
+    if (_hasNavigatedToOtp) return;
+
+    final pending = PendingPhoneVerification();
+    if (pending.hasPendingVerification && mounted) {
+      _log.info(
+        'Found pending verification - navigating to OTP screen',
+        tag: LogTags.auth,
+        data: {
+          'phoneNumber': pending.phoneNumber,
+          'hasVerificationId': pending.verificationId != null,
+        },
+      );
+
+      _hasNavigatedToOtp = true;
+      final verificationId = pending.verificationId!;
+      final phoneNumber = pending.phoneNumber!;
+      final resendToken = pending.resendToken;
+      pending.clear();
+
+      context.push(
+        '/phone-verify',
+        extra: {
+          'verificationId': verificationId,
+          'phoneNumber': phoneNumber,
+          'resendToken': resendToken,
+        },
+      );
+    }
   }
 
   String get _fullPhoneNumber {
@@ -58,26 +179,6 @@ class _PhoneLoginPageState extends State<PhoneLoginPage> {
   Future<void> _handleAutoVerification(
     firebase_auth.PhoneAuthCredential credential,
   ) async {
-    // Only handle auto-verification if:
-    // 1. We haven't navigated to OTP screen yet
-    // 2. The phone number matches what we're verifying
-    if (_navigatedToOtp) {
-      _log.debug(
-        'Skipping auto-verification - already on OTP screen',
-        tag: LogTags.auth,
-      );
-      return;
-    }
-
-    if (_verifyingPhoneNumber != _fullPhoneNumber) {
-      _log.debug(
-        'Skipping auto-verification - phone number mismatch',
-        tag: LogTags.auth,
-        data: {'verifying': _verifyingPhoneNumber, 'current': _fullPhoneNumber},
-      );
-      return;
-    }
-
     _log.info('Auto verification completed', tag: LogTags.auth);
 
     try {
@@ -127,9 +228,8 @@ class _PhoneLoginPageState extends State<PhoneLoginPage> {
   }
 
   Future<void> _ensureUserDocument(firebase_auth.User user) async {
-    final userDoc = FirebaseFirestore.instance
-        .collection('users')
-        .doc(user.uid);
+    final userDoc =
+        FirebaseFirestore.instance.collection('users').doc(user.uid);
     final doc = await userDoc.get();
 
     if (!doc.exists) {
@@ -158,20 +258,27 @@ class _PhoneLoginPageState extends State<PhoneLoginPage> {
 
     setState(() {
       _isLoading = true;
-      _navigatedToOtp = false;
-      _verifyingPhoneNumber = _fullPhoneNumber;
+      _hasNavigatedToOtp = false;
     });
+
+    final phoneNumber = _fullPhoneNumber;
 
     _log.info(
       'Initiating phone verification',
       tag: LogTags.auth,
-      data: {'phoneNumber': _fullPhoneNumber},
+      data: {'phoneNumber': phoneNumber},
     );
+
+    // Mark that we're verifying - this persists across page rebuilds
+    final pending = PendingPhoneVerification();
+    pending.isVerifying = true;
+    pending.phoneNumber = phoneNumber;
 
     try {
       await firebase_auth.FirebaseAuth.instance.verifyPhoneNumber(
-        phoneNumber: _fullPhoneNumber,
+        phoneNumber: phoneNumber,
         verificationCompleted: (firebase_auth.PhoneAuthCredential credential) {
+          pending.clear();
           _handleAutoVerification(credential);
         },
         verificationFailed: (firebase_auth.FirebaseAuthException e) {
@@ -181,10 +288,10 @@ class _PhoneLoginPageState extends State<PhoneLoginPage> {
             error: e,
             data: {'code': e.code, 'message': e.message},
           );
+          pending.clear();
           if (mounted) {
             setState(() {
               _isLoading = false;
-              _verifyingPhoneNumber = null;
             });
             _showError(_mapFirebaseError(e.code));
           }
@@ -195,30 +302,13 @@ class _PhoneLoginPageState extends State<PhoneLoginPage> {
             tag: LogTags.auth,
             data: {'verificationId': verificationId},
           );
-          if (mounted) {
-            setState(() {
-              _isLoading = false;
-              _navigatedToOtp = true;
-            });
-            context
-                .push(
-                  '/phone-verify',
-                  extra: {
-                    'verificationId': verificationId,
-                    'phoneNumber': _fullPhoneNumber,
-                    'resendToken': resendToken,
-                  },
-                )
-                .then((_) {
-                  // When returning from OTP screen, reset the flags
-                  if (mounted) {
-                    setState(() {
-                      _navigatedToOtp = false;
-                      _verifyingPhoneNumber = null;
-                    });
-                  }
-                });
-          }
+
+          // Store in singleton and notify all listeners
+          pending.verificationId = verificationId;
+          pending.resendToken = resendToken;
+
+          // Notify listeners (this will trigger navigation on the active page)
+          pending.notifyListeners();
         },
         codeAutoRetrievalTimeout: (String verificationId) {
           _log.debug(
@@ -226,6 +316,11 @@ class _PhoneLoginPageState extends State<PhoneLoginPage> {
             tag: LogTags.auth,
             data: {'verificationId': verificationId},
           );
+          // Update the verification ID in case it changed
+          if (pending.isVerifying && pending.verificationId == null) {
+            pending.verificationId = verificationId;
+            pending.notifyListeners();
+          }
         },
         timeout: const Duration(seconds: 60),
       );
@@ -236,10 +331,10 @@ class _PhoneLoginPageState extends State<PhoneLoginPage> {
         error: e,
         stackTrace: stackTrace,
       );
+      pending.clear();
       if (mounted) {
         setState(() {
           _isLoading = false;
-          _verifyingPhoneNumber = null;
         });
         _showError('Failed to send OTP. Please try again.');
       }

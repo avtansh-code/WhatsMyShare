@@ -74,34 +74,6 @@ Future<void> main() async {
       );
       _log.info('Firebase initialized', tag: LogTags.firebase);
 
-      // Use Firebase Auth Emulator in debug mode to bypass reCAPTCHA
-      // This allows phone auth testing without captcha on emulators
-      if (kDebugMode) {
-        try {
-          // Connect to Auth emulator running on localhost
-          // For Android emulator, use 10.0.2.2 instead of localhost
-          const String authEmulatorHost = '10.0.2.2'; // Android emulator
-          // const String authEmulatorHost = 'localhost'; // iOS simulator
-          const int authEmulatorPort = 9099;
-          
-          await FirebaseAuth.instance.useAuthEmulator(
-            authEmulatorHost,
-            authEmulatorPort,
-          );
-          _log.info(
-            'Firebase Auth Emulator connected',
-            tag: LogTags.firebase,
-            data: {'host': authEmulatorHost, 'port': authEmulatorPort},
-          );
-        } catch (e) {
-          _log.warning(
-            'Could not connect to Auth Emulator - using production auth',
-            tag: LogTags.firebase,
-            data: {'error': e.toString()},
-          );
-        }
-      }
-
       // Handle first launch - clear stale auth state from iOS Keychain
       // This fixes the issue where Firebase Auth persists across app uninstalls on iOS
       await _handleFirstLaunchAuthCleanup();

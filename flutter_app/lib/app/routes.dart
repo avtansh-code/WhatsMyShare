@@ -314,18 +314,31 @@ class AppRouter {
     // This route handles the /link path that Firebase uses for auth callbacks
     // During phone auth, Firebase opens a web view for reCAPTCHA and returns via this deep link
     // Firebase SDK handles the callback internally and will trigger codeSent/verificationCompleted
-    // We redirect back to phone-login so the page can receive the callback and navigate to OTP screen
+    // We just need to return to the PhoneLoginPage that initiated the verification
     GoRoute(
       path: '/link',
-      redirect: (context, state) {
+      builder: (context, state) {
         _log.info(
-          'Firebase auth callback received - redirecting to phone-login',
+          'Firebase auth callback received - returning to previous page',
           tag: LogTags.navigation,
           data: {'queryParams': state.uri.queryParameters},
         );
-        // The phone login page is waiting for Firebase's codeSent callback
-        // Redirect back to phone-login to let it handle the verification flow
-        return '/phone-login';
+        // Schedule a pop to return to the previous page (PhoneLoginPage)
+        // This allows Firebase to deliver the callback to the existing page instance
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (context.canPop()) {
+            context.pop();
+          } else {
+            // Fallback: if we can't pop, go to phone-login
+            context.go('/phone-login');
+          }
+        });
+        // Show a loading indicator while we return
+        return const Scaffold(
+          body: Center(
+            child: CircularProgressIndicator(),
+          ),
+        );
       },
     ),
 
