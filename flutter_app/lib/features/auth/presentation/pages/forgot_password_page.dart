@@ -88,8 +88,8 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
           _isLoading = state is AuthLoading;
 
           return SafeArea(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.all(24),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
               child: _emailSent
                   ? _buildSuccessView(theme)
                   : _buildFormView(theme),
@@ -104,9 +104,11 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
+        const Spacer(flex: 2),
+        
         // Icon
-        Icon(Icons.lock_reset, size: 80, color: theme.colorScheme.primary),
-        const SizedBox(height: 24),
+        Icon(Icons.lock_reset, size: 64, color: theme.colorScheme.primary),
+        const SizedBox(height: 16),
 
         // Header
         Text(
@@ -124,7 +126,7 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
           ),
           textAlign: TextAlign.center,
         ),
-        const SizedBox(height: 32),
+        const Spacer(flex: 1),
 
         // Form
         Form(
@@ -153,7 +155,7 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
             },
           ),
         ),
-        const SizedBox(height: 24),
+        const SizedBox(height: 16),
 
         // Submit Button
         FilledButton(
@@ -175,7 +177,7 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
                   style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
                 ),
         ),
-        const SizedBox(height: 24),
+        const SizedBox(height: 12),
 
         // Back to Login
         TextButton(
@@ -185,6 +187,7 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
             style: TextStyle(color: theme.colorScheme.primary),
           ),
         ),
+        const Spacer(flex: 2),
       ],
     );
   }
@@ -193,23 +196,25 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        const SizedBox(height: 48),
+        const Spacer(flex: 2),
 
         // Success Icon
-        Container(
-          width: 100,
-          height: 100,
-          decoration: BoxDecoration(
-            color: theme.colorScheme.primaryContainer,
-            shape: BoxShape.circle,
-          ),
-          child: Icon(
-            Icons.mark_email_read,
-            size: 50,
-            color: theme.colorScheme.primary,
+        Center(
+          child: Container(
+            width: 80,
+            height: 80,
+            decoration: BoxDecoration(
+              color: theme.colorScheme.primaryContainer,
+              shape: BoxShape.circle,
+            ),
+            child: Icon(
+              Icons.mark_email_read,
+              size: 40,
+              color: theme.colorScheme.primary,
+            ),
           ),
         ),
-        const SizedBox(height: 32),
+        const SizedBox(height: 16),
 
         // Success Message
         Text(
@@ -219,7 +224,7 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
           ),
           textAlign: TextAlign.center,
         ),
-        const SizedBox(height: 16),
+        const SizedBox(height: 8),
         Text(
           'We\'ve sent a password reset link to',
           style: theme.textTheme.bodyLarge?.copyWith(
@@ -227,7 +232,7 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
           ),
           textAlign: TextAlign.center,
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: 4),
         Text(
           _emailController.text,
           style: theme.textTheme.bodyLarge?.copyWith(
@@ -235,11 +240,11 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
           ),
           textAlign: TextAlign.center,
         ),
-        const SizedBox(height: 32),
+        const Spacer(flex: 1),
 
         // Instructions
         Container(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
             color: theme.colorScheme.surfaceContainerHighest,
             borderRadius: BorderRadius.circular(12),
@@ -250,33 +255,33 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
                 children: [
                   Icon(
                     Icons.info_outline,
-                    size: 20,
+                    size: 18,
                     color: theme.colorScheme.onSurfaceVariant,
                   ),
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
                       'The link will expire in 24 hours',
-                      style: theme.textTheme.bodyMedium?.copyWith(
+                      style: theme.textTheme.bodySmall?.copyWith(
                         color: theme.colorScheme.onSurfaceVariant,
                       ),
                     ),
                   ),
                 ],
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: 6),
               Row(
                 children: [
                   Icon(
                     Icons.mail_outline,
-                    size: 20,
+                    size: 18,
                     color: theme.colorScheme.onSurfaceVariant,
                   ),
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
                       'Check your spam folder if you don\'t see it',
-                      style: theme.textTheme.bodyMedium?.copyWith(
+                      style: theme.textTheme.bodySmall?.copyWith(
                         color: theme.colorScheme.onSurfaceVariant,
                       ),
                     ),
@@ -286,7 +291,7 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
             ],
           ),
         ),
-        const SizedBox(height: 32),
+        const Spacer(flex: 1),
 
         // Back to Login Button
         FilledButton(
@@ -299,7 +304,7 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
             style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
           ),
         ),
-        const SizedBox(height: 16),
+        const SizedBox(height: 8),
 
         // Resend Link
         TextButton(
@@ -313,6 +318,7 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
             style: TextStyle(color: theme.colorScheme.primary),
           ),
         ),
+        const Spacer(flex: 1),
       ],
     );
   }

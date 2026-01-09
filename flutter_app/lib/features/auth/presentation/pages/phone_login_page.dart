@@ -285,20 +285,20 @@ class _PhoneLoginPageState extends State<PhoneLoginPage> {
         ),
       ),
       body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const SizedBox(height: 24),
+              const Spacer(flex: 2),
 
               // Icon
               Icon(
                 Icons.phone_android,
-                size: 80,
+                size: 64,
                 color: theme.colorScheme.primary,
               ),
-              const SizedBox(height: 24),
+              const SizedBox(height: 16),
 
               // Title
               Text(
@@ -318,7 +318,7 @@ class _PhoneLoginPageState extends State<PhoneLoginPage> {
                 ),
                 textAlign: TextAlign.center,
               ),
-              const SizedBox(height: 32),
+              const Spacer(flex: 1),
 
               // Phone Form
               Form(
@@ -402,7 +402,7 @@ class _PhoneLoginPageState extends State<PhoneLoginPage> {
                   ],
                 ),
               ),
-              const SizedBox(height: 32),
+              const SizedBox(height: 16),
 
               // Send OTP Button
               FilledButton(
@@ -427,11 +427,11 @@ class _PhoneLoginPageState extends State<PhoneLoginPage> {
                         ),
                       ),
               ),
-              const SizedBox(height: 24),
+              const Spacer(flex: 1),
 
               // Info Text
               Container(
-                padding: const EdgeInsets.all(16),
+                padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
                   color: theme.colorScheme.surfaceContainerHighest,
                   borderRadius: BorderRadius.circular(12),
@@ -441,9 +441,9 @@ class _PhoneLoginPageState extends State<PhoneLoginPage> {
                     Icon(
                       Icons.info_outline,
                       color: theme.colorScheme.onSurfaceVariant,
-                      size: 20,
+                      size: 18,
                     ),
-                    const SizedBox(width: 12),
+                    const SizedBox(width: 8),
                     Expanded(
                       child: Text(
                         'Standard SMS rates may apply',
@@ -455,6 +455,7 @@ class _PhoneLoginPageState extends State<PhoneLoginPage> {
                   ],
                 ),
               ),
+              const Spacer(flex: 1),
             ],
           ),
         ),

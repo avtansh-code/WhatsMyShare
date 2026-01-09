@@ -100,29 +100,32 @@ class _SignUpPageState extends State<SignUpPage> {
           _isLoading = state is AuthLoading;
 
           return SafeArea(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.all(24),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
+                  const Spacer(flex: 1),
+                  
                   // Header
                   _buildHeader(theme),
-                  const SizedBox(height: 32),
+                  const Spacer(flex: 1),
 
                   // Form
                   _buildForm(theme),
-                  const SizedBox(height: 32),
+                  const SizedBox(height: 16),
 
                   // Sign Up Button
                   _buildSignUpButton(theme),
-                  const SizedBox(height: 24),
+                  const SizedBox(height: 12),
 
                   // Terms and Conditions
                   _buildTerms(theme),
-                  const SizedBox(height: 32),
+                  const Spacer(flex: 1),
 
                   // Login Link
                   _buildLoginLink(theme),
+                  const SizedBox(height: 8),
                 ],
               ),
             ),

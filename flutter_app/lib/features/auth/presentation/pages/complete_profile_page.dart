@@ -373,36 +373,38 @@ class _CompleteProfilePageState extends State<CompleteProfilePage> {
             ],
           ),
           body: SafeArea(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.all(24),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
               child: Form(
                 key: _formKey,
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
+                    const Spacer(flex: 1),
+                    
                     // Header
                     Icon(
                       Icons.person_add_outlined,
-                      size: 64,
+                      size: 48,
                       color: theme.colorScheme.primary,
                     ),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 12),
                     Text(
                       'Almost there!',
-                      style: theme.textTheme.headlineSmall?.copyWith(
+                      style: theme.textTheme.titleLarge?.copyWith(
                         fontWeight: FontWeight.bold,
                       ),
                       textAlign: TextAlign.center,
                     ),
-                    const SizedBox(height: 8),
+                    const SizedBox(height: 4),
                     Text(
                       'Please complete your profile to continue using the app.',
-                      style: theme.textTheme.bodyMedium?.copyWith(
+                      style: theme.textTheme.bodySmall?.copyWith(
                         color: theme.colorScheme.onSurfaceVariant,
                       ),
                       textAlign: TextAlign.center,
                     ),
-                    const SizedBox(height: 32),
+                    const Spacer(flex: 1),
 
                     // Name Field
                     TextFormField(
@@ -424,7 +426,7 @@ class _CompleteProfilePageState extends State<CompleteProfilePage> {
                         return null;
                       },
                     ),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 12),
 
                     // Email Field (read-only for Google users)
                     TextFormField(
@@ -442,7 +444,7 @@ class _CompleteProfilePageState extends State<CompleteProfilePage> {
                       enabled: userEmail.isEmpty,
                       onChanged: (_) => _checkEmailUniqueness(),
                     ),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 12),
 
                     // Phone Field with India country code
                     Row(
@@ -523,7 +525,7 @@ class _CompleteProfilePageState extends State<CompleteProfilePage> {
                         ),
                       ],
                     ),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 12),
 
                     // OTP Section
                     if (_isOtpSent && !isPhoneVerified) ...[
@@ -538,7 +540,6 @@ class _CompleteProfilePageState extends State<CompleteProfilePage> {
                         keyboardType: TextInputType.number,
                         maxLength: 6,
                       ),
-                      const SizedBox(height: 8),
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
@@ -559,13 +560,13 @@ class _CompleteProfilePageState extends State<CompleteProfilePage> {
                           ),
                         ],
                       ),
-                      const SizedBox(height: 16),
+                      const SizedBox(height: 8),
                     ],
 
                     // Error Message
                     if (_errorMessage != null)
                       Container(
-                        padding: const EdgeInsets.all(12),
+                        padding: const EdgeInsets.all(8),
                         decoration: BoxDecoration(
                           color: theme.colorScheme.errorContainer,
                           borderRadius: BorderRadius.circular(8),
@@ -574,10 +575,11 @@ class _CompleteProfilePageState extends State<CompleteProfilePage> {
                           _errorMessage!,
                           style: TextStyle(
                             color: theme.colorScheme.onErrorContainer,
+                            fontSize: 12,
                           ),
                         ),
                       ),
-                    const SizedBox(height: 24),
+                    const Spacer(flex: 1),
 
                     // Action Button
                     if (isPhoneVerified) ...[
@@ -661,6 +663,7 @@ class _CompleteProfilePageState extends State<CompleteProfilePage> {
                             : const Text('Verify & Continue'),
                       ),
                     ],
+                    const Spacer(flex: 1),
                   ],
                 ),
               ),

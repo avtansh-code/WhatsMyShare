@@ -330,20 +330,20 @@ class _PhoneVerifyPageState extends State<PhoneVerifyPage> {
         ),
       ),
       body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const SizedBox(height: 24),
+              const Spacer(flex: 2),
 
               // Icon
               Icon(
                 Icons.sms_outlined,
-                size: 80,
+                size: 64,
                 color: theme.colorScheme.primary,
               ),
-              const SizedBox(height: 24),
+              const SizedBox(height: 16),
 
               // Title
               Text(
@@ -371,15 +371,15 @@ class _PhoneVerifyPageState extends State<PhoneVerifyPage> {
                 ),
                 textAlign: TextAlign.center,
               ),
-              const SizedBox(height: 32),
+              const Spacer(flex: 1),
 
               // OTP Input
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 children: List.generate(6, (index) {
                   return SizedBox(
-                    width: 48,
-                    height: 56,
+                    width: 44,
+                    height: 52,
                     child: KeyboardListener(
                       focusNode: FocusNode(),
                       onKeyEvent: (event) => _onOTPKeyDown(index, event),
@@ -415,7 +415,7 @@ class _PhoneVerifyPageState extends State<PhoneVerifyPage> {
                   );
                 }),
               ),
-              const SizedBox(height: 32),
+              const SizedBox(height: 20),
 
               // Verify Button
               FilledButton(
@@ -440,7 +440,7 @@ class _PhoneVerifyPageState extends State<PhoneVerifyPage> {
                         ),
                       ),
               ),
-              const SizedBox(height: 24),
+              const SizedBox(height: 16),
 
               // Resend OTP
               Row(
@@ -448,7 +448,7 @@ class _PhoneVerifyPageState extends State<PhoneVerifyPage> {
                 children: [
                   Text(
                     "Didn't receive the code? ",
-                    style: theme.textTheme.bodyMedium?.copyWith(
+                    style: theme.textTheme.bodySmall?.copyWith(
                       color: theme.colorScheme.onSurfaceVariant,
                     ),
                   ),
@@ -460,21 +460,22 @@ class _PhoneVerifyPageState extends State<PhoneVerifyPage> {
                   else
                     Text(
                       'Resend in ${_resendCountdown}s',
-                      style: theme.textTheme.bodyMedium?.copyWith(
+                      style: theme.textTheme.bodySmall?.copyWith(
                         color: theme.colorScheme.primary,
                         fontWeight: FontWeight.w600,
                       ),
                     ),
                 ],
               ),
-              const SizedBox(height: 24),
+              const Spacer(flex: 1),
 
               // Change Number
               TextButton.icon(
                 onPressed: _isLoading ? null : () => context.pop(),
-                icon: const Icon(Icons.edit, size: 18),
+                icon: const Icon(Icons.edit, size: 16),
                 label: const Text('Change phone number'),
               ),
+              const Spacer(flex: 1),
             ],
           ),
         ),
