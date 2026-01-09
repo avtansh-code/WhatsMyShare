@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../core/di/injection_container.dart';
+import '../../../../core/services/encryption_service.dart';
 import '../../../../core/services/logging_service.dart';
 import '../../../../core/widgets/network_avatar.dart';
 import '../../../auth/presentation/bloc/auth_bloc.dart';
@@ -87,6 +89,7 @@ class _DashboardPageState extends State<DashboardPage> {
                   imageUrl: user?.photoUrl,
                   radius: 16,
                   backgroundColor: theme.colorScheme.primaryContainer,
+                  encryptionService: sl<EncryptionService>(),
                   child: Text(
                     user?.initials ?? '?',
                     style: TextStyle(

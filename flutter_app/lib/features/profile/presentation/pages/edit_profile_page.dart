@@ -5,7 +5,10 @@ import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:image_picker/image_picker.dart';
 
+import '../../../../core/di/injection_container.dart';
+import '../../../../core/services/encryption_service.dart';
 import '../../../../core/services/logging_service.dart';
+import '../../../../core/widgets/network_avatar.dart';
 import '../../../auth/presentation/bloc/auth_bloc.dart';
 import '../bloc/profile_bloc.dart';
 
@@ -115,6 +118,12 @@ class _EditProfilePageState extends State<EditProfilePage> {
               state.status == ProfileStatus.updated) {
             // Success - hide loader and navigate back
             _log.info('Profile operation successful, hiding loader', tag: LogTags.ui);
+            
+            // Clear the avatar image cache so the new image is fetched
+            if (state.status == ProfileStatus.photoUpdated) {
+              _log.debug('Clearing NetworkAvatar cache for new photo', tag: LogTags.ui);
+              NetworkAvatar.clearAllCache();
+            }
             
             // Sync the updated photoUrl to AuthBloc so dashboard and other screens update
             if (state.profile != null) {
@@ -341,21 +350,22 @@ class _EditProfilePageState extends State<EditProfilePage> {
           Stack(
             alignment: Alignment.bottomRight,
             children: [
-              // Avatar
-              CircleAvatar(
-                radius: 60,
-                backgroundImage: _selectedImage != null
-                    ? FileImage(_selectedImage!)
-                    : (profile?.photoUrl != null
-                          ? NetworkImage(profile!.photoUrl!) as ImageProvider
-                          : null),
-                child: (_selectedImage == null && profile?.photoUrl == null)
-                    ? Text(
-                        profile?.initials ?? '?',
-                        style: Theme.of(context).textTheme.headlineLarge,
-                      )
-                    : null,
-              ),
+              // Avatar - Use local file if selected, otherwise encrypted network image
+              if (_selectedImage != null)
+                CircleAvatar(
+                  radius: 60,
+                  backgroundImage: FileImage(_selectedImage!),
+                )
+              else
+                NetworkAvatar(
+                  imageUrl: profile?.photoUrl,
+                  radius: 60,
+                  encryptionService: sl<EncryptionService>(),
+                  child: Text(
+                    profile?.initials ?? '?',
+                    style: Theme.of(context).textTheme.headlineLarge,
+                  ),
+                ),
 
               // Edit button
               Positioned(

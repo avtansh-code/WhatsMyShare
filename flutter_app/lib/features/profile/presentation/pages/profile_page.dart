@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../core/di/injection_container.dart';
+import '../../../../core/services/encryption_service.dart';
 import '../../../../core/services/logging_service.dart';
 import '../../../../core/utils/currency_utils.dart';
 import '../../../../core/widgets/network_avatar.dart';
@@ -120,6 +122,7 @@ class _ProfilePageState extends State<ProfilePage> {
             NetworkAvatar(
               imageUrl: profile.photoUrl,
               radius: 50,
+              encryptionService: sl<EncryptionService>(),
               child: Text(
                 profile.initials,
                 style: Theme.of(context).textTheme.headlineMedium,
