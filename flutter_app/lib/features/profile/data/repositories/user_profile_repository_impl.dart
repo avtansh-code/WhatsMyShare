@@ -211,7 +211,7 @@ class UserProfileRepositoryImpl implements UserProfileRepository {
     bool fileExists = false;
     int fileSize = 0;
     String extension = '';
-    
+
     try {
       fileExists = await imageFile.exists();
       if (fileExists) {
@@ -225,7 +225,7 @@ class UserProfileRepositoryImpl implements UserProfileRepository {
         data: {'error': e.toString()},
       );
     }
-    
+
     _log.info(
       'Repository: Starting profile photo update',
       tag: LogTags.profile,
@@ -238,7 +238,7 @@ class UserProfileRepositoryImpl implements UserProfileRepository {
         'extension': extension,
       },
     );
-    
+
     if (!fileExists) {
       _log.error(
         'Repository: Image file does not exist',
@@ -247,45 +247,36 @@ class UserProfileRepositoryImpl implements UserProfileRepository {
       );
       return Left(ServerFailure(message: 'Image file not found'));
     }
-    
+
     try {
       _log.debug(
         'Repository: Calling datasource uploadProfilePhoto',
         tag: LogTags.profile,
       );
-      
+
       final url = await _dataSource.uploadProfilePhoto(
         userId: userId,
         imageFile: imageFile,
       );
-      
+
       _log.info(
         'Repository: Profile photo updated successfully',
         tag: LogTags.profile,
-        data: {
-          'userId': userId,
-          'photoUrl': url,
-        },
+        data: {'userId': userId, 'photoUrl': url},
       );
       return Right(url);
     } on ServerException catch (e) {
       _log.error(
         'Repository: Server exception updating photo',
         tag: LogTags.profile,
-        data: {
-          'userId': userId,
-          'exceptionMessage': e.message,
-        },
+        data: {'userId': userId, 'exceptionMessage': e.message},
       );
       return Left(ServerFailure(message: e.message));
     } on AuthException catch (e) {
       _log.error(
         'Repository: Auth exception updating photo',
         tag: LogTags.profile,
-        data: {
-          'userId': userId,
-          'exceptionMessage': e.message,
-        },
+        data: {'userId': userId, 'exceptionMessage': e.message},
       );
       return Left(AuthFailure(message: e.message));
     } catch (e, stackTrace) {
@@ -299,7 +290,9 @@ class UserProfileRepositoryImpl implements UserProfileRepository {
           'stackTrace': stackTrace.toString(),
         },
       );
-      return Left(ServerFailure(message: 'Failed to upload photo: ${e.toString()}'));
+      return Left(
+        ServerFailure(message: 'Failed to upload photo: ${e.toString()}'),
+      );
     }
   }
 

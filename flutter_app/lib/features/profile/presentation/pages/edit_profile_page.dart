@@ -54,20 +54,20 @@ class _EditProfilePageState extends State<EditProfilePage> {
   void _initializeFormWithProfile(dynamic profile) {
     if (_isInitialized) return;
     _isInitialized = true;
-    
+
     // Remove listeners temporarily to avoid triggering _hasChanges
     _displayNameController.removeListener(_onFieldChanged);
     _phoneController.removeListener(_onFieldChanged);
-    
+
     _displayNameController.text = profile.displayName ?? '';
     _phoneController.text = profile.phone ?? '';
     _emailController.text = profile.email ?? '';
     _selectedCurrency = profile.defaultCurrency ?? 'INR';
-    
+
     // Re-add listeners
     _displayNameController.addListener(_onFieldChanged);
     _phoneController.addListener(_onFieldChanged);
-    
+
     // Reset hasChanges since we just initialized
     _hasChanges = false;
   }
@@ -103,7 +103,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
             'isSaving': _isSaving,
           },
         );
-        
+
         // Initialize form when profile loads
         if (state.profile != null && !_isInitialized) {
           _log.debug('Initializing form with profile data', tag: LogTags.ui);
@@ -111,20 +111,26 @@ class _EditProfilePageState extends State<EditProfilePage> {
             _initializeFormWithProfile(state.profile);
           });
         }
-        
+
         // Handle status changes when saving
         if (_isSaving) {
           if (state.status == ProfileStatus.photoUpdated ||
               state.status == ProfileStatus.updated) {
             // Success - hide loader and navigate back
-            _log.info('Profile operation successful, hiding loader', tag: LogTags.ui);
-            
+            _log.info(
+              'Profile operation successful, hiding loader',
+              tag: LogTags.ui,
+            );
+
             // Clear the avatar image cache so the new image is fetched
             if (state.status == ProfileStatus.photoUpdated) {
-              _log.debug('Clearing NetworkAvatar cache for new photo', tag: LogTags.ui);
+              _log.debug(
+                'Clearing NetworkAvatar cache for new photo',
+                tag: LogTags.ui,
+              );
               NetworkAvatar.clearAllCache();
             }
-            
+
             // Sync the updated photoUrl to AuthBloc so dashboard and other screens update
             if (state.profile != null) {
               _log.info(
@@ -136,7 +142,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
                 AuthUserPhotoUpdated(photoUrl: state.profile!.photoUrl),
               );
             }
-            
+
             setState(() {
               _isSaving = false;
             });
@@ -248,7 +254,9 @@ class _EditProfilePageState extends State<EditProfilePage> {
                         validator: (value) {
                           if (value != null && value.isNotEmpty) {
                             final phoneRegex = RegExp(r'^\+?[0-9]{10,15}$');
-                            if (!phoneRegex.hasMatch(value.replaceAll(' ', ''))) {
+                            if (!phoneRegex.hasMatch(
+                              value.replaceAll(' ', ''),
+                            )) {
                               return 'Please enter a valid phone number';
                             }
                           }
@@ -266,12 +274,30 @@ class _EditProfilePageState extends State<EditProfilePage> {
                           border: OutlineInputBorder(),
                         ),
                         items: const [
-                          DropdownMenuItem(value: 'INR', child: Text('INR (₹)')),
-                          DropdownMenuItem(value: 'USD', child: Text('USD (\$)')),
-                          DropdownMenuItem(value: 'EUR', child: Text('EUR (€)')),
-                          DropdownMenuItem(value: 'GBP', child: Text('GBP (£)')),
-                          DropdownMenuItem(value: 'AUD', child: Text('AUD (A\$)')),
-                          DropdownMenuItem(value: 'CAD', child: Text('CAD (C\$)')),
+                          DropdownMenuItem(
+                            value: 'INR',
+                            child: Text('INR (₹)'),
+                          ),
+                          DropdownMenuItem(
+                            value: 'USD',
+                            child: Text('USD (\$)'),
+                          ),
+                          DropdownMenuItem(
+                            value: 'EUR',
+                            child: Text('EUR (€)'),
+                          ),
+                          DropdownMenuItem(
+                            value: 'GBP',
+                            child: Text('GBP (£)'),
+                          ),
+                          DropdownMenuItem(
+                            value: 'AUD',
+                            child: Text('AUD (A\$)'),
+                          ),
+                          DropdownMenuItem(
+                            value: 'CAD',
+                            child: Text('CAD (C\$)'),
+                          ),
                         ],
                         onChanged: _isSaving
                             ? null
@@ -291,7 +317,9 @@ class _EditProfilePageState extends State<EditProfilePage> {
                           icon: const Icon(Icons.delete_outline),
                           label: const Text('Remove Profile Photo'),
                           style: OutlinedButton.styleFrom(
-                            foregroundColor: Theme.of(context).colorScheme.error,
+                            foregroundColor: Theme.of(
+                              context,
+                            ).colorScheme.error,
                           ),
                         ),
                     ],
@@ -323,9 +351,12 @@ class _EditProfilePageState extends State<EditProfilePage> {
                           const SizedBox(height: 8),
                           Text(
                             'Please wait',
-                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: Theme.of(context).colorScheme.onSurfaceVariant,
-                            ),
+                            style: Theme.of(context).textTheme.bodySmall
+                                ?.copyWith(
+                                  color: Theme.of(
+                                    context,
+                                  ).colorScheme.onSurfaceVariant,
+                                ),
                           ),
                         ],
                       ),
@@ -430,11 +461,11 @@ class _EditProfilePageState extends State<EditProfilePage> {
       tag: LogTags.ui,
       data: {'source': source.toString()},
     );
-    
+
     try {
       final picker = ImagePicker();
       _log.debug('ImagePicker initialized, requesting image', tag: LogTags.ui);
-      
+
       final pickedFile = await picker.pickImage(
         source: source,
         maxWidth: 512,
@@ -446,7 +477,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
         final file = File(pickedFile.path);
         final fileExists = await file.exists();
         final fileSize = fileExists ? await file.length() : 0;
-        
+
         _log.info(
           'Image picked successfully',
           tag: LogTags.ui,
@@ -458,7 +489,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
             'sizeMB': (fileSize / (1024 * 1024)).toStringAsFixed(2),
           },
         );
-        
+
         if (!fileExists) {
           _log.error(
             'Picked file does not exist',
@@ -475,7 +506,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
           }
           return;
         }
-        
+
         setState(() {
           _selectedImage = file;
         });
@@ -494,9 +525,12 @@ class _EditProfilePageState extends State<EditProfilePage> {
         },
       );
       if (mounted) {
-        String message = 'Failed to access ${source == ImageSource.camera ? 'camera' : 'gallery'}';
-        if (e.code == 'camera_access_denied' || e.code == 'photo_access_denied') {
-          message = 'Permission denied. Please enable ${source == ImageSource.camera ? 'camera' : 'photo library'} access in Settings.';
+        String message =
+            'Failed to access ${source == ImageSource.camera ? 'camera' : 'gallery'}';
+        if (e.code == 'camera_access_denied' ||
+            e.code == 'photo_access_denied') {
+          message =
+              'Permission denied. Please enable ${source == ImageSource.camera ? 'camera' : 'photo library'} access in Settings.';
         }
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -538,7 +572,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
       _log.warning('Profile form validation failed', tag: LogTags.ui);
       return;
     }
-    
+
     _log.info(
       'Profile save requested, showing loader',
       tag: LogTags.ui,
@@ -560,9 +594,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
       _log.info(
         'Dispatching ProfilePhotoUpdateRequested event',
         tag: LogTags.ui,
-        data: {
-          'imagePath': _selectedImage!.path,
-        },
+        data: {'imagePath': _selectedImage!.path},
       );
       context.read<ProfileBloc>().add(
         ProfilePhotoUpdateRequested(imageFile: _selectedImage!),
@@ -586,7 +618,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
     // Capture the ProfileBloc reference before showing the dialog
     // because the dialog's BuildContext won't have access to it
     final profileBloc = context.read<ProfileBloc>();
-    
+
     showDialog(
       context: context,
       builder: (dialogContext) => AlertDialog(
@@ -605,13 +637,13 @@ class _EditProfilePageState extends State<EditProfilePage> {
               setState(() {
                 _isSaving = true;
               });
-              profileBloc.add(
-                const ProfilePhotoDeleteRequested(),
-              );
+              profileBloc.add(const ProfilePhotoDeleteRequested());
             },
             child: Text(
               'Remove',
-              style: TextStyle(color: Theme.of(dialogContext).colorScheme.error),
+              style: TextStyle(
+                color: Theme.of(dialogContext).colorScheme.error,
+              ),
             ),
           ),
         ],

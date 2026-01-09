@@ -57,7 +57,7 @@ class EncryptedImage extends StatefulWidget {
 
 class _EncryptedImageState extends State<EncryptedImage> {
   final LoggingService _log = LoggingService();
-  
+
   Uint8List? _decryptedImageData;
   bool _isLoading = true;
   String? _error;
@@ -80,7 +80,8 @@ class _EncryptedImageState extends State<EncryptedImage> {
     }
   }
 
-  String get _cacheKey => widget.cacheKey ?? widget.imageUrl.hashCode.toString();
+  String get _cacheKey =>
+      widget.cacheKey ?? widget.imageUrl.hashCode.toString();
 
   Future<void> _loadAndDecryptImage() async {
     setState(() {
@@ -110,7 +111,7 @@ class _EncryptedImageState extends State<EncryptedImage> {
         // Download the encrypted data
         _log.debug('Downloading encrypted image', tag: LogTags.encryption);
         final response = await http.get(Uri.parse(widget.imageUrl));
-        
+
         if (response.statusCode != 200) {
           throw Exception('Failed to download image: ${response.statusCode}');
         }
@@ -123,7 +124,9 @@ class _EncryptedImageState extends State<EncryptedImage> {
 
       // Decrypt the data
       _log.debug('Decrypting image', tag: LogTags.encryption);
-      final decryptedData = await widget.encryptionService.decryptBytes(encryptedData);
+      final decryptedData = await widget.encryptionService.decryptBytes(
+        encryptedData,
+      );
 
       // Add to memory cache (with size limit)
       if (_decryptedCache.length >= _maxCacheSize) {
@@ -185,7 +188,8 @@ class _EncryptedImageState extends State<EncryptedImage> {
     Widget imageWidget;
 
     if (_isLoading) {
-      imageWidget = widget.placeholder ??
+      imageWidget =
+          widget.placeholder ??
           Container(
             width: widget.width,
             height: widget.height,
@@ -195,7 +199,8 @@ class _EncryptedImageState extends State<EncryptedImage> {
             ),
           );
     } else if (_error != null) {
-      imageWidget = widget.errorWidget ??
+      imageWidget =
+          widget.errorWidget ??
           Container(
             width: widget.width,
             height: widget.height,
@@ -223,7 +228,8 @@ class _EncryptedImageState extends State<EncryptedImage> {
         },
       );
     } else {
-      imageWidget = widget.errorWidget ??
+      imageWidget =
+          widget.errorWidget ??
           Container(
             width: widget.width,
             height: widget.height,
@@ -235,10 +241,7 @@ class _EncryptedImageState extends State<EncryptedImage> {
     }
 
     if (widget.borderRadius != null) {
-      return ClipRRect(
-        borderRadius: widget.borderRadius!,
-        child: imageWidget,
-      );
+      return ClipRRect(borderRadius: widget.borderRadius!, child: imageWidget);
     }
 
     return imageWidget;
@@ -276,7 +279,9 @@ class EncryptedCircleAvatar extends StatelessWidget {
     if (imageUrl == null || imageUrl!.isEmpty) {
       return CircleAvatar(
         radius: radius,
-        backgroundColor: backgroundColor ?? Theme.of(context).primaryColor.withValues(alpha: 0.1),
+        backgroundColor:
+            backgroundColor ??
+            Theme.of(context).primaryColor.withValues(alpha: 0.1),
         child: child,
       );
     }
@@ -299,7 +304,9 @@ class EncryptedCircleAvatar extends StatelessWidget {
         ),
         errorWidget: CircleAvatar(
           radius: radius,
-          backgroundColor: backgroundColor ?? Theme.of(context).primaryColor.withValues(alpha: 0.1),
+          backgroundColor:
+              backgroundColor ??
+              Theme.of(context).primaryColor.withValues(alpha: 0.1),
           child: child ?? const Icon(Icons.person, color: Colors.grey),
         ),
       ),
@@ -319,7 +326,7 @@ class EncryptedImageProvider {
     try {
       // Download the encrypted data
       final response = await http.get(Uri.parse(imageUrl));
-      
+
       if (response.statusCode != 200) {
         throw Exception('Failed to download image: ${response.statusCode}');
       }
@@ -337,7 +344,10 @@ class EncryptedImageProvider {
   }
 
   /// Save a decrypted image to a temporary file
-  Future<File?> saveDecryptedImageToTemp(String imageUrl, String filename) async {
+  Future<File?> saveDecryptedImageToTemp(
+    String imageUrl,
+    String filename,
+  ) async {
     try {
       final decryptedData = await getDecryptedImage(imageUrl);
       if (decryptedData == null) return null;

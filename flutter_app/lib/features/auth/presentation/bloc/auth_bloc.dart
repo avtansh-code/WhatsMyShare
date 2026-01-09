@@ -272,7 +272,10 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     );
   }
 
-  Future<void> _onUserChanged(AuthUserChanged event, Emitter<AuthState> emit) async {
+  Future<void> _onUserChanged(
+    AuthUserChanged event,
+    Emitter<AuthState> emit,
+  ) async {
     if (event.user != null) {
       _log.debug(
         'Auth state changed: authenticated',

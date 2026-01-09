@@ -7,10 +7,10 @@ import '../services/encryption_service.dart';
 import '../services/logging_service.dart';
 
 /// A CircleAvatar that loads images from a network URL with proper error handling.
-/// 
+///
 /// This widget gracefully handles cases where the network image fails to load,
 /// such as invalid image data, expired tokens, network errors, etc.
-/// 
+///
 /// Supports encrypted images when an [encryptionService] is provided.
 class NetworkAvatar extends StatefulWidget {
   /// Clear cached image for a specific URL
@@ -59,7 +59,7 @@ class NetworkAvatar extends StatefulWidget {
 
 class _NetworkAvatarState extends State<NetworkAvatar> {
   final LoggingService _log = LoggingService();
-  
+
   Uint8List? _decryptedImageData;
   bool _isLoading = false;
   bool _hasError = false;
@@ -84,8 +84,8 @@ class _NetworkAvatarState extends State<NetworkAvatar> {
   }
 
   void _loadImageIfNeeded() {
-    if (widget.encryptionService != null && 
-        widget.imageUrl != null && 
+    if (widget.encryptionService != null &&
+        widget.imageUrl != null &&
         widget.imageUrl!.isNotEmpty &&
         widget.imageUrl != _lastLoadedUrl) {
       _loadAndDecryptImage();
@@ -104,7 +104,10 @@ class _NetworkAvatarState extends State<NetworkAvatar> {
     try {
       // Check cache first
       if (_decryptedCache.containsKey(url)) {
-        _log.debug('Using cached decrypted avatar image', tag: LogTags.encryption);
+        _log.debug(
+          'Using cached decrypted avatar image',
+          tag: LogTags.encryption,
+        );
         if (mounted) {
           setState(() {
             _decryptedImageData = _decryptedCache[url];
@@ -116,16 +119,22 @@ class _NetworkAvatarState extends State<NetworkAvatar> {
       }
 
       // Download the encrypted data
-      _log.debug('Downloading encrypted avatar image', tag: LogTags.encryption, data: {'url': url});
+      _log.debug(
+        'Downloading encrypted avatar image',
+        tag: LogTags.encryption,
+        data: {'url': url},
+      );
       final response = await http.get(Uri.parse(url));
-      
+
       if (response.statusCode != 200) {
         throw Exception('Failed to download image: ${response.statusCode}');
       }
 
       // Decrypt the data
       _log.debug('Decrypting avatar image', tag: LogTags.encryption);
-      final decryptedData = await widget.encryptionService!.decryptBytes(response.bodyBytes);
+      final decryptedData = await widget.encryptionService!.decryptBytes(
+        response.bodyBytes,
+      );
 
       // Add to memory cache (with size limit)
       if (_decryptedCache.length >= _maxCacheSize) {
@@ -168,9 +177,11 @@ class _NetworkAvatarState extends State<NetworkAvatar> {
 
   @override
   Widget build(BuildContext context) {
-    final bgColor = widget.backgroundColor ?? 
+    final bgColor =
+        widget.backgroundColor ??
         Theme.of(context).colorScheme.primaryContainer;
-    final fallbackChild = widget.child ?? 
+    final fallbackChild =
+        widget.child ??
         Icon(
           Icons.person,
           size: widget.radius,
@@ -238,10 +249,7 @@ class _NetworkAvatarState extends State<NetworkAvatar> {
             return Container(
               width: widget.radius * 2,
               height: widget.radius * 2,
-              decoration: BoxDecoration(
-                color: bgColor,
-                shape: BoxShape.circle,
-              ),
+              decoration: BoxDecoration(color: bgColor, shape: BoxShape.circle),
               child: Center(child: fallbackChild),
             );
           },
@@ -278,7 +286,7 @@ class _NetworkAvatarState extends State<NetworkAvatar> {
                     strokeWidth: 2,
                     value: loadingProgress.expectedTotalBytes != null
                         ? loadingProgress.cumulativeBytesLoaded /
-                            loadingProgress.expectedTotalBytes!
+                              loadingProgress.expectedTotalBytes!
                         : null,
                   ),
                 ),
@@ -290,19 +298,13 @@ class _NetworkAvatarState extends State<NetworkAvatar> {
             _log.warning(
               'Failed to load network image',
               tag: LogTags.ui,
-              data: {
-                'url': widget.imageUrl,
-                'error': error.toString(),
-              },
+              data: {'url': widget.imageUrl, 'error': error.toString()},
             );
             widget.onError?.call();
             return Container(
               width: widget.radius * 2,
               height: widget.radius * 2,
-              decoration: BoxDecoration(
-                color: bgColor,
-                shape: BoxShape.circle,
-              ),
+              decoration: BoxDecoration(color: bgColor, shape: BoxShape.circle),
               child: Center(child: fallbackChild),
             );
           },
@@ -313,7 +315,7 @@ class _NetworkAvatarState extends State<NetworkAvatar> {
 }
 
 /// A network image widget with proper error handling for non-circular images.
-/// 
+///
 /// This widget gracefully handles cases where the network image fails to load,
 /// such as invalid image data, expired tokens, network errors, etc.
 class SafeNetworkImage extends StatelessWidget {
@@ -375,10 +377,7 @@ class SafeNetworkImage extends StatelessWidget {
         LoggingService().warning(
           'Failed to load network image',
           tag: LogTags.ui,
-          data: {
-            'url': imageUrl,
-            'error': error.toString(),
-          },
+          data: {'url': imageUrl, 'error': error.toString()},
         );
         onError?.call();
         return _buildErrorWidget(context);
@@ -386,16 +385,16 @@ class SafeNetworkImage extends StatelessWidget {
     );
 
     if (borderRadius != null) {
-      return ClipRRect(
-        borderRadius: borderRadius!,
-        child: imageWidget,
-      );
+      return ClipRRect(borderRadius: borderRadius!, child: imageWidget);
     }
 
     return imageWidget;
   }
 
-  Widget _buildPlaceholder(BuildContext context, ImageChunkEvent loadingProgress) {
+  Widget _buildPlaceholder(
+    BuildContext context,
+    ImageChunkEvent loadingProgress,
+  ) {
     return Container(
       width: width,
       height: height,
@@ -405,7 +404,7 @@ class SafeNetworkImage extends StatelessWidget {
           strokeWidth: 2,
           value: loadingProgress.expectedTotalBytes != null
               ? loadingProgress.cumulativeBytesLoaded /
-                  loadingProgress.expectedTotalBytes!
+                    loadingProgress.expectedTotalBytes!
               : null,
         ),
       ),

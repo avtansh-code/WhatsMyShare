@@ -228,7 +228,8 @@ class AppRouter {
         return MultiBlocProvider(
           providers: [
             BlocProvider(
-              create: (_) => sl<ProfileBloc>()..add(const ProfileLoadRequested()),
+              create: (_) =>
+                  sl<ProfileBloc>()..add(const ProfileLoadRequested()),
             ),
             BlocProvider(
               create: (_) => sl<AuthBloc>()..add(const AuthCheckRequested()),

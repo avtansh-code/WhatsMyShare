@@ -262,7 +262,7 @@ class UserProfileDataSourceImpl implements UserProfileDataSource {
       final extension = imageFile.path.split('.').last.toLowerCase();
       String contentType;
       String fileName;
-      
+
       switch (extension) {
         case 'png':
           contentType = 'image/png';
@@ -292,19 +292,23 @@ class UserProfileDataSourceImpl implements UserProfileDataSource {
       _log.debug(
         'Detected image format',
         tag: LogTags.profile,
-        data: {'extension': extension, 'contentType': contentType, 'fileName': fileName},
+        data: {
+          'extension': extension,
+          'contentType': contentType,
+          'fileName': fileName,
+        },
       );
 
       // Create storage reference
       final timestamp = DateTime.now().millisecondsSinceEpoch;
       final storagePath = 'users/$userId/profile/$fileName';
       final ref = _storage.ref().child(storagePath);
-      
+
       _log.debug(
         'Storage reference created',
         tag: LogTags.profile,
         data: {
-          'path': storagePath, 
+          'path': storagePath,
           'fullPath': ref.fullPath,
           'bucket': ref.bucket,
         },
@@ -320,11 +324,14 @@ class UserProfileDataSourceImpl implements UserProfileDataSource {
         },
       );
 
-      _log.debug('Starting file encryption before upload', tag: LogTags.encryption);
-      
+      _log.debug(
+        'Starting file encryption before upload',
+        tag: LogTags.encryption,
+      );
+
       // Encrypt the image before uploading
       final encryptedBytes = await _encryptionService.encryptFile(imageFile);
-      
+
       // Update metadata for encrypted file
       final encryptedMetadata = SettableMetadata(
         contentType: 'application/octet-stream',
@@ -337,7 +344,7 @@ class UserProfileDataSourceImpl implements UserProfileDataSource {
           'originalExtension': extension,
         },
       );
-      
+
       _log.debug(
         'File encrypted successfully',
         tag: LogTags.encryption,
@@ -346,36 +353,43 @@ class UserProfileDataSourceImpl implements UserProfileDataSource {
           'encryptedSize': encryptedBytes.length,
         },
       );
-      
-      _log.debug('Starting encrypted file upload to Firebase Storage', tag: LogTags.profile);
-      
+
+      _log.debug(
+        'Starting encrypted file upload to Firebase Storage',
+        tag: LogTags.profile,
+      );
+
       // Use putData for encrypted bytes
       final uploadTask = ref.putData(encryptedBytes, encryptedMetadata);
 
       // Monitor upload progress
-      uploadTask.snapshotEvents.listen((TaskSnapshot snapshot) {
-        final progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-        _log.debug(
-          'Upload progress',
-          tag: LogTags.profile,
-          data: {
-            'progress': '${progress.toStringAsFixed(1)}%',
-            'bytesTransferred': snapshot.bytesTransferred,
-            'totalBytes': snapshot.totalBytes,
-            'state': snapshot.state.toString(),
-          },
-        );
-      }, onError: (error) {
-        _log.error(
-          'Upload stream error',
-          tag: LogTags.profile,
-          data: {'error': error.toString()},
-        );
-      });
+      uploadTask.snapshotEvents.listen(
+        (TaskSnapshot snapshot) {
+          final progress =
+              (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+          _log.debug(
+            'Upload progress',
+            tag: LogTags.profile,
+            data: {
+              'progress': '${progress.toStringAsFixed(1)}%',
+              'bytesTransferred': snapshot.bytesTransferred,
+              'totalBytes': snapshot.totalBytes,
+              'state': snapshot.state.toString(),
+            },
+          );
+        },
+        onError: (error) {
+          _log.error(
+            'Upload stream error',
+            tag: LogTags.profile,
+            data: {'error': error.toString()},
+          );
+        },
+      );
 
       // Wait for upload to complete
       final snapshot = await uploadTask;
-      
+
       _log.debug(
         'Upload task completed',
         tag: LogTags.profile,
@@ -385,20 +399,25 @@ class UserProfileDataSourceImpl implements UserProfileDataSource {
           'totalBytes': snapshot.totalBytes,
         },
       );
-      
+
       if (snapshot.state != TaskState.success) {
         _log.error(
           'Upload did not complete successfully',
           tag: LogTags.profile,
           data: {'state': snapshot.state.toString()},
         );
-        throw ServerException(message: 'Upload failed with state: ${snapshot.state}');
+        throw ServerException(
+          message: 'Upload failed with state: ${snapshot.state}',
+        );
       }
 
       // Get download URL from the snapshot reference
-      _log.debug('Getting download URL from snapshot reference', tag: LogTags.profile);
+      _log.debug(
+        'Getting download URL from snapshot reference',
+        tag: LogTags.profile,
+      );
       final downloadUrl = await snapshot.ref.getDownloadURL();
-      
+
       _log.debug(
         'Profile photo uploaded to storage',
         tag: LogTags.profile,
@@ -429,13 +448,14 @@ class UserProfileDataSourceImpl implements UserProfileDataSource {
           'plugin': e.plugin,
         },
       );
-      
+
       // Provide more helpful error messages for common issues
       String errorMessage;
       switch (e.code) {
         case 'object-not-found':
           // This error during upload usually means Storage isn't enabled
-          errorMessage = 'Firebase Storage may not be enabled. Please check Firebase Console.';
+          errorMessage =
+              'Firebase Storage may not be enabled. Please check Firebase Console.';
           break;
         case 'unauthorized':
         case 'unauthenticated':
@@ -445,12 +465,14 @@ class UserProfileDataSourceImpl implements UserProfileDataSource {
           errorMessage = 'Upload was canceled.';
           break;
         case 'unknown':
-          errorMessage = 'Upload failed. Please check your internet connection.';
+          errorMessage =
+              'Upload failed. Please check your internet connection.';
           break;
         default:
-          errorMessage = e.message ?? 'Failed to upload profile photo: ${e.code}';
+          errorMessage =
+              e.message ?? 'Failed to upload profile photo: ${e.code}';
       }
-      
+
       throw ServerException(message: errorMessage);
     } on ServerException {
       rethrow;

@@ -134,7 +134,7 @@ class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
     final imageFile = event.imageFile;
     bool fileExists = false;
     int fileSize = 0;
-    
+
     try {
       fileExists = await imageFile.exists();
       if (fileExists) {
@@ -200,8 +200,8 @@ class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
         emit(
           state.copyWith(
             status: ProfileStatus.error,
-            errorMessage: failure.message.isNotEmpty 
-                ? failure.message 
+            errorMessage: failure.message.isNotEmpty
+                ? failure.message
                 : ErrorMessages.profilePhotoUploadFailed,
           ),
         );
@@ -210,10 +210,7 @@ class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
         _log.info(
           'Profile photo uploaded successfully',
           tag: LogTags.profile,
-          data: {
-            'userId': state.profile!.id,
-            'photoUrl': photoUrl,
-          },
+          data: {'userId': state.profile!.id, 'photoUrl': photoUrl},
         );
         final updatedProfile = state.profile!.copyWith(photoUrl: photoUrl);
         emit(

@@ -105,7 +105,7 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         const SizedBox(height: 48),
-        
+
         // Icon
         Icon(Icons.lock_reset, size: 64, color: theme.colorScheme.primary),
         const SizedBox(height: 16),

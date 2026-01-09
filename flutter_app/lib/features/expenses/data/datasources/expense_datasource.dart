@@ -500,14 +500,13 @@ class FirebaseExpenseDatasource implements ExpenseDatasource {
     );
     try {
       final file = File(filePath);
-      
+
       // Encrypt the file before uploading
       _log.debug('Encrypting receipt before upload', tag: LogTags.encryption);
       final encryptedBytes = await _encryptionService.encryptFile(file);
-      
+
       // Use .enc extension to indicate encrypted file
-      final fileName =
-          '${DateTime.now().millisecondsSinceEpoch}_receipt.enc';
+      final fileName = '${DateTime.now().millisecondsSinceEpoch}_receipt.enc';
       final ref = _storage.ref().child(
         'groups/$groupId/expenses/$expenseId/receipts/$fileName',
       );
@@ -520,10 +519,10 @@ class FirebaseExpenseDatasource implements ExpenseDatasource {
           'originalExtension': file.uri.pathSegments.last.split('.').last,
         },
       );
-      
+
       await ref.putData(encryptedBytes, metadata);
       final downloadUrl = await ref.getDownloadURL();
-      
+
       _log.info(
         'Encrypted receipt uploaded successfully',
         tag: LogTags.expenses,

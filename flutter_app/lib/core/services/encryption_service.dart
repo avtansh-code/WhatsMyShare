@@ -13,7 +13,7 @@ import 'logging_service.dart';
 
 /// Service for client-side encryption of files (images, audio, etc.)
 /// Uses AES-256-GCM for encryption with per-user keys stored securely on device.
-/// 
+///
 /// Architecture:
 /// - Each user has a unique master encryption key generated on first use
 /// - Keys are stored in platform-secure storage (Keychain on iOS, Keystore on Android)
@@ -29,23 +29,25 @@ class EncryptionService {
 
   final FlutterSecureStorage _secureStorage;
   final LoggingService _log = LoggingService();
-  
+
   // Cache the key in memory to avoid frequent secure storage reads
   Uint8List? _cachedKey;
   int? _cachedKeyVersion;
 
-  EncryptionService({
-    FlutterSecureStorage? secureStorage,
-  }) : _secureStorage = secureStorage ?? const FlutterSecureStorage(
-    aOptions: AndroidOptions(
-      encryptedSharedPreferences: true,
-      keyCipherAlgorithm: KeyCipherAlgorithm.RSA_ECB_OAEPwithSHA_256andMGF1Padding,
-      storageCipherAlgorithm: StorageCipherAlgorithm.AES_GCM_NoPadding,
-    ),
-    iOptions: IOSOptions(
-      accessibility: KeychainAccessibility.first_unlock_this_device,
-    ),
-  ) {
+  EncryptionService({FlutterSecureStorage? secureStorage})
+    : _secureStorage =
+          secureStorage ??
+          const FlutterSecureStorage(
+            aOptions: AndroidOptions(
+              encryptedSharedPreferences: true,
+              keyCipherAlgorithm:
+                  KeyCipherAlgorithm.RSA_ECB_OAEPwithSHA_256andMGF1Padding,
+              storageCipherAlgorithm: StorageCipherAlgorithm.AES_GCM_NoPadding,
+            ),
+            iOptions: IOSOptions(
+              accessibility: KeychainAccessibility.first_unlock_this_device,
+            ),
+          ) {
     _log.debug('EncryptionService initialized', tag: LogTags.encryption);
   }
 
@@ -67,7 +69,10 @@ class EncryptionService {
       } else {
         // Generate new key for first-time users
         await _generateAndStoreMasterKey(userId);
-        _log.info('Generated new encryption key for user', tag: LogTags.encryption);
+        _log.info(
+          'Generated new encryption key for user',
+          tag: LogTags.encryption,
+        );
       }
     } catch (e) {
       _log.error(
@@ -90,7 +95,7 @@ class EncryptionService {
   /// Returns: Encrypted data with prepended IV (IV + encrypted data + auth tag)
   Future<Uint8List> encryptFile(File file) async {
     _log.debug('Encrypting file', tag: LogTags.encryption);
-    
+
     if (_cachedKey == null) {
       throw const EncryptionException(message: 'Encryption not initialized');
     }
@@ -105,7 +110,9 @@ class EncryptionService {
         data: {'error': e.toString()},
       );
       if (e is EncryptionException) rethrow;
-      throw EncryptionException(message: 'Failed to encrypt file: ${e.toString()}');
+      throw EncryptionException(
+        message: 'Failed to encrypt file: ${e.toString()}',
+      );
     }
   }
 
@@ -118,7 +125,7 @@ class EncryptionService {
 
     // Generate random IV for each encryption
     final iv = _generateRandomBytes(_ivLength);
-    
+
     // Create AES-GCM cipher
     final key = encrypt.Key(Uint8List.fromList(_cachedKey!));
     final ivObj = encrypt.IV(iv);
@@ -128,7 +135,7 @@ class EncryptionService {
 
     // Encrypt
     final encrypted = encrypter.encryptBytes(plainBytes, iv: ivObj);
-    
+
     // Combine IV + encrypted data (includes auth tag in GCM mode)
     final result = Uint8List(_ivLength + encrypted.bytes.length);
     result.setRange(0, _ivLength, iv);
@@ -137,10 +144,7 @@ class EncryptionService {
     _log.debug(
       'Encryption complete',
       tag: LogTags.encryption,
-      data: {
-        'inputSize': plainBytes.length,
-        'outputSize': result.length,
-      },
+      data: {'inputSize': plainBytes.length, 'outputSize': result.length},
     );
 
     return result;
@@ -155,7 +159,8 @@ class EncryptionService {
       throw const EncryptionException(message: 'Encryption not initialized');
     }
 
-    if (encryptedData.length < _ivLength + 16) { // Minimum: IV + auth tag
+    if (encryptedData.length < _ivLength + 16) {
+      // Minimum: IV + auth tag
       throw const EncryptionException(message: 'Invalid encrypted data format');
     }
 
@@ -192,7 +197,9 @@ class EncryptionService {
         data: {'error': e.toString()},
       );
       if (e is EncryptionException) rethrow;
-      throw EncryptionException(message: 'Failed to decrypt data: ${e.toString()}');
+      throw EncryptionException(
+        message: 'Failed to decrypt data: ${e.toString()}',
+      );
     }
   }
 
@@ -200,13 +207,13 @@ class EncryptionService {
   /// Returns the path to the encrypted file
   Future<String> encryptFileToTemp(File file) async {
     final encryptedBytes = await encryptFile(file);
-    
+
     final tempDir = await getTemporaryDirectory();
     final encryptedFile = File(
       '${tempDir.path}/encrypted_${DateTime.now().millisecondsSinceEpoch}.enc',
     );
     await encryptedFile.writeAsBytes(encryptedBytes);
-    
+
     return encryptedFile.path;
   }
 
@@ -232,7 +239,7 @@ class EncryptionService {
     // Derive a key from password using PBKDF2
     final salt = _generateRandomBytes(16);
     final derivedKey = _deriveKeyFromPassword(password, salt);
-    
+
     // Encrypt the master key with the derived key
     final iv = _generateRandomBytes(_ivLength);
     final key = encrypt.Key(derivedKey);
@@ -242,7 +249,7 @@ class EncryptionService {
     );
 
     final encrypted = encrypter.encryptBytes(_cachedKey!, iv: ivObj);
-    
+
     // Combine: salt + iv + encrypted key
     final exportData = Uint8List(16 + _ivLength + encrypted.bytes.length);
     exportData.setRange(0, 16, salt);
@@ -260,7 +267,7 @@ class EncryptionService {
   ) async {
     try {
       final exportData = base64Decode(exportedKey);
-      
+
       if (exportData.length < 16 + _ivLength + 32) {
         throw const EncryptionException(message: 'Invalid backup data');
       }
@@ -271,7 +278,10 @@ class EncryptionService {
       final encryptedKey = exportData.sublist(16 + _ivLength);
 
       // Derive key from password
-      final derivedKey = _deriveKeyFromPassword(password, Uint8List.fromList(salt));
+      final derivedKey = _deriveKeyFromPassword(
+        password,
+        Uint8List.fromList(salt),
+      );
 
       // Decrypt the master key
       final key = encrypt.Key(derivedKey);
@@ -286,15 +296,20 @@ class EncryptionService {
       // Store the imported key
       await _storeMasterKey(userId, Uint8List.fromList(masterKey));
       _cachedKey = Uint8List.fromList(masterKey);
-      
-      _log.info('Successfully imported encryption key from backup', tag: LogTags.encryption);
+
+      _log.info(
+        'Successfully imported encryption key from backup',
+        tag: LogTags.encryption,
+      );
     } catch (e) {
       _log.error(
         'Failed to import key from backup',
         tag: LogTags.encryption,
         data: {'error': e.toString()},
       );
-      throw const EncryptionException(message: 'Failed to import key. Check your password.');
+      throw const EncryptionException(
+        message: 'Failed to import key. Check your password.',
+      );
     }
   }
 
@@ -344,7 +359,7 @@ class EncryptionService {
   Uint8List _deriveKeyFromPassword(String password, Uint8List salt) {
     final pbkdf2 = PBKDF2KeyDerivator(HMac(SHA256Digest(), 64))
       ..init(Pbkdf2Parameters(salt, 100000, _keyLength));
-    
+
     return pbkdf2.process(Uint8List.fromList(utf8.encode(password)));
   }
 }

@@ -100,13 +100,14 @@ class _LoginPageState extends State<LoginPage> {
                 'Navigating to complete profile',
                 tag: LogTags.ui,
                 data: {
-                  'reason': user.displayName == null || user.displayName!.isEmpty
+                  'reason':
+                      user.displayName == null || user.displayName!.isEmpty
                       ? 'missing displayName'
                       : user.phone == null || user.phone!.isEmpty
-                          ? 'missing phone'
-                          : !user.isPhoneVerified
-                              ? 'phone not verified'
-                              : 'unknown',
+                      ? 'missing phone'
+                      : !user.isPhoneVerified
+                      ? 'phone not verified'
+                      : 'unknown',
                 },
               );
               context.go('/complete-profile', extra: user);
@@ -121,7 +122,8 @@ class _LoginPageState extends State<LoginPage> {
               padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
               child: ConstrainedBox(
                 constraints: BoxConstraints(
-                  minHeight: MediaQuery.of(context).size.height -
+                  minHeight:
+                      MediaQuery.of(context).size.height -
                       MediaQuery.of(context).padding.top -
                       MediaQuery.of(context).padding.bottom -
                       32, // vertical padding
@@ -131,7 +133,7 @@ class _LoginPageState extends State<LoginPage> {
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     const SizedBox(height: 32),
-                    
+
                     // Logo and Title
                     _buildHeader(theme),
                     const SizedBox(height: 32),

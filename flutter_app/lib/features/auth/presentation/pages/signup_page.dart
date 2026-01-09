@@ -106,7 +106,7 @@ class _SignUpPageState extends State<SignUpPage> {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   const SizedBox(height: 16),
-                  
+
                   // Header
                   _buildHeader(theme),
                   const SizedBox(height: 24),

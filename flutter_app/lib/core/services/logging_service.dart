@@ -94,7 +94,7 @@ class LoggingService {
       // Print to console (shows in Xcode/terminal)
       // ignore: avoid_print
       print(logMessage);
-      
+
       // Also use developer.log for DevTools
       developer.log(
         logMessage,

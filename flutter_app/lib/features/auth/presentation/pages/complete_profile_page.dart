@@ -61,11 +61,11 @@ class _CompleteProfilePageState extends State<CompleteProfilePage> {
 
   void _initializeFromUser(UserEntity user) {
     if (_controllersInitialized) return;
-    
+
     _currentUser = user;
     _nameController.text = user.displayName ?? '';
     _emailController.text = user.email;
-    
+
     // Extract 10-digit phone number (remove country code if present)
     String phone = user.phone ?? '';
     if (phone.startsWith('+91')) {
@@ -74,9 +74,9 @@ class _CompleteProfilePageState extends State<CompleteProfilePage> {
       phone = phone.substring(2);
     }
     _phoneController.text = phone;
-    
+
     _controllersInitialized = true;
-    
+
     _log.debug(
       'Initialized controllers from user',
       tag: LogTags.auth,
@@ -286,7 +286,7 @@ class _CompleteProfilePageState extends State<CompleteProfilePage> {
       final user = firebase_auth.FirebaseAuth.instance.currentUser;
       if (user != null) {
         await user.linkWithCredential(credential);
-        
+
         // Get the phone number from the controller and save it along with verification status
         final phone = _phoneController.text.trim();
         await _authDataSource.markPhoneVerified(phoneNumber: phone);
@@ -384,7 +384,7 @@ class _CompleteProfilePageState extends State<CompleteProfilePage> {
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     const SizedBox(height: 24),
-                    
+
                     // Header
                     Icon(
                       Icons.person_add_outlined,
