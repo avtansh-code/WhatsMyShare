@@ -57,7 +57,12 @@ class AuthCompleteProfileRequested extends AuthEvent {
   });
 
   @override
-  List<Object?> get props => [displayName, photoUrl, defaultCurrency, countryCode];
+  List<Object?> get props => [
+    displayName,
+    photoUrl,
+    defaultCurrency,
+    countryCode,
+  ];
 }
 
 /// Request sign out

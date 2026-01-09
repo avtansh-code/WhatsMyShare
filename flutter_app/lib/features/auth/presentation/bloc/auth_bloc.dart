@@ -25,9 +25,9 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   AuthBloc({
     required AuthRepository authRepository,
     required LoggingService loggingService,
-  })  : _authRepository = authRepository,
-        _log = loggingService,
-        super(AuthInitial()) {
+  }) : _authRepository = authRepository,
+       _log = loggingService,
+       super(AuthInitial()) {
     // Auth check
     on<AuthCheckRequested>(_onAuthCheckRequested);
 
@@ -146,10 +146,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     }
   }
 
-  void _onCodeSent(
-    _AuthCodeSent event,
-    Emitter<AuthState> emit,
-  ) {
+  void _onCodeSent(_AuthCodeSent event, Emitter<AuthState> emit) {
     _log.info('OTP code sent', tag: LogTags.auth);
     _verificationId = event.verificationId;
     _resendToken = event.resendToken;
@@ -356,10 +353,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     );
   }
 
-  void _onUserChanged(
-    AuthUserChanged event,
-    Emitter<AuthState> emit,
-  ) {
+  void _onUserChanged(AuthUserChanged event, Emitter<AuthState> emit) {
     if (event.user != null) {
       _log.debug(
         'Auth state changed: authenticated',

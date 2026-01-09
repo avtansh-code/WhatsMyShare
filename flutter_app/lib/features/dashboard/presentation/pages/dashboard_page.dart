@@ -67,7 +67,8 @@ class _DashboardPageState extends State<DashboardPage> {
         if (state is AuthUnauthenticated) {
           _log.info('User signed out, redirecting to login', tag: LogTags.ui);
           context.go('/login');
-        } else if (state is AuthAuthenticated && !state.user.hasCompletedProfile) {
+        } else if (state is AuthAuthenticated &&
+            !state.user.hasCompletedProfile) {
           _log.info(
             'User profile incomplete, redirecting to complete profile',
             tag: LogTags.ui,
@@ -259,7 +260,7 @@ class _DashboardPageState extends State<DashboardPage> {
                     ),
                   ),
                   Text(
-                    user?.displayNameOrEmail ?? 'User',
+                    user?.displayName ?? 'User',
                     style: theme.textTheme.titleLarge?.copyWith(
                       fontWeight: FontWeight.bold,
                     ),

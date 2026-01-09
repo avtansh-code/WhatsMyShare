@@ -7,11 +7,8 @@ import 'package:go_router/go_router.dart';
 import '../../../../core/services/logging_service.dart';
 
 /// Callback type for verification received
-typedef VerificationCallback = void Function(
-  String verificationId,
-  String phoneNumber,
-  int? resendToken,
-);
+typedef VerificationCallback =
+    void Function(String verificationId, String phoneNumber, int? resendToken);
 
 /// Singleton to hold pending phone verification state
 /// This persists across page rebuilds when returning from reCAPTCHA
@@ -228,8 +225,9 @@ class _PhoneLoginPageState extends State<PhoneLoginPage> {
   }
 
   Future<void> _ensureUserDocument(firebase_auth.User user) async {
-    final userDoc =
-        FirebaseFirestore.instance.collection('users').doc(user.uid);
+    final userDoc = FirebaseFirestore.instance
+        .collection('users')
+        .doc(user.uid);
     final doc = await userDoc.get();
 
     if (!doc.exists) {

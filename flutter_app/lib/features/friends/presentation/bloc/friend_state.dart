@@ -84,10 +84,7 @@ class UserSearchResults extends FriendState {
   final List<RegisteredUser> users;
   final bool isSearching;
 
-  const UserSearchResults({
-    required this.users,
-    this.isSearching = false,
-  });
+  const UserSearchResults({required this.users, this.isSearching = false});
 
   @override
   List<Object?> get props => [users, isSearching];

@@ -30,7 +30,7 @@ abstract class FriendDatasource {
   /// Unblock a friend
   Future<void> unblockFriend(String friendId);
 
-  /// Search for registered users by email or name
+  /// Search for registered users by phone or name
   Future<List<RegisteredUserModel>> searchUsers(String query);
 
   /// Get pending friend requests
@@ -45,10 +45,7 @@ class FriendDatasourceImpl implements FriendDatasource {
   final FirebaseFirestore firestore;
   final LoggingService loggingService;
 
-  FriendDatasourceImpl({
-    required this.firestore,
-    required this.loggingService,
-  });
+  FriendDatasourceImpl({required this.firestore, required this.loggingService});
 
   CollectionReference<Map<String, dynamic>> get _friendsCollection =>
       firestore.collection('friends');
@@ -58,19 +55,27 @@ class FriendDatasourceImpl implements FriendDatasource {
 
   @override
   Future<List<FriendModel>> getFriends(String userId) async {
-    loggingService.debug('Getting friends for user: $userId', tag: LogTags.friends);
+    loggingService.debug(
+      'Getting friends for user: $userId',
+      tag: LogTags.friends,
+    );
 
     final querySnapshot = await _friendsCollection
         .where('userId', isEqualTo: userId)
         .where('status', isEqualTo: 'accepted')
         .get();
 
-    return querySnapshot.docs.map((doc) => FriendModel.fromFirestore(doc)).toList();
+    return querySnapshot.docs
+        .map((doc) => FriendModel.fromFirestore(doc))
+        .toList();
   }
 
   @override
   Future<FriendModel?> getFriendById(String friendId) async {
-    loggingService.debug('Getting friend by ID: $friendId', tag: LogTags.friends);
+    loggingService.debug(
+      'Getting friend by ID: $friendId',
+      tag: LogTags.friends,
+    );
 
     final doc = await _friendsCollection.doc(friendId).get();
     if (!doc.exists) return null;
@@ -83,12 +88,17 @@ class FriendDatasourceImpl implements FriendDatasource {
     required String userId,
     required String friendUserId,
   }) async {
-    loggingService.info('Adding friend: $friendUserId for user: $userId', tag: LogTags.friends);
+    loggingService.info(
+      'Adding friend: $friendUserId for user: $userId',
+      tag: LogTags.friends,
+    );
 
     // Verify the friend is a registered user
     final friendUserDoc = await _usersCollection.doc(friendUserId).get();
     if (!friendUserDoc.exists) {
-      throw Exception('User not found. Only registered users can be added as friends.');
+      throw Exception(
+        'User not found. Only registered users can be added as friends.',
+      );
     }
 
     final friendUserData = friendUserDoc.data()!;
@@ -108,9 +118,9 @@ class FriendDatasourceImpl implements FriendDatasource {
     final friendData = {
       'userId': userId,
       'friendUserId': friendUserId,
-      'displayName': friendUserData['displayName'] ?? friendUserData['name'] ?? 'Unknown',
-      'email': friendUserData['email'] ?? '',
-      'phone': friendUserData['phone'],
+      'displayName':
+          friendUserData['displayName'] ?? friendUserData['name'] ?? 'Unknown',
+      'phone': friendUserData['phone'] ?? '',
       'photoUrl': friendUserData['photoUrl'],
       'status': 'pending',
       'createdAt': Timestamp.fromDate(now),
@@ -125,7 +135,10 @@ class FriendDatasourceImpl implements FriendDatasource {
 
   @override
   Future<FriendModel> acceptFriendRequest(String friendId) async {
-    loggingService.info('Accepting friend request: $friendId', tag: LogTags.friends);
+    loggingService.info(
+      'Accepting friend request: $friendId',
+      tag: LogTags.friends,
+    );
 
     final now = DateTime.now();
 
@@ -166,7 +179,10 @@ class FriendDatasourceImpl implements FriendDatasource {
 
   @override
   Future<List<RegisteredUserModel>> searchUsers(String query) async {
-    loggingService.debug('Searching users with query: $query', tag: LogTags.friends);
+    loggingService.debug(
+      'Searching users with query: $query',
+      tag: LogTags.friends,
+    );
 
     if (query.isEmpty || query.length < 2) {
       return [];
@@ -174,12 +190,26 @@ class FriendDatasourceImpl implements FriendDatasource {
 
     final queryLower = query.toLowerCase();
 
-    // Search by email (exact prefix match)
-    final emailResults = await _usersCollection
-        .where('email', isGreaterThanOrEqualTo: queryLower)
-        .where('email', isLessThanOrEqualTo: '$queryLower\uf8ff')
-        .limit(10)
-        .get();
+    // Combine and deduplicate results
+    final userMap = <String, RegisteredUserModel>{};
+
+    // Search by phone number (exact match or prefix)
+    if (RegExp(r'^\+?[0-9]+$').hasMatch(query)) {
+      // It's a phone number search
+      String normalizedPhone = query;
+      if (!query.startsWith('+')) {
+        normalizedPhone = '+91$query'; // Default to India
+      }
+
+      final phoneResults = await _usersCollection
+          .where('phone', isEqualTo: normalizedPhone)
+          .limit(10)
+          .get();
+
+      for (final doc in phoneResults.docs) {
+        userMap[doc.id] = RegisteredUserModel.fromFirestore(doc);
+      }
+    }
 
     // Search by display name (prefix match)
     final nameResults = await _usersCollection
@@ -188,13 +218,6 @@ class FriendDatasourceImpl implements FriendDatasource {
         .limit(10)
         .get();
 
-    // Combine and deduplicate results
-    final userMap = <String, RegisteredUserModel>{};
-    
-    for (final doc in emailResults.docs) {
-      userMap[doc.id] = RegisteredUserModel.fromFirestore(doc);
-    }
-    
     for (final doc in nameResults.docs) {
       if (!userMap.containsKey(doc.id)) {
         userMap[doc.id] = RegisteredUserModel.fromFirestore(doc);
@@ -206,7 +229,10 @@ class FriendDatasourceImpl implements FriendDatasource {
 
   @override
   Future<List<FriendModel>> getPendingRequests(String userId) async {
-    loggingService.debug('Getting pending requests for user: $userId', tag: LogTags.friends);
+    loggingService.debug(
+      'Getting pending requests for user: $userId',
+      tag: LogTags.friends,
+    );
 
     // Get requests where this user is the friend (incoming requests)
     final querySnapshot = await _friendsCollection
@@ -214,18 +240,26 @@ class FriendDatasourceImpl implements FriendDatasource {
         .where('status', isEqualTo: 'pending')
         .get();
 
-    return querySnapshot.docs.map((doc) => FriendModel.fromFirestore(doc)).toList();
+    return querySnapshot.docs
+        .map((doc) => FriendModel.fromFirestore(doc))
+        .toList();
   }
 
   @override
   Stream<List<FriendModel>> watchFriends(String userId) {
-    loggingService.debug('Watching friends for user: $userId', tag: LogTags.friends);
+    loggingService.debug(
+      'Watching friends for user: $userId',
+      tag: LogTags.friends,
+    );
 
     return _friendsCollection
         .where('userId', isEqualTo: userId)
         .where('status', isEqualTo: 'accepted')
         .snapshots()
-        .map((snapshot) =>
-            snapshot.docs.map((doc) => FriendModel.fromFirestore(doc)).toList());
+        .map(
+          (snapshot) => snapshot.docs
+              .map((doc) => FriendModel.fromFirestore(doc))
+              .toList(),
+        );
   }
 }

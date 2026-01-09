@@ -30,7 +30,7 @@ abstract class FriendRepository {
   /// Unblock a friend
   Future<Either<Failure, void>> unblockFriend(String friendId);
 
-  /// Search for registered users by email or name
+  /// Search for registered users by phone or name
   Future<Either<Failure, List<RegisteredUser>>> searchUsers(String query);
 
   /// Get pending friend requests for a user

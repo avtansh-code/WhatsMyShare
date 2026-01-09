@@ -158,7 +158,6 @@ Future<void> _initAuthFeature() async {
     ),
   );
 
-  // Note: Email/Google usecases removed - phone authentication only
   // Use AuthRepository directly for phone verification methods
 
   // BLoC - simplified for phone-only auth
@@ -325,9 +324,7 @@ Future<void> _initFriendsFeature() async {
 
   // BLoC
   sl.registerFactory<FriendBloc>(
-    () => FriendBloc(
-      repository: sl<FriendRepository>(),
-    ),
+    () => FriendBloc(repository: sl<FriendRepository>()),
   );
 }
 

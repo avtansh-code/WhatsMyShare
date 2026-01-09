@@ -35,10 +35,7 @@ class FriendBloc extends Bloc<FriendEvent, FriendState> {
     );
   }
 
-  Future<void> _onAddFriend(
-    AddFriend event,
-    Emitter<FriendState> emit,
-  ) async {
+  Future<void> _onAddFriend(AddFriend event, Emitter<FriendState> emit) async {
     emit(const FriendOperationInProgress(message: 'Sending friend request...'));
 
     final result = await repository.addFriend(
@@ -48,10 +45,12 @@ class FriendBloc extends Bloc<FriendEvent, FriendState> {
 
     result.fold(
       (failure) => emit(FriendError(message: failure.message)),
-      (friend) => emit(FriendOperationSuccess(
-        message: 'Friend request sent successfully',
-        friend: friend,
-      )),
+      (friend) => emit(
+        FriendOperationSuccess(
+          message: 'Friend request sent successfully',
+          friend: friend,
+        ),
+      ),
     );
   }
 
@@ -59,16 +58,20 @@ class FriendBloc extends Bloc<FriendEvent, FriendState> {
     AcceptFriendRequest event,
     Emitter<FriendState> emit,
   ) async {
-    emit(const FriendOperationInProgress(message: 'Accepting friend request...'));
+    emit(
+      const FriendOperationInProgress(message: 'Accepting friend request...'),
+    );
 
     final result = await repository.acceptFriendRequest(event.friendId);
 
     result.fold(
       (failure) => emit(FriendError(message: failure.message)),
-      (friend) => emit(FriendOperationSuccess(
-        message: 'Friend request accepted',
-        friend: friend,
-      )),
+      (friend) => emit(
+        FriendOperationSuccess(
+          message: 'Friend request accepted',
+          friend: friend,
+        ),
+      ),
     );
   }
 
@@ -128,10 +131,7 @@ class FriendBloc extends Bloc<FriendEvent, FriendState> {
     );
   }
 
-  void _onClearSearch(
-    ClearSearch event,
-    Emitter<FriendState> emit,
-  ) {
+  void _onClearSearch(ClearSearch event, Emitter<FriendState> emit) {
     emit(const UserSearchResults(users: [], isSearching: false));
   }
 
@@ -140,18 +140,19 @@ class FriendBloc extends Bloc<FriendEvent, FriendState> {
     Emitter<FriendState> emit,
   ) async {
     final currentState = state;
-    
+
     final result = await repository.getPendingRequests(event.userId);
 
-    result.fold(
-      (failure) => emit(FriendError(message: failure.message)),
-      (pendingRequests) {
-        if (currentState is FriendsLoaded) {
-          emit(currentState.copyWith(pendingRequests: pendingRequests));
-        } else {
-          emit(FriendsLoaded(friends: const [], pendingRequests: pendingRequests));
-        }
-      },
-    );
+    result.fold((failure) => emit(FriendError(message: failure.message)), (
+      pendingRequests,
+    ) {
+      if (currentState is FriendsLoaded) {
+        emit(currentState.copyWith(pendingRequests: pendingRequests));
+      } else {
+        emit(
+          FriendsLoaded(friends: const [], pendingRequests: pendingRequests),
+        );
+      }
+    });
   }
 }

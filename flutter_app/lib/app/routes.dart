@@ -8,11 +8,8 @@ import '../core/services/logging_service.dart';
 import '../features/auth/domain/entities/user_entity.dart';
 import '../features/auth/presentation/bloc/auth_bloc.dart';
 import '../features/auth/presentation/pages/complete_profile_page.dart';
-import '../features/auth/presentation/pages/forgot_password_page.dart';
-import '../features/auth/presentation/pages/login_page.dart';
 import '../features/auth/presentation/pages/phone_login_page.dart';
 import '../features/auth/presentation/pages/phone_verify_page.dart';
-import '../features/auth/presentation/pages/signup_page.dart';
 import '../features/dashboard/presentation/pages/dashboard_page.dart';
 import '../features/profile/presentation/bloc/profile_bloc.dart';
 import '../features/profile/presentation/pages/edit_profile_page.dart';
@@ -63,8 +60,6 @@ class AppRouter {
     final isLoggedIn = FirebaseAuth.instance.currentUser != null;
     final isAuthRoute =
         state.matchedLocation == '/login' ||
-        state.matchedLocation == '/signup' ||
-        state.matchedLocation == '/forgot-password' ||
         state.matchedLocation == '/phone-login' ||
         state.matchedLocation == '/phone-verify' ||
         state.matchedLocation == '/link' ||
@@ -87,11 +82,13 @@ class AppRouter {
         tag: LogTags.navigation,
         data: {'from': state.matchedLocation},
       );
-      return '/login';
+      return '/phone-login';
     }
 
     // If logged in and on auth route (except complete-profile), redirect to dashboard
-    if (isLoggedIn && isAuthRoute && state.matchedLocation != '/complete-profile') {
+    if (isLoggedIn &&
+        isAuthRoute &&
+        state.matchedLocation != '/complete-profile') {
       _log.info(
         'Redirecting authenticated user to dashboard',
         tag: LogTags.navigation,
@@ -105,59 +102,11 @@ class AppRouter {
 
   /// Define all app routes
   static final List<RouteBase> _routes = [
-    // Auth Routes
+    // Auth Routes - Phone Login is the only login method
     GoRoute(
       path: '/login',
       name: 'login',
-      builder: (context, state) {
-        _log.debug('Navigating to login page', tag: LogTags.navigation);
-        return BlocProvider(
-          create: (_) => sl<AuthBloc>()..add(const AuthCheckRequested()),
-          child: const LoginPage(),
-        );
-      },
-    ),
-    GoRoute(
-      path: '/signup',
-      name: 'signup',
-      builder: (context, state) {
-        _log.debug('Navigating to signup page', tag: LogTags.navigation);
-        return BlocProvider(
-          create: (_) => sl<AuthBloc>(),
-          child: const SignUpPage(),
-        );
-      },
-    ),
-    GoRoute(
-      path: '/forgot-password',
-      name: 'forgot-password',
-      builder: (context, state) {
-        _log.debug(
-          'Navigating to forgot password page',
-          tag: LogTags.navigation,
-        );
-        return BlocProvider(
-          create: (_) => sl<AuthBloc>(),
-          child: const ForgotPasswordPage(),
-        );
-      },
-    ),
-    GoRoute(
-      path: '/complete-profile',
-      name: 'complete-profile',
-      builder: (context, state) {
-        _log.debug(
-          'Navigating to complete profile page',
-          tag: LogTags.navigation,
-        );
-        // User can be passed via extra, or will be loaded by the page
-        final extra = state.extra;
-        final user = extra is UserEntity ? extra : null;
-        return BlocProvider(
-          create: (_) => sl<AuthBloc>()..add(const AuthCheckRequested()),
-          child: CompleteProfilePage(user: user),
-        );
-      },
+      redirect: (_, __) => '/phone-login', // Redirect to phone login
     ),
     GoRoute(
       path: '/phone-login',
@@ -177,6 +126,23 @@ class AppRouter {
           verificationId: data['verificationId'] as String,
           phoneNumber: data['phoneNumber'] as String,
           resendToken: data['resendToken'] as int?,
+        );
+      },
+    ),
+    GoRoute(
+      path: '/complete-profile',
+      name: 'complete-profile',
+      builder: (context, state) {
+        _log.debug(
+          'Navigating to complete profile page',
+          tag: LogTags.navigation,
+        );
+        // User can be passed via extra, or will be loaded by the page
+        final extra = state.extra;
+        final user = extra is UserEntity ? extra : null;
+        return BlocProvider(
+          create: (_) => sl<AuthBloc>()..add(const AuthCheckRequested()),
+          child: CompleteProfilePage(user: user),
         );
       },
     ),
@@ -312,10 +278,6 @@ class AppRouter {
     ),
 
     // Handle Firebase Auth callback deep links (reCAPTCHA verification)
-    // This route handles the /link path that Firebase uses for auth callbacks
-    // During phone auth, Firebase opens a web view for reCAPTCHA and returns via this deep link
-    // Firebase SDK handles the callback internally and will trigger codeSent/verificationCompleted
-    // We just need to return to the PhoneLoginPage that initiated the verification
     GoRoute(
       path: '/link',
       builder: (context, state) {
@@ -324,22 +286,14 @@ class AppRouter {
           tag: LogTags.navigation,
           data: {'queryParams': state.uri.queryParameters},
         );
-        // Schedule a pop to return to the previous page (PhoneLoginPage)
-        // This allows Firebase to deliver the callback to the existing page instance
         WidgetsBinding.instance.addPostFrameCallback((_) {
           if (context.canPop()) {
             context.pop();
           } else {
-            // Fallback: if we can't pop, go to phone-login
             context.go('/phone-login');
           }
         });
-        // Show a loading indicator while we return
-        return const Scaffold(
-          body: Center(
-            child: CircularProgressIndicator(),
-          ),
-        );
+        return const Scaffold(body: Center(child: CircularProgressIndicator()));
       },
     ),
 
@@ -348,7 +302,7 @@ class AppRouter {
       path: '/',
       redirect: (context, state) {
         final isLoggedIn = FirebaseAuth.instance.currentUser != null;
-        final destination = isLoggedIn ? '/dashboard' : '/login';
+        final destination = isLoggedIn ? '/dashboard' : '/phone-login';
         _log.debug(
           'Root redirect',
           tag: LogTags.navigation,

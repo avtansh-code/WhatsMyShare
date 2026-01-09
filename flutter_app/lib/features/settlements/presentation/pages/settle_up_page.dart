@@ -344,7 +344,7 @@ class _SettleUpPageState extends State<SettleUpPage> {
               child: Text(member.displayName.substring(0, 1).toUpperCase()),
             ),
             title: Text(member.displayName),
-            subtitle: Text(member.email),
+            subtitle: Text(member.maskedPhone),
             onTap: () {
               onSelected(member.userId, member.displayName);
               Navigator.pop(context);

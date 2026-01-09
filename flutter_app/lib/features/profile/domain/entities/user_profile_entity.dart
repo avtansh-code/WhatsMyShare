@@ -1,12 +1,12 @@
 import 'package:equatable/equatable.dart';
 
 /// User profile entity with complete profile information
+/// Phone number is the primary identifier (phone-only authentication)
 class UserProfileEntity extends Equatable {
   final String id;
-  final String email;
+  final String phone; // Required - primary identifier
   final String? displayName;
   final String? photoUrl;
-  final String? phone;
   final String defaultCurrency;
   final String locale;
   final String timezone;
@@ -23,10 +23,9 @@ class UserProfileEntity extends Equatable {
 
   const UserProfileEntity({
     required this.id,
-    required this.email,
+    required this.phone,
     this.displayName,
     this.photoUrl,
-    this.phone,
     this.defaultCurrency = 'INR',
     this.locale = 'en-IN',
     this.timezone = 'Asia/Kolkata',
@@ -42,8 +41,17 @@ class UserProfileEntity extends Equatable {
     this.lastActiveAt,
   });
 
-  /// Get display name or email prefix
-  String get displayNameOrEmail => displayName ?? email.split('@').first;
+  /// Get display name or phone suffix for display
+  String get displayNameOrPhone {
+    if (displayName != null && displayName!.isNotEmpty) {
+      return displayName!;
+    }
+    // Show last 4 digits of phone
+    if (phone.length >= 4) {
+      return '****${phone.substring(phone.length - 4)}';
+    }
+    return phone;
+  }
 
   /// Get user initials for avatar
   String get initials {
@@ -54,7 +62,11 @@ class UserProfileEntity extends Equatable {
       }
       return displayName![0].toUpperCase();
     }
-    return email[0].toUpperCase();
+    // Use last 2 digits of phone as fallback
+    if (phone.length >= 2) {
+      return phone.substring(phone.length - 2);
+    }
+    return '??';
   }
 
   /// Net balance (positive = owed to user, negative = user owes)
@@ -66,10 +78,9 @@ class UserProfileEntity extends Equatable {
   /// Copy with new values
   UserProfileEntity copyWith({
     String? id,
-    String? email,
+    String? phone,
     String? displayName,
     String? photoUrl,
-    String? phone,
     String? defaultCurrency,
     String? locale,
     String? timezone,
@@ -86,10 +97,9 @@ class UserProfileEntity extends Equatable {
   }) {
     return UserProfileEntity(
       id: id ?? this.id,
-      email: email ?? this.email,
+      phone: phone ?? this.phone,
       displayName: displayName ?? this.displayName,
       photoUrl: photoUrl ?? this.photoUrl,
-      phone: phone ?? this.phone,
       defaultCurrency: defaultCurrency ?? this.defaultCurrency,
       locale: locale ?? this.locale,
       timezone: timezone ?? this.timezone,
@@ -109,10 +119,9 @@ class UserProfileEntity extends Equatable {
   @override
   List<Object?> get props => [
     id,
-    email,
+    phone,
     displayName,
     photoUrl,
-    phone,
     defaultCurrency,
     locale,
     timezone,

@@ -106,19 +106,19 @@ class UserProfileRepositoryImpl implements UserProfileRepository {
   @override
   Future<Either<Failure, UserProfileEntity>> createUserProfile({
     required String userId,
-    required String email,
+    required String phone,
     String? displayName,
     String? photoUrl,
   }) async {
     _log.info(
       'Creating user profile',
       tag: LogTags.profile,
-      data: {'userId': userId, 'email': email},
+      data: {'userId': userId, 'phone': phone},
     );
     try {
       final profile = await _dataSource.createUserProfile(
         userId: userId,
-        email: email,
+        phone: phone,
         displayName: displayName,
         photoUrl: photoUrl,
       );

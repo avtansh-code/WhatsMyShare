@@ -40,16 +40,15 @@ class PayerInfoModel {
 }
 
 /// Friend split participant model for Firestore
+/// Phone number is the primary identifier for users
 class FriendSplitParticipantModel {
   final String? userId;
-  final String? email;
   final String? phone;
   final String displayName;
   final String? photoUrl;
 
   const FriendSplitParticipantModel({
     this.userId,
-    this.email,
     this.phone,
     required this.displayName,
     this.photoUrl,
@@ -58,7 +57,6 @@ class FriendSplitParticipantModel {
   factory FriendSplitParticipantModel.fromMap(Map<String, dynamic> map) {
     return FriendSplitParticipantModel(
       userId: map['userId'] as String?,
-      email: map['email'] as String?,
       phone: map['phone'] as String?,
       displayName: map['displayName'] as String? ?? 'Unknown',
       photoUrl: map['photoUrl'] as String?,
@@ -68,7 +66,6 @@ class FriendSplitParticipantModel {
   Map<String, dynamic> toMap() {
     return {
       if (userId != null) 'userId': userId,
-      if (email != null) 'email': email,
       if (phone != null) 'phone': phone,
       'displayName': displayName,
       if (photoUrl != null) 'photoUrl': photoUrl,
@@ -78,17 +75,17 @@ class FriendSplitParticipantModel {
   FriendSplitParticipant toEntity() {
     return FriendSplitParticipant(
       userId: userId,
-      email: email,
       phone: phone,
       displayName: displayName,
       photoUrl: photoUrl,
     );
   }
 
-  factory FriendSplitParticipantModel.fromEntity(FriendSplitParticipant entity) {
+  factory FriendSplitParticipantModel.fromEntity(
+    FriendSplitParticipant entity,
+  ) {
     return FriendSplitParticipantModel(
       userId: entity.userId,
-      email: entity.email,
       phone: entity.phone,
       displayName: entity.displayName,
       photoUrl: entity.photoUrl,
@@ -110,12 +107,17 @@ class SplitContextModel {
 
   factory SplitContextModel.fromMap(Map<String, dynamic> map) {
     final typeStr = map['type'] as String? ?? 'group';
-    final type = typeStr == 'friends' ? SplitContextType.friends : SplitContextType.group;
-    
+    final type = typeStr == 'friends'
+        ? SplitContextType.friends
+        : SplitContextType.group;
+
     List<FriendSplitParticipantModel>? participants;
     if (map['friendParticipants'] != null) {
       participants = (map['friendParticipants'] as List<dynamic>)
-          .map((p) => FriendSplitParticipantModel.fromMap(p as Map<String, dynamic>))
+          .map(
+            (p) =>
+                FriendSplitParticipantModel.fromMap(p as Map<String, dynamic>),
+          )
           .toList();
     }
 
@@ -131,7 +133,9 @@ class SplitContextModel {
       'type': type.name,
       if (groupId != null) 'groupId': groupId,
       if (friendParticipants != null)
-        'friendParticipants': friendParticipants!.map((p) => p.toMap()).toList(),
+        'friendParticipants': friendParticipants!
+            .map((p) => p.toMap())
+            .toList(),
     };
   }
 
@@ -302,7 +306,9 @@ class ExpenseModel {
           : null,
       deletedBy: data['deletedBy'] as String?,
       splitContext: data['splitContext'] != null
-          ? SplitContextModel.fromMap(data['splitContext'] as Map<String, dynamic>)
+          ? SplitContextModel.fromMap(
+              data['splitContext'] as Map<String, dynamic>,
+            )
           : null,
     );
   }

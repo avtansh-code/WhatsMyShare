@@ -57,7 +57,8 @@ class FriendRepositoryImpl implements FriendRepository {
 
   @override
   Future<Either<Failure, FriendEntity>> acceptFriendRequest(
-      String friendId) async {
+    String friendId,
+  ) async {
     try {
       final model = await datasource.acceptFriendRequest(friendId);
       return Right(model.toEntity());
@@ -98,7 +99,8 @@ class FriendRepositoryImpl implements FriendRepository {
 
   @override
   Future<Either<Failure, List<RegisteredUser>>> searchUsers(
-      String query) async {
+    String query,
+  ) async {
     try {
       final models = await datasource.searchUsers(query);
       return Right(models.map((m) => m.toEntity()).toList());
@@ -109,7 +111,8 @@ class FriendRepositoryImpl implements FriendRepository {
 
   @override
   Future<Either<Failure, List<FriendEntity>>> getPendingRequests(
-      String userId) async {
+    String userId,
+  ) async {
     try {
       final models = await datasource.getPendingRequests(userId);
       return Right(models.map((m) => m.toEntity()).toList());

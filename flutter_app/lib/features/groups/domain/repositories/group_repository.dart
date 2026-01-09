@@ -56,7 +56,7 @@ abstract class GroupRepository {
     required String groupId,
     required String userId,
     required String displayName,
-    required String email,
+    String? phone,
     String? photoUrl,
     MemberRole role = MemberRole.member,
   });

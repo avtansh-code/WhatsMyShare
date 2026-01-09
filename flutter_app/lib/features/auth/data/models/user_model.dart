@@ -3,7 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../domain/entities/user_entity.dart';
 
 /// User model for data layer - handles Firestore serialization
-/// Phone number is the primary identifier - no email authentication
+/// Phone number is the primary identifier (phone-only authentication)
 class UserModel extends UserEntity {
   const UserModel({
     required super.id,

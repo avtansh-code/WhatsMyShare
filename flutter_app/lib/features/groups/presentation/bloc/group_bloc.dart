@@ -425,7 +425,7 @@ class GroupBloc extends Bloc<GroupEvent, GroupState> {
       groupId: event.groupId,
       userId: event.userId,
       displayName: event.displayName,
-      email: event.email,
+      phone: event.phone,
       photoUrl: event.photoUrl,
       role: event.role,
     );

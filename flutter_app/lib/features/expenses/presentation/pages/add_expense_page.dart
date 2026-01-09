@@ -83,7 +83,7 @@ class _AddExpenseFormState extends State<_AddExpenseForm> {
     if (user != null) {
       setState(() {
         _currentUserId = user.uid;
-        _currentUserName = user.displayName ?? user.email ?? 'You';
+        _currentUserName = user.displayName ?? user.phoneNumber ?? 'You';
       });
     }
   }

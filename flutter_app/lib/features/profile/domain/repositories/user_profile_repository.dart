@@ -19,7 +19,7 @@ abstract class UserProfileRepository {
   /// Create a new user profile
   Future<Either<Failure, UserProfileEntity>> createUserProfile({
     required String userId,
-    required String email,
+    required String phone,
     String? displayName,
     String? photoUrl,
   });

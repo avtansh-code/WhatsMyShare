@@ -7,11 +7,13 @@ enum GroupType { trip, home, couple, other }
 enum MemberRole { admin, member }
 
 /// Group member entity
+/// Phone number is the primary identifier for users
 class GroupMember extends Equatable {
   final String userId;
   final String displayName;
   final String? photoUrl;
-  final String email;
+  final String?
+  phone; // Phone number (optional, may be null during group creation)
   final DateTime joinedAt;
   final MemberRole role;
 
@@ -19,7 +21,7 @@ class GroupMember extends Equatable {
     required this.userId,
     required this.displayName,
     this.photoUrl,
-    required this.email,
+    this.phone,
     required this.joinedAt,
     required this.role,
   });
@@ -35,8 +37,17 @@ class GroupMember extends Equatable {
     return '${parts[0][0]}${parts[parts.length - 1][0]}'.toUpperCase();
   }
 
+  /// Get masked phone for display (show last 4 digits)
+  String get maskedPhone {
+    if (phone == null || phone!.isEmpty) return '';
+    if (phone!.length >= 4) {
+      return '****${phone!.substring(phone!.length - 4)}';
+    }
+    return phone!;
+  }
+
   @override
-  List<Object?> get props => [userId, email, role, joinedAt];
+  List<Object?> get props => [userId, phone, role, joinedAt];
 }
 
 /// Simplified debt between two users

@@ -82,7 +82,7 @@ abstract class GroupDataSource {
     required String groupId,
     required String userId,
     required String displayName,
-    required String email,
+    String? phone,
     String? photoUrl,
     MemberRole role = MemberRole.member,
   });
@@ -358,7 +358,7 @@ class GroupDataSourceImpl implements GroupDataSource {
         userId: userId,
         displayName: user.displayName ?? 'Unknown',
         photoUrl: user.photoURL,
-        email: user.email ?? '',
+        phone: user.phoneNumber,
         joinedAt: DateTime.now(),
         role: MemberRole.admin,
       );
@@ -567,7 +567,7 @@ class GroupDataSourceImpl implements GroupDataSource {
     required String groupId,
     required String userId,
     required String displayName,
-    required String email,
+    String? phone,
     String? photoUrl,
     MemberRole role = MemberRole.member,
   }) async {
@@ -581,7 +581,7 @@ class GroupDataSourceImpl implements GroupDataSource {
         userId: userId,
         displayName: displayName,
         photoUrl: photoUrl,
-        email: email,
+        phone: phone,
         joinedAt: DateTime.now(),
         role: role,
       );
@@ -684,7 +684,7 @@ class GroupDataSourceImpl implements GroupDataSource {
             userId: m.userId,
             displayName: m.displayName,
             photoUrl: m.photoUrl,
-            email: m.email,
+            phone: m.phone,
             joinedAt: m.joinedAt,
             role: newRole,
           );

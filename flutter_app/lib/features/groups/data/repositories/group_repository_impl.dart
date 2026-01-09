@@ -396,7 +396,7 @@ class GroupRepositoryImpl implements GroupRepository {
     required String groupId,
     required String userId,
     required String displayName,
-    required String email,
+    String? phone,
     String? photoUrl,
     MemberRole role = MemberRole.member,
   }) async {
@@ -410,7 +410,7 @@ class GroupRepositoryImpl implements GroupRepository {
         groupId: groupId,
         userId: userId,
         displayName: displayName,
-        email: email,
+        phone: phone,
         photoUrl: photoUrl,
         role: role,
       );

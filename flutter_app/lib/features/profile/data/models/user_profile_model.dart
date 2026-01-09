@@ -3,13 +3,13 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../domain/entities/user_profile_entity.dart';
 
 /// User profile model for Firestore serialization
+/// Phone number is the primary identifier (phone-only authentication)
 class UserProfileModel extends UserProfileEntity {
   const UserProfileModel({
     required super.id,
-    required super.email,
+    required super.phone,
     super.displayName,
     super.photoUrl,
-    super.phone,
     super.defaultCurrency,
     super.locale,
     super.timezone,
@@ -30,10 +30,9 @@ class UserProfileModel extends UserProfileEntity {
     final data = doc.data() as Map<String, dynamic>;
     return UserProfileModel(
       id: doc.id,
-      email: data['email'] as String? ?? '',
+      phone: data['phone'] as String? ?? '',
       displayName: data['displayName'] as String?,
       photoUrl: data['photoUrl'] as String?,
-      phone: data['phone'] as String?,
       defaultCurrency: data['defaultCurrency'] as String? ?? 'INR',
       locale: data['locale'] as String? ?? 'en-IN',
       timezone: data['timezone'] as String? ?? 'Asia/Kolkata',
@@ -54,10 +53,9 @@ class UserProfileModel extends UserProfileEntity {
   factory UserProfileModel.fromEntity(UserProfileEntity entity) {
     return UserProfileModel(
       id: entity.id,
-      email: entity.email,
+      phone: entity.phone,
       displayName: entity.displayName,
       photoUrl: entity.photoUrl,
-      phone: entity.phone,
       defaultCurrency: entity.defaultCurrency,
       locale: entity.locale,
       timezone: entity.timezone,
@@ -77,10 +75,9 @@ class UserProfileModel extends UserProfileEntity {
   /// Convert to Firestore document
   Map<String, dynamic> toFirestore() {
     return {
-      'email': email,
+      'phone': phone,
       'displayName': displayName,
       'photoUrl': photoUrl,
-      'phone': phone,
       'defaultCurrency': defaultCurrency,
       'locale': locale,
       'timezone': timezone,
@@ -102,10 +99,9 @@ class UserProfileModel extends UserProfileEntity {
   /// Create document for new user profile
   Map<String, dynamic> toCreateFirestore() {
     return {
-      'email': email,
+      'phone': phone,
       'displayName': displayName,
       'photoUrl': photoUrl,
-      'phone': phone,
       'defaultCurrency': defaultCurrency,
       'locale': locale,
       'timezone': timezone,
@@ -127,10 +123,9 @@ class UserProfileModel extends UserProfileEntity {
   UserProfileEntity toEntity() {
     return UserProfileEntity(
       id: id,
-      email: email,
+      phone: phone,
       displayName: displayName,
       photoUrl: photoUrl,
-      phone: phone,
       defaultCurrency: defaultCurrency,
       locale: locale,
       timezone: timezone,

@@ -6,7 +6,6 @@ import '../entities/user_entity.dart';
 
 /// Authentication repository interface
 /// Supports ONLY phone-based authentication
-/// No email/password or social login methods
 abstract class AuthRepository {
   /// Get the currently authenticated user
   /// Returns null if no user is signed in

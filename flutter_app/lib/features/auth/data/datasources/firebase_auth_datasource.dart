@@ -6,7 +6,6 @@ import '../../../../core/services/logging_service.dart';
 import '../models/user_model.dart';
 
 /// Firebase Auth data source for phone-based authentication ONLY
-/// No email/password or social login methods
 abstract class FirebaseAuthDataSource {
   /// Get the currently authenticated user
   Future<UserModel?> getCurrentUser();
@@ -79,9 +78,9 @@ class FirebaseAuthDataSourceImpl implements FirebaseAuthDataSource {
     firebase_auth.FirebaseAuth? firebaseAuth,
     FirebaseFirestore? firestore,
     required LoggingService loggingService,
-  })  : _firebaseAuth = firebaseAuth ?? firebase_auth.FirebaseAuth.instance,
-        _firestore = firestore ?? FirebaseFirestore.instance,
-        _loggingService = loggingService;
+  }) : _firebaseAuth = firebaseAuth ?? firebase_auth.FirebaseAuth.instance,
+       _firestore = firestore ?? FirebaseFirestore.instance,
+       _loggingService = loggingService;
 
   @override
   Future<UserModel?> getCurrentUser() async {
@@ -92,8 +91,10 @@ class FirebaseAuthDataSourceImpl implements FirebaseAuthDataSource {
       }
 
       // Get user data from Firestore
-      final userDoc =
-          await _firestore.collection('users').doc(firebaseUser.uid).get();
+      final userDoc = await _firestore
+          .collection('users')
+          .doc(firebaseUser.uid)
+          .get();
 
       if (!userDoc.exists) {
         // User exists in Firebase Auth but not in Firestore
@@ -109,8 +110,14 @@ class FirebaseAuthDataSourceImpl implements FirebaseAuthDataSource {
 
       return UserModel.fromFirestore(userDoc);
     } catch (e, stackTrace) {
-      _loggingService.error('Error getting current user', e, stackTrace);
-      throw ServerException(message: 'Failed to get current user: ${e.toString()}');
+      _loggingService.error(
+        'Error getting current user',
+        error: e,
+        stackTrace: stackTrace,
+      );
+      throw ServerException(
+        message: 'Failed to get current user: ${e.toString()}',
+      );
     }
   }
 
@@ -122,8 +129,10 @@ class FirebaseAuthDataSourceImpl implements FirebaseAuthDataSource {
       }
 
       try {
-        final userDoc =
-            await _firestore.collection('users').doc(firebaseUser.uid).get();
+        final userDoc = await _firestore
+            .collection('users')
+            .doc(firebaseUser.uid)
+            .get();
 
         if (!userDoc.exists) {
           // New user - return basic info from Firebase Auth
@@ -138,7 +147,7 @@ class FirebaseAuthDataSourceImpl implements FirebaseAuthDataSource {
 
         return UserModel.fromFirestore(userDoc);
       } catch (e) {
-        _loggingService.error('Error in auth state changes', e);
+        _loggingService.error('Error in auth state changes', error: e);
         return null;
       }
     });
@@ -165,8 +174,14 @@ class FirebaseAuthDataSourceImpl implements FirebaseAuthDataSource {
         forceResendingToken: forceResendingToken,
       );
     } catch (e, stackTrace) {
-      _loggingService.error('Error verifying phone number', e, stackTrace);
-      throw AuthException(message: 'Failed to verify phone number: ${e.toString()}');
+      _loggingService.error(
+        'Error verifying phone number',
+        error: e,
+        stackTrace: stackTrace,
+      );
+      throw AuthException(
+        message: 'Failed to verify phone number: ${e.toString()}',
+      );
     }
   }
 
@@ -183,10 +198,18 @@ class FirebaseAuthDataSourceImpl implements FirebaseAuthDataSource {
 
       return await _signInWithCredential(credential);
     } on firebase_auth.FirebaseAuthException catch (e, stackTrace) {
-      _loggingService.error('Firebase auth error', e, stackTrace);
+      _loggingService.error(
+        'Firebase auth error',
+        error: e,
+        stackTrace: stackTrace,
+      );
       throw _mapFirebaseAuthException(e);
     } catch (e, stackTrace) {
-      _loggingService.error('Error signing in with phone credential', e, stackTrace);
+      _loggingService.error(
+        'Error signing in with phone credential',
+        error: e,
+        stackTrace: stackTrace,
+      );
       throw AuthException(message: 'Failed to sign in: ${e.toString()}');
     }
   }
@@ -198,10 +221,18 @@ class FirebaseAuthDataSourceImpl implements FirebaseAuthDataSource {
     try {
       return await _signInWithCredential(credential);
     } on firebase_auth.FirebaseAuthException catch (e, stackTrace) {
-      _loggingService.error('Firebase auth error', e, stackTrace);
+      _loggingService.error(
+        'Firebase auth error',
+        error: e,
+        stackTrace: stackTrace,
+      );
       throw _mapFirebaseAuthException(e);
     } catch (e, stackTrace) {
-      _loggingService.error('Error signing in with auto-retrieved credential', e, stackTrace);
+      _loggingService.error(
+        'Error signing in with auto-retrieved credential',
+        error: e,
+        stackTrace: stackTrace,
+      );
       throw AuthException(message: 'Failed to sign in: ${e.toString()}');
     }
   }
@@ -217,8 +248,10 @@ class FirebaseAuthDataSourceImpl implements FirebaseAuthDataSource {
     }
 
     // Check if user exists in Firestore
-    final userDoc =
-        await _firestore.collection('users').doc(firebaseUser.uid).get();
+    final userDoc = await _firestore
+        .collection('users')
+        .doc(firebaseUser.uid)
+        .get();
 
     if (!userDoc.exists) {
       // New user - create initial record
@@ -277,8 +310,14 @@ class FirebaseAuthDataSourceImpl implements FirebaseAuthDataSource {
         await _firestore.collection('users').doc(firebaseUser.uid).get(),
       );
     } catch (e, stackTrace) {
-      _loggingService.error('Error updating profile', e, stackTrace);
-      throw ServerException(message: 'Failed to update profile: ${e.toString()}');
+      _loggingService.error(
+        'Error updating profile',
+        error: e,
+        stackTrace: stackTrace,
+      );
+      throw ServerException(
+        message: 'Failed to update profile: ${e.toString()}',
+      );
     }
   }
 
@@ -311,14 +350,23 @@ class FirebaseAuthDataSourceImpl implements FirebaseAuthDataSource {
       if (defaultCurrency != null) updates['defaultCurrency'] = defaultCurrency;
       if (countryCode != null) updates['countryCode'] = countryCode;
 
-      await _firestore.collection('users').doc(firebaseUser.uid).update(updates);
+      await _firestore
+          .collection('users')
+          .doc(firebaseUser.uid)
+          .update(updates);
 
       return UserModel.fromFirestore(
         await _firestore.collection('users').doc(firebaseUser.uid).get(),
       );
     } catch (e, stackTrace) {
-      _loggingService.error('Error completing profile setup', e, stackTrace);
-      throw ServerException(message: 'Failed to complete profile setup: ${e.toString()}');
+      _loggingService.error(
+        'Error completing profile setup',
+        error: e,
+        stackTrace: stackTrace,
+      );
+      throw ServerException(
+        message: 'Failed to complete profile setup: ${e.toString()}',
+      );
     }
   }
 
@@ -327,7 +375,11 @@ class FirebaseAuthDataSourceImpl implements FirebaseAuthDataSource {
     try {
       await _firebaseAuth.signOut();
     } catch (e, stackTrace) {
-      _loggingService.error('Error signing out', e, stackTrace);
+      _loggingService.error(
+        'Error signing out',
+        error: e,
+        stackTrace: stackTrace,
+      );
       throw AuthException(message: 'Failed to sign out: ${e.toString()}');
     }
   }
@@ -346,11 +398,21 @@ class FirebaseAuthDataSourceImpl implements FirebaseAuthDataSource {
       // Delete Firebase Auth account
       await firebaseUser.delete();
     } on firebase_auth.FirebaseAuthException catch (e, stackTrace) {
-      _loggingService.error('Firebase auth error during account deletion', e, stackTrace);
+      _loggingService.error(
+        'Firebase auth error during account deletion',
+        error: e,
+        stackTrace: stackTrace,
+      );
       throw _mapFirebaseAuthException(e);
     } catch (e, stackTrace) {
-      _loggingService.error('Error deleting account', e, stackTrace);
-      throw ServerException(message: 'Failed to delete account: ${e.toString()}');
+      _loggingService.error(
+        'Error deleting account',
+        error: e,
+        stackTrace: stackTrace,
+      );
+      throw ServerException(
+        message: 'Failed to delete account: ${e.toString()}',
+      );
     }
   }
 
@@ -365,8 +427,14 @@ class FirebaseAuthDataSourceImpl implements FirebaseAuthDataSource {
 
       return querySnapshot.docs.isNotEmpty;
     } catch (e, stackTrace) {
-      _loggingService.error('Error checking phone registration', e, stackTrace);
-      throw ServerException(message: 'Failed to check phone registration: ${e.toString()}');
+      _loggingService.error(
+        'Error checking phone registration',
+        error: e,
+        stackTrace: stackTrace,
+      );
+      throw ServerException(
+        message: 'Failed to check phone registration: ${e.toString()}',
+      );
     }
   }
 
@@ -385,8 +453,14 @@ class FirebaseAuthDataSourceImpl implements FirebaseAuthDataSource {
 
       return UserModel.fromFirestore(querySnapshot.docs.first);
     } catch (e, stackTrace) {
-      _loggingService.error('Error getting user by phone', e, stackTrace);
-      throw ServerException(message: 'Failed to get user by phone: ${e.toString()}');
+      _loggingService.error(
+        'Error getting user by phone',
+        error: e,
+        stackTrace: stackTrace,
+      );
+      throw ServerException(
+        message: 'Failed to get user by phone: ${e.toString()}',
+      );
     }
   }
 
@@ -402,7 +476,11 @@ class FirebaseAuthDataSourceImpl implements FirebaseAuthDataSource {
         'fcmTokens': FieldValue.arrayUnion([token]),
       });
     } catch (e, stackTrace) {
-      _loggingService.error('Error updating FCM token', e, stackTrace);
+      _loggingService.error(
+        'Error updating FCM token',
+        error: e,
+        stackTrace: stackTrace,
+      );
       // Don't throw - FCM token update failure shouldn't break the app
     }
   }
@@ -419,30 +497,48 @@ class FirebaseAuthDataSourceImpl implements FirebaseAuthDataSource {
         'fcmTokens': FieldValue.arrayRemove([token]),
       });
     } catch (e, stackTrace) {
-      _loggingService.error('Error removing FCM token', e, stackTrace);
+      _loggingService.error(
+        'Error removing FCM token',
+        error: e,
+        stackTrace: stackTrace,
+      );
       // Don't throw - FCM token removal failure shouldn't break the app
     }
   }
 
   /// Map Firebase Auth exceptions to our custom exceptions
-  AuthException _mapFirebaseAuthException(firebase_auth.FirebaseAuthException e) {
+  AuthException _mapFirebaseAuthException(
+    firebase_auth.FirebaseAuthException e,
+  ) {
     switch (e.code) {
       case 'invalid-verification-code':
-        return const AuthException(message: 'Invalid verification code. Please try again.');
+        return const AuthException(
+          message: 'Invalid verification code. Please try again.',
+        );
       case 'invalid-verification-id':
-        return const AuthException(message: 'Verification session expired. Please request a new code.');
+        return const AuthException(
+          message: 'Verification session expired. Please request a new code.',
+        );
       case 'session-expired':
-        return const AuthException(message: 'Verification session expired. Please request a new code.');
+        return const AuthException(
+          message: 'Verification session expired. Please request a new code.',
+        );
       case 'too-many-requests':
-        return const AuthException(message: 'Too many attempts. Please try again later.');
+        return const AuthException(
+          message: 'Too many attempts. Please try again later.',
+        );
       case 'invalid-phone-number':
         return const AuthException(message: 'Invalid phone number format.');
       case 'quota-exceeded':
-        return const AuthException(message: 'SMS quota exceeded. Please try again later.');
+        return const AuthException(
+          message: 'SMS quota exceeded. Please try again later.',
+        );
       case 'user-disabled':
         return const AuthException(message: 'This account has been disabled.');
       case 'requires-recent-login':
-        return const AuthException(message: 'Please sign in again to complete this action.');
+        return const AuthException(
+          message: 'Please sign in again to complete this action.',
+        );
       default:
         return AuthException(message: e.message ?? 'Authentication failed');
     }

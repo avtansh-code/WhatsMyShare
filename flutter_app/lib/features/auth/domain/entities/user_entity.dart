@@ -1,7 +1,7 @@
 import 'package:equatable/equatable.dart';
 
 /// User entity representing authenticated user
-/// Authentication is ONLY via phone number - no email/password or social login
+/// Authentication is ONLY via phone number
 class UserEntity extends Equatable {
   final String id;
   final String? displayName;

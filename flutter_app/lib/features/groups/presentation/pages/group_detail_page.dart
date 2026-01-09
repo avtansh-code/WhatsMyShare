@@ -332,7 +332,6 @@ class _GroupDetailPageState extends State<GroupDetailPage>
           orElse: () => GroupMember(
             userId: entry.key,
             displayName: 'Unknown',
-            email: '',
             joinedAt: DateTime.now(),
             role: MemberRole.member,
           ),
@@ -413,7 +412,7 @@ class _GroupDetailPageState extends State<GroupDetailPage>
                 ],
               ],
             ),
-            subtitle: Text(member.email),
+            subtitle: Text(member.maskedPhone),
             trailing: PopupMenuButton<String>(
               onSelected: (value) =>
                   _handleMemberAction(context, value, group, member),

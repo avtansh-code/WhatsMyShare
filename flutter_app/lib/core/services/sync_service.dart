@@ -272,29 +272,29 @@ class SyncService {
     final groupId = operation.entityId;
     if (groupId == null) throw Exception('Group ID required');
 
-    final email = operation.data['email'] as String?;
-    if (email == null) throw Exception('Email required');
+    final phone = operation.data['phone'] as String?;
+    if (phone == null) throw Exception('Phone number required');
 
     _log.debug(
       'Adding group member via sync',
       tag: LogTags.sync,
-      data: {'groupId': groupId, 'email': email},
+      data: {'groupId': groupId, 'phone': phone},
     );
 
-    // Find user by email
+    // Find user by phone number
     final userQuery = await _firestore
         .collection('users')
-        .where('email', isEqualTo: email)
+        .where('phone', isEqualTo: phone)
         .limit(1)
         .get();
 
     if (userQuery.docs.isEmpty) {
       _log.warning(
-        'User not found for email',
+        'User not found for phone',
         tag: LogTags.sync,
-        data: {'email': email},
+        data: {'phone': phone},
       );
-      throw Exception('User not found with email: $email');
+      throw Exception('User not found with phone: $phone');
     }
 
     final userId = userQuery.docs.first.id;

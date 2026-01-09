@@ -4,30 +4,28 @@ import 'exceptions.dart';
 /// Centralized error messages for user-friendly display
 /// Ready for localization (l10n)
 class ErrorMessages {
-  // ==================== Authentication ====================
-  static const String authInvalidEmail = 'Please enter a valid email address.';
-  static const String authInvalidPassword =
-      'Password must be at least 6 characters.';
-  static const String authUserNotFound =
-      'No account found with this email. Please sign up.';
-  static const String authWrongPassword =
-      'Incorrect password. Please try again.';
-  static const String authEmailInUse =
-      'An account already exists with this email.';
-  static const String authWeakPassword = 'Please choose a stronger password.';
+  // ==================== Authentication (Phone OTP) ====================
+  static const String authInvalidPhoneNumber =
+      'Please enter a valid phone number.';
+  static const String authUserNotFound = 'No account found. Please sign up.';
+  static const String authPhoneInUse =
+      'This phone number is already registered.';
+  static const String authInvalidOtp =
+      'Invalid verification code. Please try again.';
+  static const String authOtpExpired =
+      'Verification code expired. Please request a new one.';
   static const String authSignInFailed = 'Sign in failed. Please try again.';
   static const String authSignUpFailed = 'Sign up failed. Please try again.';
   static const String authSignOutFailed = 'Sign out failed. Please try again.';
-  static const String authResetPasswordFailed =
-      'Failed to send password reset email.';
-  static const String authGoogleSignInCancelled =
-      'Google sign in was cancelled.';
-  static const String authGoogleSignInFailed =
-      'Google sign in failed. Please try again.';
   static const String authSessionExpired =
       'Your session has expired. Please sign in again.';
   static const String authUnauthorized =
       'You are not authorized to perform this action.';
+  static const String authTooManyRequests =
+      'Too many attempts. Please try again later.';
+  static const String authVerificationFailed =
+      'Phone verification failed. Please try again.';
+  static const String authOtpSendFailed = 'Failed to send verification code.';
 
   // ==================== Profile ====================
   static const String profileLoadFailed =
@@ -212,18 +210,18 @@ class ErrorMessages {
     switch (code) {
       case 'user-not-found':
         return authUserNotFound;
-      case 'wrong-password':
-        return authWrongPassword;
-      case 'email-already-in-use':
-        return authEmailInUse;
-      case 'weak-password':
-        return authWeakPassword;
-      case 'invalid-email':
-        return authInvalidEmail;
+      case 'invalid-phone-number':
+        return authInvalidPhoneNumber;
+      case 'invalid-verification-code':
+        return authInvalidOtp;
+      case 'session-expired':
+        return authOtpExpired;
+      case 'too-many-requests':
+        return authTooManyRequests;
+      case 'quota-exceeded':
+        return authTooManyRequests;
       case 'user-disabled':
         return 'This account has been disabled.';
-      case 'too-many-requests':
-        return 'Too many attempts. Please try again later.';
       case 'operation-not-allowed':
         return 'This sign-in method is not enabled.';
       case 'network-request-failed':
@@ -233,24 +231,15 @@ class ErrorMessages {
     }
   }
 
-  /// Get validation error message
-  static String? validateEmail(String? email) {
-    if (email == null || email.isEmpty) {
-      return 'Email is required.';
+  /// Get validation error message for phone number
+  static String? validatePhoneNumber(String? phone) {
+    if (phone == null || phone.isEmpty) {
+      return 'Phone number is required.';
     }
-    final emailRegex = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
-    if (!emailRegex.hasMatch(email)) {
-      return authInvalidEmail;
-    }
-    return null;
-  }
-
-  static String? validatePassword(String? password) {
-    if (password == null || password.isEmpty) {
-      return 'Password is required.';
-    }
-    if (password.length < 6) {
-      return authInvalidPassword;
+    // Remove any non-digit characters for validation
+    final digitsOnly = phone.replaceAll(RegExp(r'[^\d]'), '');
+    if (digitsOnly.length < 10) {
+      return authInvalidPhoneNumber;
     }
     return null;
   }
@@ -275,6 +264,19 @@ class ErrorMessages {
     }
     if (parsedAmount <= 0) {
       return expenseAmountZero;
+    }
+    return null;
+  }
+
+  static String? validateOtp(String? otp) {
+    if (otp == null || otp.isEmpty) {
+      return 'Verification code is required.';
+    }
+    if (otp.length != 6) {
+      return 'Please enter a 6-digit verification code.';
+    }
+    if (!RegExp(r'^\d{6}$').hasMatch(otp)) {
+      return 'Verification code must be 6 digits.';
     }
     return null;
   }

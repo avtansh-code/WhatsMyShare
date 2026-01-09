@@ -16,8 +16,8 @@ class AuthRepositoryImpl implements AuthRepository {
   AuthRepositoryImpl({
     required FirebaseAuthDataSource dataSource,
     required LoggingService loggingService,
-  })  : _dataSource = dataSource,
-        _loggingService = loggingService;
+  }) : _dataSource = dataSource,
+       _loggingService = loggingService;
 
   @override
   Future<Either<Failure, UserEntity?>> getCurrentUser() async {
@@ -25,10 +25,10 @@ class AuthRepositoryImpl implements AuthRepository {
       final user = await _dataSource.getCurrentUser();
       return Right(user);
     } on ServerException catch (e) {
-      _loggingService.error('Server error getting current user', e);
+      _loggingService.error('Server error getting current user', error: e);
       return Left(ServerFailure(message: e.message));
     } catch (e) {
-      _loggingService.error('Unexpected error getting current user', e);
+      _loggingService.error('Unexpected error getting current user', error: e);
       return Left(ServerFailure(message: 'Failed to get current user'));
     }
   }
@@ -59,10 +59,10 @@ class AuthRepositoryImpl implements AuthRepository {
       // Return success - actual verification ID comes via codeSent callback
       return const Right('Verification started');
     } on AuthException catch (e) {
-      _loggingService.error('Auth error verifying phone', e);
+      _loggingService.error('Auth error verifying phone', error: e);
       return Left(AuthFailure(message: e.message));
     } catch (e) {
-      _loggingService.error('Unexpected error verifying phone', e);
+      _loggingService.error('Unexpected error verifying phone', error: e);
       return Left(AuthFailure(message: 'Failed to verify phone number'));
     }
   }
@@ -79,10 +79,10 @@ class AuthRepositoryImpl implements AuthRepository {
       );
       return Right(user);
     } on AuthException catch (e) {
-      _loggingService.error('Auth error signing in with phone', e);
+      _loggingService.error('Auth error signing in with phone', error: e);
       return Left(AuthFailure(message: e.message));
     } catch (e) {
-      _loggingService.error('Unexpected error signing in with phone', e);
+      _loggingService.error('Unexpected error signing in with phone', error: e);
       return Left(AuthFailure(message: 'Failed to sign in'));
     }
   }
@@ -92,13 +92,21 @@ class AuthRepositoryImpl implements AuthRepository {
     firebase_auth.PhoneAuthCredential credential,
   ) async {
     try {
-      final user = await _dataSource.signInWithAutoRetrievedCredential(credential);
+      final user = await _dataSource.signInWithAutoRetrievedCredential(
+        credential,
+      );
       return Right(user);
     } on AuthException catch (e) {
-      _loggingService.error('Auth error with auto-retrieved credential', e);
+      _loggingService.error(
+        'Auth error with auto-retrieved credential',
+        error: e,
+      );
       return Left(AuthFailure(message: e.message));
     } catch (e) {
-      _loggingService.error('Unexpected error with auto-retrieved credential', e);
+      _loggingService.error(
+        'Unexpected error with auto-retrieved credential',
+        error: e,
+      );
       return Left(AuthFailure(message: 'Failed to sign in'));
     }
   }
@@ -115,10 +123,10 @@ class AuthRepositoryImpl implements AuthRepository {
       );
       return Right(user);
     } on ServerException catch (e) {
-      _loggingService.error('Server error updating profile', e);
+      _loggingService.error('Server error updating profile', error: e);
       return Left(ServerFailure(message: e.message));
     } catch (e) {
-      _loggingService.error('Unexpected error updating profile', e);
+      _loggingService.error('Unexpected error updating profile', error: e);
       return Left(ServerFailure(message: 'Failed to update profile'));
     }
   }
@@ -139,10 +147,10 @@ class AuthRepositoryImpl implements AuthRepository {
       );
       return Right(user);
     } on ServerException catch (e) {
-      _loggingService.error('Server error completing profile', e);
+      _loggingService.error('Server error completing profile', error: e);
       return Left(ServerFailure(message: e.message));
     } catch (e) {
-      _loggingService.error('Unexpected error completing profile', e);
+      _loggingService.error('Unexpected error completing profile', error: e);
       return Left(ServerFailure(message: 'Failed to complete profile setup'));
     }
   }
@@ -153,10 +161,10 @@ class AuthRepositoryImpl implements AuthRepository {
       await _dataSource.signOut();
       return const Right(null);
     } on AuthException catch (e) {
-      _loggingService.error('Auth error signing out', e);
+      _loggingService.error('Auth error signing out', error: e);
       return Left(AuthFailure(message: e.message));
     } catch (e) {
-      _loggingService.error('Unexpected error signing out', e);
+      _loggingService.error('Unexpected error signing out', error: e);
       return Left(AuthFailure(message: 'Failed to sign out'));
     }
   }
@@ -167,38 +175,50 @@ class AuthRepositoryImpl implements AuthRepository {
       await _dataSource.deleteAccount();
       return const Right(null);
     } on AuthException catch (e) {
-      _loggingService.error('Auth error deleting account', e);
+      _loggingService.error('Auth error deleting account', error: e);
       return Left(AuthFailure(message: e.message));
     } catch (e) {
-      _loggingService.error('Unexpected error deleting account', e);
+      _loggingService.error('Unexpected error deleting account', error: e);
       return Left(AuthFailure(message: 'Failed to delete account'));
     }
   }
 
   @override
-  Future<Either<Failure, bool>> isPhoneNumberRegistered(String phoneNumber) async {
+  Future<Either<Failure, bool>> isPhoneNumberRegistered(
+    String phoneNumber,
+  ) async {
     try {
-      final isRegistered = await _dataSource.isPhoneNumberRegistered(phoneNumber);
+      final isRegistered = await _dataSource.isPhoneNumberRegistered(
+        phoneNumber,
+      );
       return Right(isRegistered);
     } on ServerException catch (e) {
-      _loggingService.error('Server error checking phone registration', e);
+      _loggingService.error(
+        'Server error checking phone registration',
+        error: e,
+      );
       return Left(ServerFailure(message: e.message));
     } catch (e) {
-      _loggingService.error('Unexpected error checking phone registration', e);
+      _loggingService.error(
+        'Unexpected error checking phone registration',
+        error: e,
+      );
       return Left(ServerFailure(message: 'Failed to check phone registration'));
     }
   }
 
   @override
-  Future<Either<Failure, UserEntity?>> getUserByPhoneNumber(String phoneNumber) async {
+  Future<Either<Failure, UserEntity?>> getUserByPhoneNumber(
+    String phoneNumber,
+  ) async {
     try {
       final user = await _dataSource.getUserByPhoneNumber(phoneNumber);
       return Right(user);
     } on ServerException catch (e) {
-      _loggingService.error('Server error getting user by phone', e);
+      _loggingService.error('Server error getting user by phone', error: e);
       return Left(ServerFailure(message: e.message));
     } catch (e) {
-      _loggingService.error('Unexpected error getting user by phone', e);
+      _loggingService.error('Unexpected error getting user by phone', error: e);
       return Left(ServerFailure(message: 'Failed to get user'));
     }
   }
@@ -209,7 +229,7 @@ class AuthRepositoryImpl implements AuthRepository {
       await _dataSource.updateFcmToken(token);
       return const Right(null);
     } catch (e) {
-      _loggingService.error('Error updating FCM token', e);
+      _loggingService.error('Error updating FCM token', error: e);
       // Don't fail silently for FCM token updates
       return const Right(null);
     }
@@ -221,7 +241,7 @@ class AuthRepositoryImpl implements AuthRepository {
       await _dataSource.removeFcmToken(token);
       return const Right(null);
     } catch (e) {
-      _loggingService.error('Error removing FCM token', e);
+      _loggingService.error('Error removing FCM token', error: e);
       return const Right(null);
     }
   }

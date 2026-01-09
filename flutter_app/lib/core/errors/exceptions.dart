@@ -68,26 +68,26 @@ class AuthException extends AppException {
   });
 
   factory AuthException.invalidCredentials() => const AuthException(
-    message: 'Invalid email or password',
+    message: 'Invalid credentials',
     code: 'INVALID_CREDENTIALS',
   );
 
   factory AuthException.userNotFound() =>
       const AuthException(message: 'User not found', code: 'USER_NOT_FOUND');
 
-  factory AuthException.emailAlreadyInUse() => const AuthException(
-    message: 'Email is already registered',
-    code: 'EMAIL_ALREADY_IN_USE',
+  factory AuthException.phoneAlreadyInUse() => const AuthException(
+    message: 'Phone number is already registered',
+    code: 'PHONE_ALREADY_IN_USE',
   );
 
-  factory AuthException.weakPassword() => const AuthException(
-    message: 'Password is too weak',
-    code: 'WEAK_PASSWORD',
+  factory AuthException.invalidPhoneNumber() => const AuthException(
+    message: 'Invalid phone number',
+    code: 'INVALID_PHONE_NUMBER',
   );
 
-  factory AuthException.invalidEmail() => const AuthException(
-    message: 'Invalid email address',
-    code: 'INVALID_EMAIL',
+  factory AuthException.invalidOtp() => const AuthException(
+    message: 'Invalid verification code',
+    code: 'INVALID_OTP',
   );
 
   factory AuthException.sessionExpired() => const AuthException(

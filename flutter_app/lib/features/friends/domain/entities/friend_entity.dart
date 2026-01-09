@@ -2,13 +2,14 @@ import 'package:equatable/equatable.dart';
 
 /// Status of a friend relationship
 enum FriendStatus {
-  pending,    // Friend request sent, waiting for acceptance
-  accepted,   // Both users have accepted friendship
-  blocked,    // User blocked this friend
+  pending, // Friend request sent, waiting for acceptance
+  accepted, // Both users have accepted friendship
+  blocked, // User blocked this friend
 }
 
 /// Friend entity - represents a friendship between two REGISTERED users
 /// Both the user and friend must be registered in the app
+/// Phone number is the primary identifier for searching users
 class FriendEntity extends Equatable {
   /// Unique friend relationship ID
   final String id;
@@ -22,11 +23,8 @@ class FriendEntity extends Equatable {
   /// Display name of the friend (from their profile)
   final String displayName;
 
-  /// Email of the friend (from their profile)
-  final String email;
-
-  /// Phone number of the friend (optional, from their profile)
-  final String? phone;
+  /// Phone number of the friend (required - primary identifier)
+  final String phone;
 
   /// Profile photo URL of the friend
   final String? photoUrl;
@@ -45,8 +43,7 @@ class FriendEntity extends Equatable {
     required this.userId,
     required this.friendUserId,
     required this.displayName,
-    required this.email,
-    this.phone,
+    required this.phone,
     this.photoUrl,
     required this.status,
     required this.createdAt,
@@ -62,12 +59,19 @@ class FriendEntity extends Equatable {
   /// Check if the friend is blocked
   bool get isBlocked => status == FriendStatus.blocked;
 
+  /// Get masked phone for display (show last 4 digits)
+  String get maskedPhone {
+    if (phone.length >= 4) {
+      return '****${phone.substring(phone.length - 4)}';
+    }
+    return phone;
+  }
+
   FriendEntity copyWith({
     String? id,
     String? userId,
     String? friendUserId,
     String? displayName,
-    String? email,
     String? phone,
     String? photoUrl,
     FriendStatus? status,
@@ -79,7 +83,6 @@ class FriendEntity extends Equatable {
       userId: userId ?? this.userId,
       friendUserId: friendUserId ?? this.friendUserId,
       displayName: displayName ?? this.displayName,
-      email: email ?? this.email,
       phone: phone ?? this.phone,
       photoUrl: photoUrl ?? this.photoUrl,
       status: status ?? this.status,
@@ -90,21 +93,21 @@ class FriendEntity extends Equatable {
 
   @override
   List<Object?> get props => [
-        id,
-        userId,
-        friendUserId,
-        displayName,
-        email,
-        phone,
-        photoUrl,
-        status,
-        createdAt,
-        updatedAt,
-      ];
+    id,
+    userId,
+    friendUserId,
+    displayName,
+    phone,
+    photoUrl,
+    status,
+    createdAt,
+    updatedAt,
+  ];
 }
 
 /// A registered user who can be added as a friend or to an expense
 /// This ensures all participants in expenses are registered users
+/// Phone number is the primary identifier
 class RegisteredUser extends Equatable {
   /// The user's unique ID in Firebase Auth
   final String id;
@@ -112,11 +115,8 @@ class RegisteredUser extends Equatable {
   /// The user's display name
   final String displayName;
 
-  /// The user's email (always present for registered users)
-  final String email;
-
-  /// The user's phone number (optional)
-  final String? phone;
+  /// The user's phone number (required - primary identifier)
+  final String phone;
 
   /// The user's profile photo URL
   final String? photoUrl;
@@ -124,13 +124,20 @@ class RegisteredUser extends Equatable {
   const RegisteredUser({
     required this.id,
     required this.displayName,
-    required this.email,
-    this.phone,
+    required this.phone,
     this.photoUrl,
   });
 
+  /// Get masked phone for display (show last 4 digits)
+  String get maskedPhone {
+    if (phone.length >= 4) {
+      return '****${phone.substring(phone.length - 4)}';
+    }
+    return phone;
+  }
+
   @override
-  List<Object?> get props => [id, displayName, email, phone, photoUrl];
+  List<Object?> get props => [id, displayName, phone, photoUrl];
 }
 
 /// Extension to convert FriendEntity to RegisteredUser for expense splits
@@ -139,7 +146,6 @@ extension FriendToUser on FriendEntity {
     return RegisteredUser(
       id: friendUserId,
       displayName: displayName,
-      email: email,
       phone: phone,
       photoUrl: photoUrl,
     );

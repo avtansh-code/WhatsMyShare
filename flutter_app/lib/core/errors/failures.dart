@@ -40,21 +40,31 @@ class AuthFailure extends Failure {
   const AuthFailure({required super.message, super.code});
 
   factory AuthFailure.invalidCredentials() => const AuthFailure(
-    message: 'Invalid email or password',
+    message: 'Invalid credentials',
     code: 'INVALID_CREDENTIALS',
   );
 
   factory AuthFailure.userNotFound() =>
       const AuthFailure(message: 'User not found', code: 'USER_NOT_FOUND');
 
-  factory AuthFailure.emailAlreadyInUse() => const AuthFailure(
-    message: 'Email is already registered',
-    code: 'EMAIL_ALREADY_IN_USE',
+  factory AuthFailure.phoneAlreadyInUse() => const AuthFailure(
+    message: 'Phone number is already registered',
+    code: 'PHONE_ALREADY_IN_USE',
   );
 
-  factory AuthFailure.weakPassword() => const AuthFailure(
-    message: 'Password is too weak. Use at least 8 characters.',
-    code: 'WEAK_PASSWORD',
+  factory AuthFailure.invalidPhoneNumber() => const AuthFailure(
+    message: 'Invalid phone number format',
+    code: 'INVALID_PHONE_NUMBER',
+  );
+
+  factory AuthFailure.invalidOtp() => const AuthFailure(
+    message: 'Invalid verification code',
+    code: 'INVALID_OTP',
+  );
+
+  factory AuthFailure.otpExpired() => const AuthFailure(
+    message: 'Verification code expired. Please request a new one.',
+    code: 'OTP_EXPIRED',
   );
 
   factory AuthFailure.sessionExpired() => const AuthFailure(

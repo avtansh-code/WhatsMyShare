@@ -23,10 +23,7 @@ class AddFriend extends FriendEvent {
   final String userId;
   final String friendUserId;
 
-  const AddFriend({
-    required this.userId,
-    required this.friendUserId,
-  });
+  const AddFriend({required this.userId, required this.friendUserId});
 
   @override
   List<Object?> get props => [userId, friendUserId];

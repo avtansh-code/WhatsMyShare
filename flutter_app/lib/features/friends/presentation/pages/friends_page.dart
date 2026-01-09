@@ -16,7 +16,7 @@ import '../../../groups/presentation/bloc/group_state.dart';
 class FriendBalance {
   final String odTuserId;
   final String displayName;
-  final String email;
+  final String? phone;
   final String? photoUrl;
   final int totalBalance; // positive = they owe you, negative = you owe them
   final List<GroupBalanceDetail> groupBalances;
@@ -24,7 +24,7 @@ class FriendBalance {
   FriendBalance({
     required this.odTuserId,
     required this.displayName,
-    required this.email,
+    this.phone,
     this.photoUrl,
     required this.totalBalance,
     required this.groupBalances,
@@ -121,7 +121,7 @@ class _FriendsPageState extends State<FriendsPage> {
               friendMap[friendId] = FriendBalance(
                 odTuserId: friendId,
                 displayName: existing.displayName,
-                email: existing.email,
+                phone: existing.phone,
                 photoUrl: existing.photoUrl ?? member?.photoUrl,
                 totalBalance: existing.totalBalance + balanceWithFriend,
                 groupBalances: [...existing.groupBalances, groupDetail],
@@ -130,7 +130,7 @@ class _FriendsPageState extends State<FriendsPage> {
               friendMap[friendId] = FriendBalance(
                 odTuserId: friendId,
                 displayName: friendName ?? 'Unknown',
-                email: member?.email ?? '',
+                phone: member?.phone,
                 photoUrl: member?.photoUrl,
                 totalBalance: balanceWithFriend,
                 groupBalances: [groupDetail],
@@ -191,7 +191,7 @@ class _FriendsPageState extends State<FriendsPage> {
               friendMap[member.userId] = FriendBalance(
                 odTuserId: member.userId,
                 displayName: existing.displayName,
-                email: existing.email,
+                phone: existing.phone,
                 photoUrl: existing.photoUrl ?? member.photoUrl,
                 totalBalance: existing.totalBalance + balanceWithFriend,
                 groupBalances: [...existing.groupBalances, groupDetail],
@@ -200,7 +200,7 @@ class _FriendsPageState extends State<FriendsPage> {
               friendMap[member.userId] = FriendBalance(
                 odTuserId: member.userId,
                 displayName: member.displayName,
-                email: member.email,
+                phone: member.phone,
                 photoUrl: member.photoUrl,
                 totalBalance: balanceWithFriend,
                 groupBalances: [groupDetail],
@@ -212,7 +212,7 @@ class _FriendsPageState extends State<FriendsPage> {
               friendMap[member.userId] = FriendBalance(
                 odTuserId: member.userId,
                 displayName: member.displayName,
-                email: member.email,
+                phone: member.phone,
                 photoUrl: member.photoUrl,
                 totalBalance: 0,
                 groupBalances: [],
@@ -718,9 +718,10 @@ class _FriendsPageState extends State<FriendsPage> {
                                   fontWeight: FontWeight.bold,
                                 ),
                               ),
-                              if (friend.email.isNotEmpty)
+                              if (friend.phone != null &&
+                                  friend.phone!.isNotEmpty)
                                 Text(
-                                  friend.email,
+                                  friend.phone!,
                                   style: theme.textTheme.bodySmall?.copyWith(
                                     color: theme.colorScheme.onSurfaceVariant,
                                   ),
@@ -928,12 +929,12 @@ class _FriendsPageState extends State<FriendsPage> {
                 const SizedBox(height: 16),
                 TextField(
                   decoration: const InputDecoration(
-                    labelText: 'Email or Phone',
-                    hintText: 'Enter email or phone number',
-                    prefixIcon: Icon(Icons.search),
+                    labelText: 'Phone Number',
+                    hintText: 'Enter phone number',
+                    prefixIcon: Icon(Icons.phone),
                     border: OutlineInputBorder(),
                   ),
-                  keyboardType: TextInputType.emailAddress,
+                  keyboardType: TextInputType.phone,
                 ),
                 const SizedBox(height: 16),
                 SizedBox(

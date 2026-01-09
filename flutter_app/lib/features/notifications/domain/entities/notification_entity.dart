@@ -350,13 +350,13 @@ extension ActivityTypeExtension on ActivityType {
 }
 
 /// Notification preferences for a user
+/// Push notifications only (phone-auth only)
 class NotificationPreferences extends Equatable {
   final bool pushEnabled;
   final bool expenseNotifications;
   final bool settlementNotifications;
   final bool groupNotifications;
   final bool reminderNotifications;
-  final bool emailNotifications;
   final String? quietHoursStart;
   final String? quietHoursEnd;
 
@@ -366,7 +366,6 @@ class NotificationPreferences extends Equatable {
     this.settlementNotifications = true,
     this.groupNotifications = true,
     this.reminderNotifications = true,
-    this.emailNotifications = false,
     this.quietHoursStart,
     this.quietHoursEnd,
   });
@@ -378,7 +377,6 @@ class NotificationPreferences extends Equatable {
     bool? settlementNotifications,
     bool? groupNotifications,
     bool? reminderNotifications,
-    bool? emailNotifications,
     String? quietHoursStart,
     String? quietHoursEnd,
   }) {
@@ -390,7 +388,6 @@ class NotificationPreferences extends Equatable {
       groupNotifications: groupNotifications ?? this.groupNotifications,
       reminderNotifications:
           reminderNotifications ?? this.reminderNotifications,
-      emailNotifications: emailNotifications ?? this.emailNotifications,
       quietHoursStart: quietHoursStart ?? this.quietHoursStart,
       quietHoursEnd: quietHoursEnd ?? this.quietHoursEnd,
     );
@@ -428,7 +425,6 @@ class NotificationPreferences extends Equatable {
       'settlementNotifications': settlementNotifications,
       'groupNotifications': groupNotifications,
       'reminderNotifications': reminderNotifications,
-      'emailNotifications': emailNotifications,
       'quietHoursStart': quietHoursStart,
       'quietHoursEnd': quietHoursEnd,
     };
@@ -442,7 +438,6 @@ class NotificationPreferences extends Equatable {
       settlementNotifications: map['settlementNotifications'] ?? true,
       groupNotifications: map['groupNotifications'] ?? true,
       reminderNotifications: map['reminderNotifications'] ?? true,
-      emailNotifications: map['emailNotifications'] ?? false,
       quietHoursStart: map['quietHoursStart'],
       quietHoursEnd: map['quietHoursEnd'],
     );
@@ -455,7 +450,6 @@ class NotificationPreferences extends Equatable {
     settlementNotifications,
     groupNotifications,
     reminderNotifications,
-    emailNotifications,
     quietHoursStart,
     quietHoursEnd,
   ];

@@ -141,28 +141,18 @@ class _ProfilePageState extends State<ProfilePage> {
 
         // Name
         Text(
-          profile.displayNameOrEmail,
+          profile.displayName ?? 'User',
           style: Theme.of(context).textTheme.headlineSmall,
         ),
 
-        // Email
-        Text(
-          profile.email,
-          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-            color: Theme.of(context).colorScheme.onSurfaceVariant,
-          ),
-        ),
-
-        // Phone
-        if (profile.phone != null) ...[
-          const SizedBox(height: 4),
+        // Phone (primary identifier)
+        if (profile.phone != null && profile.phone!.isNotEmpty)
           Text(
             profile.phone!,
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
               color: Theme.of(context).colorScheme.onSurfaceVariant,
             ),
           ),
-        ],
       ],
     );
   }

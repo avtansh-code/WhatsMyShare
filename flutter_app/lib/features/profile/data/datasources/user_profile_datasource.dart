@@ -23,7 +23,7 @@ abstract class UserProfileDataSource {
   /// Create a new user profile
   Future<UserProfileModel> createUserProfile({
     required String userId,
-    required String email,
+    required String phone,
     String? displayName,
     String? photoUrl,
   });
@@ -149,20 +149,20 @@ class UserProfileDataSourceImpl implements UserProfileDataSource {
   @override
   Future<UserProfileModel> createUserProfile({
     required String userId,
-    required String email,
+    required String phone,
     String? displayName,
     String? photoUrl,
   }) async {
     _log.info(
       'Creating user profile',
       tag: LogTags.profile,
-      data: {'userId': userId, 'email': email, 'displayName': displayName},
+      data: {'userId': userId, 'phone': phone, 'displayName': displayName},
     );
     try {
       final now = DateTime.now();
       final model = UserProfileModel(
         id: userId,
-        email: email,
+        phone: phone,
         displayName: displayName,
         photoUrl: photoUrl,
         createdAt: now,
@@ -517,7 +517,10 @@ class UserProfileDataSourceImpl implements UserProfileDataSource {
           _log.info(
             'Profile photo deleted from storage',
             tag: LogTags.profile,
-            data: {'extension': ext, 'path': 'users/$userId/profile/avatar.$ext'},
+            data: {
+              'extension': ext,
+              'path': 'users/$userId/profile/avatar.$ext',
+            },
           );
           deletedAny = true;
           // Once we successfully delete a file, we can stop trying other extensions

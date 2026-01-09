@@ -147,7 +147,8 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
     emit(state.copyWith(isSending: true));
 
     try {
-      final currentUser = await _authRepository.getCurrentUser();
+      final userResult = await _authRepository.getCurrentUser();
+      final currentUser = userResult.fold((failure) => null, (user) => user);
       if (currentUser == null) {
         _log.warning(
           'User not authenticated when sending message',
@@ -199,7 +200,8 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
     emit(state.copyWith(isSending: true));
 
     try {
-      final currentUser = await _authRepository.getCurrentUser();
+      final userResult = await _authRepository.getCurrentUser();
+      final currentUser = userResult.fold((failure) => null, (user) => user);
       if (currentUser == null) {
         _log.warning(
           'User not authenticated when sending image',
@@ -251,7 +253,8 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
     emit(state.copyWith(isSending: true));
 
     try {
-      final currentUser = await _authRepository.getCurrentUser();
+      final userResult = await _authRepository.getCurrentUser();
+      final currentUser = userResult.fold((failure) => null, (user) => user);
       if (currentUser == null) {
         _log.warning(
           'User not authenticated when sending voice note',
@@ -304,7 +307,8 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
     Emitter<ChatState> emit,
   ) async {
     try {
-      final currentUser = await _authRepository.getCurrentUser();
+      final userResult = await _authRepository.getCurrentUser();
+      final currentUser = userResult.fold((failure) => null, (user) => user);
       if (currentUser == null) return;
 
       _log.debug(

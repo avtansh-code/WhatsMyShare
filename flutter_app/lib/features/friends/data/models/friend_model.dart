@@ -3,13 +3,13 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../domain/entities/friend_entity.dart';
 
 /// Friend model for Firestore - only stores registered users
+/// Phone number is the primary identifier for users
 class FriendModel {
   final String id;
   final String userId;
   final String friendUserId;
   final String displayName;
-  final String email;
-  final String? phone;
+  final String phone; // Required - primary identifier
   final String? photoUrl;
   final FriendStatus status;
   final DateTime createdAt;
@@ -20,8 +20,7 @@ class FriendModel {
     required this.userId,
     required this.friendUserId,
     required this.displayName,
-    required this.email,
-    this.phone,
+    required this.phone,
     this.photoUrl,
     required this.status,
     required this.createdAt,
@@ -35,8 +34,7 @@ class FriendModel {
       userId: data['userId'] as String,
       friendUserId: data['friendUserId'] as String,
       displayName: data['displayName'] as String,
-      email: data['email'] as String,
-      phone: data['phone'] as String?,
+      phone: data['phone'] as String? ?? '',
       photoUrl: data['photoUrl'] as String?,
       status: _statusFromString(data['status'] as String? ?? 'pending'),
       createdAt: (data['createdAt'] as Timestamp).toDate(),
@@ -50,8 +48,7 @@ class FriendModel {
       userId: map['userId'] as String,
       friendUserId: map['friendUserId'] as String,
       displayName: map['displayName'] as String,
-      email: map['email'] as String,
-      phone: map['phone'] as String?,
+      phone: map['phone'] as String? ?? '',
       photoUrl: map['photoUrl'] as String?,
       status: _statusFromString(map['status'] as String? ?? 'pending'),
       createdAt: map['createdAt'] is Timestamp
@@ -68,8 +65,7 @@ class FriendModel {
       'userId': userId,
       'friendUserId': friendUserId,
       'displayName': displayName,
-      'email': email,
-      if (phone != null) 'phone': phone,
+      'phone': phone,
       if (photoUrl != null) 'photoUrl': photoUrl,
       'status': status.name,
       'createdAt': Timestamp.fromDate(createdAt),
@@ -83,7 +79,6 @@ class FriendModel {
       'userId': userId,
       'friendUserId': friendUserId,
       'displayName': displayName,
-      'email': email,
       'phone': phone,
       'photoUrl': photoUrl,
       'status': status.name,
@@ -98,7 +93,6 @@ class FriendModel {
       userId: userId,
       friendUserId: friendUserId,
       displayName: displayName,
-      email: email,
       phone: phone,
       photoUrl: photoUrl,
       status: status,
@@ -113,7 +107,6 @@ class FriendModel {
       userId: entity.userId,
       friendUserId: entity.friendUserId,
       displayName: entity.displayName,
-      email: entity.email,
       phone: entity.phone,
       photoUrl: entity.photoUrl,
       status: entity.status,
@@ -127,7 +120,6 @@ class FriendModel {
     String? userId,
     String? friendUserId,
     String? displayName,
-    String? email,
     String? phone,
     String? photoUrl,
     FriendStatus? status,
@@ -139,7 +131,6 @@ class FriendModel {
       userId: userId ?? this.userId,
       friendUserId: friendUserId ?? this.friendUserId,
       displayName: displayName ?? this.displayName,
-      email: email ?? this.email,
       phone: phone ?? this.phone,
       photoUrl: photoUrl ?? this.photoUrl,
       status: status ?? this.status,
@@ -157,18 +148,17 @@ class FriendModel {
 }
 
 /// Registered user model for Firestore search results
+/// Phone number is the primary identifier
 class RegisteredUserModel {
   final String id;
   final String displayName;
-  final String email;
-  final String? phone;
+  final String phone; // Required - primary identifier
   final String? photoUrl;
 
   const RegisteredUserModel({
     required this.id,
     required this.displayName,
-    required this.email,
-    this.phone,
+    required this.phone,
     this.photoUrl,
   });
 
@@ -176,9 +166,11 @@ class RegisteredUserModel {
     final data = doc.data() as Map<String, dynamic>;
     return RegisteredUserModel(
       id: doc.id,
-      displayName: data['displayName'] as String? ?? data['name'] as String? ?? 'Unknown',
-      email: data['email'] as String,
-      phone: data['phone'] as String?,
+      displayName:
+          data['displayName'] as String? ??
+          data['name'] as String? ??
+          'Unknown',
+      phone: data['phone'] as String? ?? '',
       photoUrl: data['photoUrl'] as String?,
     );
   }
@@ -186,9 +178,9 @@ class RegisteredUserModel {
   factory RegisteredUserModel.fromMap(Map<String, dynamic> map) {
     return RegisteredUserModel(
       id: map['id'] as String,
-      displayName: map['displayName'] as String? ?? map['name'] as String? ?? 'Unknown',
-      email: map['email'] as String,
-      phone: map['phone'] as String?,
+      displayName:
+          map['displayName'] as String? ?? map['name'] as String? ?? 'Unknown',
+      phone: map['phone'] as String? ?? '',
       photoUrl: map['photoUrl'] as String?,
     );
   }
@@ -197,8 +189,7 @@ class RegisteredUserModel {
     return {
       'id': id,
       'displayName': displayName,
-      'email': email,
-      if (phone != null) 'phone': phone,
+      'phone': phone,
       if (photoUrl != null) 'photoUrl': photoUrl,
     };
   }
@@ -207,7 +198,6 @@ class RegisteredUserModel {
     return RegisteredUser(
       id: id,
       displayName: displayName,
-      email: email,
       phone: phone,
       photoUrl: photoUrl,
     );
@@ -217,7 +207,6 @@ class RegisteredUserModel {
     return RegisteredUserModel(
       id: entity.id,
       displayName: entity.displayName,
-      email: entity.email,
       phone: entity.phone,
       photoUrl: entity.photoUrl,
     );

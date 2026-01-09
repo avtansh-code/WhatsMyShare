@@ -124,7 +124,7 @@ class GroupMemberAddRequested extends GroupEvent {
   final String groupId;
   final String userId;
   final String displayName;
-  final String email;
+  final String? phone;
   final String? photoUrl;
   final MemberRole role;
 
@@ -132,7 +132,7 @@ class GroupMemberAddRequested extends GroupEvent {
     required this.groupId,
     required this.userId,
     required this.displayName,
-    required this.email,
+    this.phone,
     this.photoUrl,
     this.role = MemberRole.member,
   });
@@ -142,7 +142,7 @@ class GroupMemberAddRequested extends GroupEvent {
     groupId,
     userId,
     displayName,
-    email,
+    phone,
     photoUrl,
     role,
   ];

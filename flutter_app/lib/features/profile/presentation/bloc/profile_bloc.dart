@@ -262,7 +262,6 @@ class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
         _log.info('Profile photo deleted successfully', tag: LogTags.profile);
         final updatedProfile = UserProfileEntity(
           id: state.profile!.id,
-          email: state.profile!.email,
           displayName: state.profile!.displayName,
           photoUrl: null,
           phone: state.profile!.phone,

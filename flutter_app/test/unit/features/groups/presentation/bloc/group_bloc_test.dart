@@ -41,7 +41,7 @@ void main() {
       GroupMember(
         userId: 'user-1',
         displayName: 'John Doe',
-        email: 'john@example.com',
+        phone: '+919876543210',
         role: MemberRole.admin,
         joinedAt: testDateTime,
       ),
@@ -69,7 +69,7 @@ void main() {
       GroupMember(
         userId: 'user-1',
         displayName: 'John Doe',
-        email: 'john@example.com',
+        phone: '+919876543210',
         role: MemberRole.admin,
         joinedAt: DateTime(2026, 1, 8),
       ),
@@ -330,7 +330,7 @@ void main() {
               groupId: any(named: 'groupId'),
               userId: any(named: 'userId'),
               displayName: any(named: 'displayName'),
-              email: any(named: 'email'),
+              phone: any(named: 'phone'),
               photoUrl: any(named: 'photoUrl'),
               role: any(named: 'role'),
             ),
@@ -342,7 +342,7 @@ void main() {
             groupId: 'group-1',
             userId: 'user-2',
             displayName: 'Jane Doe',
-            email: 'jane@example.com',
+            phone: '+919876543211',
           ),
         ),
         expect: () => [

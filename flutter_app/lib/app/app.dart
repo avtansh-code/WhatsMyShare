@@ -27,10 +27,10 @@ class _WhatsMyShareAppState extends State<WhatsMyShareApp>
     super.initState();
     _log.info('WhatsMyShareApp initializing', tag: LogTags.ui);
     WidgetsBinding.instance.addObserver(this);
-    
+
     // Initialize AuthBloc and trigger auth check
     _authBloc = sl<AuthBloc>()..add(const AuthCheckRequested());
-    
+
     _router = AppRouter.createRouter();
     _log.info('Router created successfully', tag: LogTags.ui);
   }

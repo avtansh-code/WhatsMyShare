@@ -3,12 +3,13 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../domain/entities/group_entity.dart';
 
 /// Group member model for Firestore
+/// Phone number is the primary identifier for users
 class GroupMemberModel extends GroupMember {
   const GroupMemberModel({
     required super.userId,
     required super.displayName,
     super.photoUrl,
-    required super.email,
+    super.phone,
     required super.joinedAt,
     required super.role,
   });
@@ -19,7 +20,7 @@ class GroupMemberModel extends GroupMember {
       userId: map['userId'] as String,
       displayName: map['displayName'] as String,
       photoUrl: map['photoUrl'] as String?,
-      email: map['email'] as String,
+      phone: map['phone'] as String? ?? '',
       joinedAt: (map['joinedAt'] as Timestamp).toDate(),
       role: MemberRole.values.firstWhere(
         (e) => e.name == map['role'],
@@ -34,7 +35,7 @@ class GroupMemberModel extends GroupMember {
       userId: entity.userId,
       displayName: entity.displayName,
       photoUrl: entity.photoUrl,
-      email: entity.email,
+      phone: entity.phone,
       joinedAt: entity.joinedAt,
       role: entity.role,
     );
@@ -46,7 +47,7 @@ class GroupMemberModel extends GroupMember {
       'userId': userId,
       'displayName': displayName,
       'photoUrl': photoUrl,
-      'email': email,
+      'phone': phone,
       'joinedAt': Timestamp.fromDate(joinedAt),
       'role': role.name,
     };
