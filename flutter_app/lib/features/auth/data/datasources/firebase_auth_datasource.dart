@@ -770,6 +770,75 @@ class FirebaseAuthDataSourceImpl implements FirebaseAuthDataSource {
       throw const AuthException(message: 'User not authenticated');
     }
 
+    final normalizedPhone = _normalizePhoneNumber(phoneNumber);
+
+    // Check if phone provider is already linked to this user
+    final hasPhoneProvider = user.providerData.any(
+      (info) => info.providerId == firebase_auth.PhoneAuthProvider.PROVIDER_ID,
+    );
+
+    if (hasPhoneProvider) {
+      // Phone provider already linked - check if it's the same number
+      final existingPhone = user.phoneNumber;
+      
+      _log.info(
+        'Phone provider already linked to user',
+        tag: LogTags.auth,
+        data: {
+          'existingPhone': existingPhone,
+          'newPhone': normalizedPhone,
+        },
+      );
+
+      // If the same phone number is already linked, just verify the OTP and update Firestore
+      // We still need to verify the OTP to ensure the user has access to this phone
+      try {
+        final credential = firebase_auth.PhoneAuthProvider.credential(
+          verificationId: verificationId,
+          smsCode: smsCode,
+        );
+
+        // Sign in with the credential to verify OTP is correct
+        // This doesn't change the auth state since user is already signed in
+        await _firebaseAuth.signInWithCredential(credential);
+        
+        _log.info(
+          'OTP verified for already-linked phone number',
+          tag: LogTags.auth,
+        );
+      } on firebase_auth.FirebaseAuthException catch (e) {
+        // If it's a credential-already-in-use error, it means the phone is linked
+        // to this same account, which is fine - the OTP was valid
+        if (e.code != 'credential-already-in-use') {
+          _log.error(
+            'OTP verification failed',
+            tag: LogTags.auth,
+            data: {'code': e.code, 'message': e.message},
+          );
+          throw _mapFirebaseAuthException(e);
+        }
+        _log.debug(
+          'Credential already in use (expected for same account)',
+          tag: LogTags.auth,
+        );
+      }
+
+      // Update Firestore with the phone number (using set with merge to handle missing doc)
+      await _usersCollection.doc(user.uid).set({
+        'phone': normalizedPhone,
+        'isPhoneVerified': true,
+        'updatedAt': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true));
+
+      _log.info(
+        'Phone number verified and Firestore updated (provider was already linked)',
+        tag: LogTags.auth,
+        data: {'phone': normalizedPhone},
+      );
+      return await _getUserFromFirestore(user.uid);
+    }
+
+    // Phone provider not linked - proceed with normal linking
     try {
       final credential = firebase_auth.PhoneAuthProvider.credential(
         verificationId: verificationId,
@@ -778,16 +847,12 @@ class FirebaseAuthDataSourceImpl implements FirebaseAuthDataSource {
 
       await user.linkWithCredential(credential);
 
-      // Normalize and use the provided phone number
-      // (Firebase Auth user.phoneNumber may not be immediately updated)
-      final normalizedPhone = _normalizePhoneNumber(phoneNumber);
-
-      // Update Firestore with the phone number
-      await _usersCollection.doc(user.uid).update({
+      // Update Firestore with the phone number (using set with merge to handle missing doc)
+      await _usersCollection.doc(user.uid).set({
         'phone': normalizedPhone,
         'isPhoneVerified': true,
         'updatedAt': FieldValue.serverTimestamp(),
-      });
+      }, SetOptions(merge: true));
 
       _log.info(
         'Phone number linked successfully',
