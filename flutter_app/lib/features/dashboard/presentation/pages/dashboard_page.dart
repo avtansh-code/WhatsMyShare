@@ -67,9 +67,19 @@ class _DashboardPageState extends State<DashboardPage> {
         if (state is AuthUnauthenticated) {
           _log.info('User signed out, redirecting to login', tag: LogTags.ui);
           context.go('/login');
+        } else if (state is AuthAuthenticated && !state.user.hasCompletedProfile) {
+          _log.info(
+            'User profile incomplete, redirecting to complete profile',
+            tag: LogTags.ui,
+            data: {
+              'userId': state.user.id,
+              'displayName': state.user.displayName,
+              'phone': state.user.phone,
+              'isPhoneVerified': state.user.isPhoneVerified,
+            },
+          );
+          context.go('/complete-profile', extra: state.user);
         }
-        // Note: Profile completion check is handled at login time,
-        // not here, to avoid redirect loops when returning from profile completion
       },
       builder: (context, state) {
         final user = state is AuthAuthenticated ? state.user : null;

@@ -90,8 +90,8 @@ class AppRouter {
       return '/login';
     }
 
-    // If logged in and on auth route, redirect to dashboard
-    if (isLoggedIn && isAuthRoute) {
+    // If logged in and on auth route (except complete-profile), redirect to dashboard
+    if (isLoggedIn && isAuthRoute && state.matchedLocation != '/complete-profile') {
       _log.info(
         'Redirecting authenticated user to dashboard',
         tag: LogTags.navigation,
@@ -151,7 +151,8 @@ class AppRouter {
           tag: LogTags.navigation,
         );
         // User can be passed via extra, or will be loaded by the page
-        final user = state.extra as UserEntity?;
+        final extra = state.extra;
+        final user = extra is UserEntity ? extra : null;
         return BlocProvider(
           create: (_) => sl<AuthBloc>()..add(const AuthCheckRequested()),
           child: CompleteProfilePage(user: user),
