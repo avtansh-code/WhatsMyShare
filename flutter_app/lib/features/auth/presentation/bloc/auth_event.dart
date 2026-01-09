@@ -72,3 +72,13 @@ class AuthUserChanged extends AuthEvent {
   @override
   List<Object?> get props => [user];
 }
+
+/// User photo URL updated (sync from ProfileBloc)
+class AuthUserPhotoUpdated extends AuthEvent {
+  final String? photoUrl;
+
+  const AuthUserPhotoUpdated({required this.photoUrl});
+
+  @override
+  List<Object?> get props => [photoUrl];
+}

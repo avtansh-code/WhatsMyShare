@@ -53,6 +53,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     on<AuthSignOutRequested>(_onSignOutRequested);
     on<AuthResetPasswordRequested>(_onResetPasswordRequested);
     on<AuthUserChanged>(_onUserChanged);
+    on<AuthUserPhotoUpdated>(_onUserPhotoUpdated);
 
     _log.info('AuthBloc initialized', tag: LogTags.auth);
 
@@ -286,6 +287,22 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       // Clear encryption cache on sign out
       _encryptionService.clearCache();
       emit(AuthUnauthenticated());
+    }
+  }
+
+  void _onUserPhotoUpdated(
+    AuthUserPhotoUpdated event,
+    Emitter<AuthState> emit,
+  ) {
+    final currentState = state;
+    if (currentState is AuthAuthenticated) {
+      _log.info(
+        'Updating user photo URL in AuthBloc',
+        tag: LogTags.auth,
+        data: {'photoUrl': event.photoUrl},
+      );
+      final updatedUser = currentState.user.copyWith(photoUrl: event.photoUrl);
+      emit(AuthAuthenticated(updatedUser));
     }
   }
 

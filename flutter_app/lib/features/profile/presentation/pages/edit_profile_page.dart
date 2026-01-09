@@ -6,6 +6,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../../../../core/services/logging_service.dart';
+import '../../../auth/presentation/bloc/auth_bloc.dart';
 import '../bloc/profile_bloc.dart';
 
 /// Edit Profile page for updating user information
@@ -114,6 +115,19 @@ class _EditProfilePageState extends State<EditProfilePage> {
               state.status == ProfileStatus.updated) {
             // Success - hide loader and navigate back
             _log.info('Profile operation successful, hiding loader', tag: LogTags.ui);
+            
+            // Sync the updated photoUrl to AuthBloc so dashboard and other screens update
+            if (state.profile != null) {
+              _log.info(
+                'Syncing updated photoUrl to AuthBloc',
+                tag: LogTags.ui,
+                data: {'photoUrl': state.profile!.photoUrl},
+              );
+              context.read<AuthBloc>().add(
+                AuthUserPhotoUpdated(photoUrl: state.profile!.photoUrl),
+              );
+            }
+            
             setState(() {
               _isSaving = false;
             });

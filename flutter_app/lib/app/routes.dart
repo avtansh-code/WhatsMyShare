@@ -225,8 +225,15 @@ class AppRouter {
       name: 'edit-profile',
       builder: (context, state) {
         _log.debug('Navigating to edit profile page', tag: LogTags.navigation);
-        return BlocProvider(
-          create: (_) => sl<ProfileBloc>()..add(const ProfileLoadRequested()),
+        return MultiBlocProvider(
+          providers: [
+            BlocProvider(
+              create: (_) => sl<ProfileBloc>()..add(const ProfileLoadRequested()),
+            ),
+            BlocProvider(
+              create: (_) => sl<AuthBloc>()..add(const AuthCheckRequested()),
+            ),
+          ],
           child: const EditProfilePage(),
         );
       },
