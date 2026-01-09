@@ -66,7 +66,9 @@ class AppRouter {
         state.matchedLocation == '/signup' ||
         state.matchedLocation == '/forgot-password' ||
         state.matchedLocation == '/phone-login' ||
-        state.matchedLocation == '/phone-verify';
+        state.matchedLocation == '/phone-verify' ||
+        state.matchedLocation == '/link' ||
+        state.matchedLocation == '/complete-profile';
 
     _log.debug(
       'Handling redirect',
@@ -310,18 +312,20 @@ class AppRouter {
 
     // Handle Firebase Auth callback deep links (reCAPTCHA verification)
     // This route handles the /link path that Firebase uses for auth callbacks
+    // During phone auth, Firebase opens a web view for reCAPTCHA and returns via this deep link
+    // Firebase SDK handles the callback internally and will trigger codeSent/verificationCompleted
+    // We redirect back to phone-login so the page can receive the callback and navigate to OTP screen
     GoRoute(
       path: '/link',
       redirect: (context, state) {
         _log.info(
-          'Firebase auth callback received',
+          'Firebase auth callback received - redirecting to phone-login',
           tag: LogTags.navigation,
           data: {'queryParams': state.uri.queryParameters},
         );
-        // Firebase handles the auth callback internally
-        // Just redirect to the appropriate page based on auth state
-        final isLoggedIn = FirebaseAuth.instance.currentUser != null;
-        return isLoggedIn ? '/dashboard' : '/login';
+        // The phone login page is waiting for Firebase's codeSent callback
+        // Redirect back to phone-login to let it handle the verification flow
+        return '/phone-login';
       },
     ),
 
