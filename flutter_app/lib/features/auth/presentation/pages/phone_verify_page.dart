@@ -330,12 +330,12 @@ class _PhoneVerifyPageState extends State<PhoneVerifyPage> {
         ),
       ),
       body: SafeArea(
-        child: Padding(
+        child: SingleChildScrollView(
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const Spacer(flex: 2),
+              const SizedBox(height: 48),
 
               // Icon
               Icon(
@@ -371,7 +371,7 @@ class _PhoneVerifyPageState extends State<PhoneVerifyPage> {
                 ),
                 textAlign: TextAlign.center,
               ),
-              const Spacer(flex: 1),
+              const SizedBox(height: 32),
 
               // OTP Input
               Row(
@@ -467,7 +467,7 @@ class _PhoneVerifyPageState extends State<PhoneVerifyPage> {
                     ),
                 ],
               ),
-              const Spacer(flex: 1),
+              const SizedBox(height: 24),
 
               // Change Number
               TextButton.icon(
@@ -475,7 +475,7 @@ class _PhoneVerifyPageState extends State<PhoneVerifyPage> {
                 icon: const Icon(Icons.edit, size: 16),
                 label: const Text('Change phone number'),
               ),
-              const Spacer(flex: 1),
+              const SizedBox(height: 24),
             ],
           ),
         ),

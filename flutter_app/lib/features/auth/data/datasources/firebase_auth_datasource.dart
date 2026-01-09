@@ -97,8 +97,8 @@ abstract class FirebaseAuthDataSource {
   /// Update password
   Future<void> updatePassword(String currentPassword, String newPassword);
 
-  /// Mark phone as verified
-  Future<UserModel> markPhoneVerified();
+  /// Mark phone as verified with the phone number
+  Future<UserModel> markPhoneVerified({String? phoneNumber});
 
   /// Update profile with email
   Future<UserModel> updateProfileWithEmail({
@@ -873,18 +873,35 @@ class FirebaseAuthDataSourceImpl implements FirebaseAuthDataSource {
   }
 
   @override
-  Future<UserModel> markPhoneVerified() async {
-    _log.info('Marking phone as verified', tag: LogTags.auth);
+  Future<UserModel> markPhoneVerified({String? phoneNumber}) async {
+    _log.info(
+      'Marking phone as verified',
+      tag: LogTags.auth,
+      data: {'phoneNumber': phoneNumber},
+    );
 
     final user = _firebaseAuth.currentUser;
     if (user == null) {
       throw const AuthException(message: 'User not authenticated');
     }
 
-    await _usersCollection.doc(user.uid).update({
+    final updates = <String, dynamic>{
       'isPhoneVerified': true,
       'updatedAt': FieldValue.serverTimestamp(),
-    });
+    };
+
+    // Save the phone number if provided
+    if (phoneNumber != null && phoneNumber.isNotEmpty) {
+      updates['phone'] = _normalizePhoneNumber(phoneNumber);
+    }
+
+    await _usersCollection.doc(user.uid).update(updates);
+
+    _log.info(
+      'Phone marked as verified successfully',
+      tag: LogTags.auth,
+      data: {'phone': phoneNumber},
+    );
 
     return await _getUserFromFirestore(user.uid);
   }

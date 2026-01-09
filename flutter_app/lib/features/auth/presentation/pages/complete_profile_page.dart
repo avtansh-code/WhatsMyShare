@@ -286,7 +286,10 @@ class _CompleteProfilePageState extends State<CompleteProfilePage> {
       final user = firebase_auth.FirebaseAuth.instance.currentUser;
       if (user != null) {
         await user.linkWithCredential(credential);
-        await _authDataSource.markPhoneVerified();
+        
+        // Get the phone number from the controller and save it along with verification status
+        final phone = _phoneController.text.trim();
+        await _authDataSource.markPhoneVerified(phoneNumber: phone);
 
         // Update name if changed
         final currentDisplayName = _currentUser?.displayName ?? '';
@@ -373,14 +376,14 @@ class _CompleteProfilePageState extends State<CompleteProfilePage> {
             ],
           ),
           body: SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
               child: Form(
                 key: _formKey,
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    const Spacer(flex: 1),
+                    const SizedBox(height: 24),
                     
                     // Header
                     Icon(
@@ -404,7 +407,7 @@ class _CompleteProfilePageState extends State<CompleteProfilePage> {
                       ),
                       textAlign: TextAlign.center,
                     ),
-                    const Spacer(flex: 1),
+                    const SizedBox(height: 32),
 
                     // Name Field
                     TextFormField(
@@ -579,7 +582,7 @@ class _CompleteProfilePageState extends State<CompleteProfilePage> {
                           ),
                         ),
                       ),
-                    const Spacer(flex: 1),
+                    const SizedBox(height: 24),
 
                     // Action Button
                     if (isPhoneVerified) ...[
@@ -663,7 +666,7 @@ class _CompleteProfilePageState extends State<CompleteProfilePage> {
                             : const Text('Verify & Continue'),
                       ),
                     ],
-                    const Spacer(flex: 1),
+                    const SizedBox(height: 32),
                   ],
                 ),
               ),

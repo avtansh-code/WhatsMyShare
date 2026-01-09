@@ -88,7 +88,7 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
           _isLoading = state is AuthLoading;
 
           return SafeArea(
-            child: Padding(
+            child: SingleChildScrollView(
               padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
               child: _emailSent
                   ? _buildSuccessView(theme)
@@ -104,7 +104,7 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        const Spacer(flex: 2),
+        const SizedBox(height: 48),
         
         // Icon
         Icon(Icons.lock_reset, size: 64, color: theme.colorScheme.primary),
@@ -126,7 +126,7 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
           ),
           textAlign: TextAlign.center,
         ),
-        const Spacer(flex: 1),
+        const SizedBox(height: 32),
 
         // Form
         Form(
@@ -187,7 +187,7 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
             style: TextStyle(color: theme.colorScheme.primary),
           ),
         ),
-        const Spacer(flex: 2),
+        const SizedBox(height: 48),
       ],
     );
   }
@@ -196,7 +196,7 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        const Spacer(flex: 2),
+        const SizedBox(height: 48),
 
         // Success Icon
         Center(
@@ -240,7 +240,7 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
           ),
           textAlign: TextAlign.center,
         ),
-        const Spacer(flex: 1),
+        const SizedBox(height: 32),
 
         // Instructions
         Container(
@@ -291,7 +291,7 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
             ],
           ),
         ),
-        const Spacer(flex: 1),
+        const SizedBox(height: 32),
 
         // Back to Login Button
         FilledButton(
@@ -318,7 +318,7 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
             style: TextStyle(color: theme.colorScheme.primary),
           ),
         ),
-        const Spacer(flex: 1),
+        const SizedBox(height: 24),
       ],
     );
   }

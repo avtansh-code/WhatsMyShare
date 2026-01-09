@@ -117,46 +117,54 @@ class _LoginPageState extends State<LoginPage> {
           _isLoading = state is AuthLoading;
 
           return SafeArea(
-            child: Padding(
+            child: SingleChildScrollView(
               padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  const Spacer(flex: 2),
-                  
-                  // Logo and Title
-                  _buildHeader(theme),
-                  const Spacer(flex: 2),
+              child: ConstrainedBox(
+                constraints: BoxConstraints(
+                  minHeight: MediaQuery.of(context).size.height -
+                      MediaQuery.of(context).padding.top -
+                      MediaQuery.of(context).padding.bottom -
+                      32, // vertical padding
+                ),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    const SizedBox(height: 32),
+                    
+                    // Logo and Title
+                    _buildHeader(theme),
+                    const SizedBox(height: 32),
 
-                  // Login Form
-                  _buildForm(theme),
-                  const SizedBox(height: 16),
+                    // Login Form
+                    _buildForm(theme),
+                    const SizedBox(height: 16),
 
-                  // Sign In Button
-                  _buildSignInButton(theme),
-                  const SizedBox(height: 8),
+                    // Sign In Button
+                    _buildSignInButton(theme),
+                    const SizedBox(height: 8),
 
-                  // Forgot Password
-                  _buildForgotPassword(theme),
-                  const Spacer(flex: 1),
+                    // Forgot Password
+                    _buildForgotPassword(theme),
+                    const SizedBox(height: 16),
 
-                  // Divider
-                  _buildDivider(theme),
-                  const Spacer(flex: 1),
+                    // Divider
+                    _buildDivider(theme),
+                    const SizedBox(height: 16),
 
-                  // Google Sign In
-                  _buildGoogleSignIn(theme),
-                  const SizedBox(height: 12),
+                    // Google Sign In
+                    _buildGoogleSignIn(theme),
+                    const SizedBox(height: 12),
 
-                  // Phone Sign In
-                  _buildPhoneSignIn(theme),
-                  const Spacer(flex: 1),
+                    // Phone Sign In
+                    _buildPhoneSignIn(theme),
+                    const SizedBox(height: 16),
 
-                  // Sign Up Link
-                  _buildSignUpLink(theme),
-                  const Spacer(flex: 1),
-                ],
+                    // Sign Up Link
+                    _buildSignUpLink(theme),
+                    const SizedBox(height: 16),
+                  ],
+                ),
               ),
             ),
           );

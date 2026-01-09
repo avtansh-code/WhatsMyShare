@@ -33,7 +33,7 @@ class UserModel extends UserEntity {
     final data = doc.data()!;
     return UserModel(
       id: doc.id,
-      email: data['email'] as String,
+      email: (data['email'] as String?) ?? '',
       phone: data['phone'] as String?,
       displayName: data['displayName'] as String?,
       photoUrl: data['photoUrl'] as String?,
@@ -64,7 +64,7 @@ class UserModel extends UserEntity {
   factory UserModel.fromMap(Map<String, dynamic> map) {
     return UserModel(
       id: map['id'] as String,
-      email: map['email'] as String,
+      email: (map['email'] as String?) ?? '',
       phone: map['phone'] as String?,
       displayName: map['displayName'] as String?,
       photoUrl: map['photoUrl'] as String?,

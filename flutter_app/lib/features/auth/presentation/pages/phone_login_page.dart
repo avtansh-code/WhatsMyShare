@@ -285,12 +285,12 @@ class _PhoneLoginPageState extends State<PhoneLoginPage> {
         ),
       ),
       body: SafeArea(
-        child: Padding(
+        child: SingleChildScrollView(
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const Spacer(flex: 2),
+              const SizedBox(height: 48),
 
               // Icon
               Icon(
@@ -318,7 +318,7 @@ class _PhoneLoginPageState extends State<PhoneLoginPage> {
                 ),
                 textAlign: TextAlign.center,
               ),
-              const Spacer(flex: 1),
+              const SizedBox(height: 32),
 
               // Phone Form
               Form(
@@ -427,7 +427,7 @@ class _PhoneLoginPageState extends State<PhoneLoginPage> {
                         ),
                       ),
               ),
-              const Spacer(flex: 1),
+              const SizedBox(height: 32),
 
               // Info Text
               Container(
@@ -455,7 +455,7 @@ class _PhoneLoginPageState extends State<PhoneLoginPage> {
                   ],
                 ),
               ),
-              const Spacer(flex: 1),
+              const SizedBox(height: 24),
             ],
           ),
         ),
