@@ -105,7 +105,7 @@ class _CompleteProfilePageState extends State<CompleteProfilePage> {
     final currentUserId = _currentUser?.id ?? '';
 
     if (email.isEmpty || email == currentUserEmail) {
-      setState(() => _emailWarning = null);
+      if (mounted) setState(() => _emailWarning = null);
       return;
     }
 
@@ -116,6 +116,7 @@ class _CompleteProfilePageState extends State<CompleteProfilePage> {
       currentUserId,
     );
 
+    if (!mounted) return;
     setState(() {
       _emailWarning = isRegisteredByOther
           ? 'This email is already associated with another account'
@@ -128,7 +129,7 @@ class _CompleteProfilePageState extends State<CompleteProfilePage> {
     final currentUserId = _currentUser?.id ?? '';
 
     if (phone.isEmpty || currentUserId.isEmpty) {
-      setState(() => _phoneWarning = null);
+      if (mounted) setState(() => _phoneWarning = null);
       return;
     }
 
@@ -137,6 +138,7 @@ class _CompleteProfilePageState extends State<CompleteProfilePage> {
       currentUserId,
     );
 
+    if (!mounted) return;
     setState(() {
       _phoneWarning = isRegisteredByOther
           ? 'This phone number is already associated with another account'
@@ -147,12 +149,13 @@ class _CompleteProfilePageState extends State<CompleteProfilePage> {
   Future<void> _sendOtp() async {
     final phone = _phoneController.text.trim();
     if (phone.isEmpty) {
-      setState(() => _errorMessage = 'Please enter a phone number');
+      if (mounted) setState(() => _errorMessage = 'Please enter a phone number');
       return;
     }
 
     // Check if phone is already registered by another user
     await _checkPhoneUniqueness();
+    if (!mounted) return;
     if (_phoneWarning != null) {
       setState(() => _errorMessage = _phoneWarning);
       return;
@@ -175,6 +178,7 @@ class _CompleteProfilePageState extends State<CompleteProfilePage> {
       await _authDataSource.signInWithPhone(
         phoneNumber: normalizedPhone,
         codeSent: (verificationId, resendToken) {
+          if (!mounted) return;
           setState(() {
             _verificationId = verificationId;
             _resendToken = resendToken;
@@ -199,6 +203,7 @@ class _CompleteProfilePageState extends State<CompleteProfilePage> {
             tag: LogTags.auth,
             data: {'code': error.code, 'message': error.message},
           );
+          if (!mounted) return;
           setState(() {
             _isVerifyingPhone = false;
             _errorMessage = error.message ?? 'Phone verification failed';
@@ -210,6 +215,7 @@ class _CompleteProfilePageState extends State<CompleteProfilePage> {
         resendToken: _resendToken,
       );
     } catch (e) {
+      if (!mounted) return;
       setState(() {
         _isVerifyingPhone = false;
         _errorMessage = 'Failed to send OTP: $e';
@@ -220,22 +226,26 @@ class _CompleteProfilePageState extends State<CompleteProfilePage> {
   Future<void> _verifyOtp() async {
     final otp = _otpController.text.trim();
     if (otp.isEmpty || otp.length != 6) {
-      setState(() => _errorMessage = 'Please enter a valid 6-digit OTP');
+      if (mounted) setState(() => _errorMessage = 'Please enter a valid 6-digit OTP');
       return;
     }
 
     if (_verificationId == null) {
-      setState(
-        () => _errorMessage =
-            'Verification session expired. Please request a new OTP',
-      );
+      if (mounted) {
+        setState(
+          () => _errorMessage =
+              'Verification session expired. Please request a new OTP',
+        );
+      }
       return;
     }
 
-    setState(() {
-      _isLoading = true;
-      _errorMessage = null;
-    });
+    if (mounted) {
+      setState(() {
+        _isLoading = true;
+        _errorMessage = null;
+      });
+    }
 
     // Get the phone number from the controller
     final phone = _phoneController.text.trim();
@@ -270,6 +280,7 @@ class _CompleteProfilePageState extends State<CompleteProfilePage> {
         context.go('/dashboard');
       }
     } catch (e) {
+      if (!mounted) return;
       setState(() {
         _isLoading = false;
         _errorMessage = e.toString();
@@ -280,7 +291,7 @@ class _CompleteProfilePageState extends State<CompleteProfilePage> {
   Future<void> _verifyWithCredential(
     firebase_auth.PhoneAuthCredential credential,
   ) async {
-    setState(() => _isLoading = true);
+    if (mounted) setState(() => _isLoading = true);
 
     try {
       final user = firebase_auth.FirebaseAuth.instance.currentUser;
@@ -311,6 +322,7 @@ class _CompleteProfilePageState extends State<CompleteProfilePage> {
         }
       }
     } catch (e) {
+      if (!mounted) return;
       setState(() {
         _isLoading = false;
         _errorMessage = e.toString();
@@ -593,7 +605,7 @@ class _CompleteProfilePageState extends State<CompleteProfilePage> {
                             : () async {
                                 if (!_formKey.currentState!.validate()) return;
 
-                                setState(() => _isLoading = true);
+                                if (mounted) setState(() => _isLoading = true);
 
                                 try {
                                   await _authDataSource.updateProfile(
@@ -607,6 +619,7 @@ class _CompleteProfilePageState extends State<CompleteProfilePage> {
                                     context.go('/dashboard');
                                   }
                                 } catch (e) {
+                                  if (!mounted) return;
                                   setState(() {
                                     _isLoading = false;
                                     _errorMessage = e.toString();

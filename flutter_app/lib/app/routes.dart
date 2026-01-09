@@ -308,6 +308,23 @@ class AppRouter {
       },
     ),
 
+    // Handle Firebase Auth callback deep links (reCAPTCHA verification)
+    // This route handles the /link path that Firebase uses for auth callbacks
+    GoRoute(
+      path: '/link',
+      redirect: (context, state) {
+        _log.info(
+          'Firebase auth callback received',
+          tag: LogTags.navigation,
+          data: {'queryParams': state.uri.queryParameters},
+        );
+        // Firebase handles the auth callback internally
+        // Just redirect to the appropriate page based on auth state
+        final isLoggedIn = FirebaseAuth.instance.currentUser != null;
+        return isLoggedIn ? '/dashboard' : '/login';
+      },
+    ),
+
     // Redirect root to appropriate page
     GoRoute(
       path: '/',
