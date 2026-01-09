@@ -175,6 +175,7 @@ Future<void> _initAuthFeature() async {
       signOut: sl<SignOut>(),
       getCurrentUser: sl<GetCurrentUser>(),
       resetPassword: sl<ResetPassword>(),
+      encryptionService: sl<EncryptionService>(),
     ),
   );
 }

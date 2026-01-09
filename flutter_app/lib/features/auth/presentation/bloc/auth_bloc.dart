@@ -4,6 +4,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:equatable/equatable.dart';
 
 import '../../../../core/errors/error_messages.dart';
+import '../../../../core/services/encryption_service.dart';
 import '../../../../core/services/logging_service.dart';
 import '../../domain/entities/user_entity.dart';
 import '../../domain/usecases/get_current_user.dart';
@@ -24,6 +25,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   final SignOut _signOut;
   final GetCurrentUser _getCurrentUser;
   final ResetPassword _resetPassword;
+  final EncryptionService _encryptionService;
   final LoggingService _log = LoggingService();
 
   StreamSubscription<UserEntity?>? _authStateSubscription;
@@ -35,12 +37,14 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     required SignOut signOut,
     required GetCurrentUser getCurrentUser,
     required ResetPassword resetPassword,
+    required EncryptionService encryptionService,
   }) : _signInWithEmail = signInWithEmail,
        _signUpWithEmail = signUpWithEmail,
        _signInWithGoogle = signInWithGoogle,
        _signOut = signOut,
        _getCurrentUser = getCurrentUser,
        _resetPassword = resetPassword,
+       _encryptionService = encryptionService,
        super(AuthInitial()) {
     on<AuthCheckRequested>(_onAuthCheckRequested);
     on<AuthSignInWithEmailRequested>(_onSignInWithEmailRequested);
@@ -73,6 +77,8 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
           tag: LogTags.auth,
           data: {'userId': user.id},
         );
+        // Initialize encryption service for the authenticated user
+        await _initializeEncryption(user.id);
         emit(AuthAuthenticated(user));
       } else {
         _log.info('User not authenticated', tag: LogTags.auth);
@@ -114,12 +120,14 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         final errorMessage = ErrorMessages.fromFailure(failure);
         emit(AuthError(errorMessage));
       },
-      (user) {
+      (user) async {
         _log.info(
           'Sign in successful',
           tag: LogTags.auth,
           data: {'userId': user.id},
         );
+        // Initialize encryption service for the authenticated user
+        await _initializeEncryption(user.id);
         emit(AuthAuthenticated(user));
       },
     );
@@ -154,12 +162,14 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         final errorMessage = ErrorMessages.fromFailure(failure);
         emit(AuthError(errorMessage));
       },
-      (user) {
+      (user) async {
         _log.info(
           'Sign up successful',
           tag: LogTags.auth,
           data: {'userId': user.id},
         );
+        // Initialize encryption service for the authenticated user
+        await _initializeEncryption(user.id);
         emit(AuthAuthenticated(user));
       },
     );
@@ -186,12 +196,14 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
             : ErrorMessages.authGoogleSignInFailed;
         emit(AuthError(errorMessage));
       },
-      (user) {
+      (user) async {
         _log.info(
           'Google sign in successful',
           tag: LogTags.auth,
           data: {'userId': user.id},
         );
+        // Initialize encryption service for the authenticated user
+        await _initializeEncryption(user.id);
         emit(AuthAuthenticated(user));
       },
     );
@@ -217,6 +229,8 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       },
       (_) {
         _log.info('Sign out successful', tag: LogTags.auth);
+        // Clear encryption cache on sign out
+        _encryptionService.clearCache();
         emit(AuthUnauthenticated());
       },
     );
@@ -257,17 +271,49 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     );
   }
 
-  void _onUserChanged(AuthUserChanged event, Emitter<AuthState> emit) {
+  Future<void> _onUserChanged(AuthUserChanged event, Emitter<AuthState> emit) async {
     if (event.user != null) {
       _log.debug(
         'Auth state changed: authenticated',
         tag: LogTags.auth,
         data: {'userId': event.user!.id},
       );
+      // Initialize encryption service for the authenticated user
+      await _initializeEncryption(event.user!.id);
       emit(AuthAuthenticated(event.user!));
     } else {
       _log.debug('Auth state changed: unauthenticated', tag: LogTags.auth);
+      // Clear encryption cache on sign out
+      _encryptionService.clearCache();
       emit(AuthUnauthenticated());
+    }
+  }
+
+  /// Initialize encryption service for a user
+  Future<void> _initializeEncryption(String userId) async {
+    if (!_encryptionService.isInitialized) {
+      _log.debug(
+        'Initializing encryption service',
+        tag: LogTags.auth,
+        data: {'userId': userId},
+      );
+      try {
+        await _encryptionService.initialize(userId);
+        _log.info(
+          'Encryption service initialized',
+          tag: LogTags.auth,
+          data: {'userId': userId},
+        );
+      } catch (e, stackTrace) {
+        _log.error(
+          'Failed to initialize encryption service',
+          tag: LogTags.auth,
+          error: e,
+          stackTrace: stackTrace,
+        );
+        // Don't throw - encryption failure shouldn't block auth
+        // Features using encryption will handle the error gracefully
+      }
     }
   }
 

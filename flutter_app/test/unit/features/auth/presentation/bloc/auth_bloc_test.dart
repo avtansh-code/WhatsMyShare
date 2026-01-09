@@ -6,6 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mockito/annotations.dart';
 import 'package:mockito/mockito.dart';
 import 'package:whats_my_share/core/errors/failures.dart';
+import 'package:whats_my_share/core/services/encryption_service.dart';
 import 'package:whats_my_share/features/auth/domain/entities/user_entity.dart';
 import 'package:whats_my_share/features/auth/domain/usecases/get_current_user.dart';
 import 'package:whats_my_share/features/auth/domain/usecases/reset_password.dart';
@@ -22,6 +23,7 @@ import 'package:whats_my_share/features/auth/presentation/bloc/auth_bloc.dart';
   SignOut,
   GetCurrentUser,
   ResetPassword,
+  EncryptionService,
 ])
 import 'auth_bloc_test.mocks.dart';
 
@@ -33,6 +35,7 @@ void main() {
   late MockSignOut mockSignOut;
   late MockGetCurrentUser mockGetCurrentUser;
   late MockResetPassword mockResetPassword;
+  late MockEncryptionService mockEncryptionService;
   late StreamController<UserEntity?> authStateController;
 
   const tUser = UserEntity(
@@ -48,12 +51,18 @@ void main() {
     mockSignOut = MockSignOut();
     mockGetCurrentUser = MockGetCurrentUser();
     mockResetPassword = MockResetPassword();
+    mockEncryptionService = MockEncryptionService();
     authStateController = StreamController<UserEntity?>.broadcast();
 
     // Setup default auth state changes stream
     when(
       mockGetCurrentUser.authStateChanges,
     ).thenAnswer((_) => authStateController.stream);
+
+    // Setup encryption service mocks
+    when(mockEncryptionService.isInitialized).thenReturn(false);
+    when(mockEncryptionService.initialize(any)).thenAnswer((_) async {});
+    when(mockEncryptionService.clearCache()).thenReturn(null);
 
     authBloc = AuthBloc(
       signInWithEmail: mockSignInWithEmail,
@@ -62,6 +71,7 @@ void main() {
       signOut: mockSignOut,
       getCurrentUser: mockGetCurrentUser,
       resetPassword: mockResetPassword,
+      encryptionService: mockEncryptionService,
     );
   });
 

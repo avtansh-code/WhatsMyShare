@@ -4,10 +4,14 @@
 
 // ignore_for_file: no_leading_underscores_for_library_prefixes
 import 'dart:async' as _i5;
+import 'dart:io' as _i15;
+import 'dart:typed_data' as _i14;
 
 import 'package:dartz/dartz.dart' as _i3;
 import 'package:mockito/mockito.dart' as _i1;
+import 'package:mockito/src/dummies.dart' as _i16;
 import 'package:whats_my_share/core/errors/failures.dart' as _i6;
+import 'package:whats_my_share/core/services/encryption_service.dart' as _i13;
 import 'package:whats_my_share/features/auth/domain/entities/user_entity.dart'
     as _i7;
 import 'package:whats_my_share/features/auth/domain/repositories/auth_repository.dart'
@@ -259,4 +263,100 @@ class MockResetPassword extends _i1.Mock implements _i12.ResetPassword {
             ),
           )
           as _i5.Future<_i3.Either<_i6.Failure, void>>);
+}
+
+/// A class which mocks [EncryptionService].
+///
+/// See the documentation for Mockito's code generation for more information.
+class MockEncryptionService extends _i1.Mock implements _i13.EncryptionService {
+  MockEncryptionService() {
+    _i1.throwOnMissingStub(this);
+  }
+
+  @override
+  bool get isInitialized =>
+      (super.noSuchMethod(Invocation.getter(#isInitialized), returnValue: false)
+          as bool);
+
+  @override
+  _i5.Future<void> initialize(String? userId) =>
+      (super.noSuchMethod(
+            Invocation.method(#initialize, [userId]),
+            returnValue: _i5.Future<void>.value(),
+            returnValueForMissingStub: _i5.Future<void>.value(),
+          )
+          as _i5.Future<void>);
+
+  @override
+  void clearCache() => super.noSuchMethod(
+    Invocation.method(#clearCache, []),
+    returnValueForMissingStub: null,
+  );
+
+  @override
+  _i5.Future<_i14.Uint8List> encryptFile(_i15.File? file) =>
+      (super.noSuchMethod(
+            Invocation.method(#encryptFile, [file]),
+            returnValue: _i5.Future<_i14.Uint8List>.value(_i14.Uint8List(0)),
+          )
+          as _i5.Future<_i14.Uint8List>);
+
+  @override
+  _i5.Future<_i14.Uint8List> decryptBytes(_i14.Uint8List? encryptedData) =>
+      (super.noSuchMethod(
+            Invocation.method(#decryptBytes, [encryptedData]),
+            returnValue: _i5.Future<_i14.Uint8List>.value(_i14.Uint8List(0)),
+          )
+          as _i5.Future<_i14.Uint8List>);
+
+  @override
+  _i5.Future<String> encryptFileToTemp(_i15.File? file) =>
+      (super.noSuchMethod(
+            Invocation.method(#encryptFileToTemp, [file]),
+            returnValue: _i5.Future<String>.value(
+              _i16.dummyValue<String>(
+                this,
+                Invocation.method(#encryptFileToTemp, [file]),
+              ),
+            ),
+          )
+          as _i5.Future<String>);
+
+  @override
+  _i5.Future<_i14.Uint8List> decryptFile(_i15.File? encryptedFile) =>
+      (super.noSuchMethod(
+            Invocation.method(#decryptFile, [encryptedFile]),
+            returnValue: _i5.Future<_i14.Uint8List>.value(_i14.Uint8List(0)),
+          )
+          as _i5.Future<_i14.Uint8List>);
+
+  @override
+  _i5.Future<String> exportKeyForBackup(String? password) =>
+      (super.noSuchMethod(
+            Invocation.method(#exportKeyForBackup, [password]),
+            returnValue: _i5.Future<String>.value(
+              _i16.dummyValue<String>(
+                this,
+                Invocation.method(#exportKeyForBackup, [password]),
+              ),
+            ),
+          )
+          as _i5.Future<String>);
+
+  @override
+  _i5.Future<void> importKeyFromBackup(
+    String? userId,
+    String? exportedKey,
+    String? password,
+  ) =>
+      (super.noSuchMethod(
+            Invocation.method(#importKeyFromBackup, [
+              userId,
+              exportedKey,
+              password,
+            ]),
+            returnValue: _i5.Future<void>.value(),
+            returnValueForMissingStub: _i5.Future<void>.value(),
+          )
+          as _i5.Future<void>);
 }
