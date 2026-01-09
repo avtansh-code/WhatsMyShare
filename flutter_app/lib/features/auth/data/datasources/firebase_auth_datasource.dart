@@ -571,6 +571,10 @@ class FirebaseAuthDataSourceImpl implements FirebaseAuthDataSource {
       tag: LogTags.auth,
       data: {'uid': uid},
     );
+    
+    // Get the Firebase Auth user for fallback values
+    final firebaseUser = _firebaseAuth.currentUser;
+    
     final doc = await _usersCollection.doc(uid).get();
     if (!doc.exists) {
       _log.warning(
@@ -578,8 +582,7 @@ class FirebaseAuthDataSourceImpl implements FirebaseAuthDataSource {
         tag: LogTags.auth,
         data: {'uid': uid},
       );
-      // Get the Firebase Auth user to get email and display name
-      final firebaseUser = _firebaseAuth.currentUser;
+      
       if (firebaseUser == null) {
         _log.error(
           'Cannot create user document: Firebase user is null',
@@ -608,7 +611,23 @@ class FirebaseAuthDataSourceImpl implements FirebaseAuthDataSource {
       return UserModel.fromFirestore(newDoc);
     }
     
-    final userModel = UserModel.fromFirestore(doc);
+    var userModel = UserModel.fromFirestore(doc);
+    
+    // Track if we need to update the Firestore document
+    final updates = <String, dynamic>{};
+    
+    // Fix data inconsistency: if email is empty but Firebase Auth has email,
+    // use the Firebase Auth email
+    if (userModel.email.isEmpty && firebaseUser?.email != null && firebaseUser!.email!.isNotEmpty) {
+      _log.warning(
+        'Data inconsistency detected: Firestore email is empty but Firebase Auth has email. Fixing...',
+        tag: LogTags.auth,
+        data: {'uid': uid, 'firestoreEmail': userModel.email, 'authEmail': firebaseUser.email},
+      );
+      
+      updates['email'] = firebaseUser.email;
+      userModel = userModel.copyWithModel(email: firebaseUser.email);
+    }
     
     // Fix data inconsistency: if phone is null/empty but isPhoneVerified is true,
     // reset isPhoneVerified to false
@@ -620,13 +639,14 @@ class FirebaseAuthDataSourceImpl implements FirebaseAuthDataSource {
         data: {'uid': uid, 'phone': userModel.phone, 'isPhoneVerified': userModel.isPhoneVerified},
       );
       
-      await _usersCollection.doc(uid).update({
-        'isPhoneVerified': false,
-        'updatedAt': FieldValue.serverTimestamp(),
-      });
-      
-      // Return corrected model
-      return userModel.copyWithModel(isPhoneVerified: false);
+      updates['isPhoneVerified'] = false;
+      userModel = userModel.copyWithModel(isPhoneVerified: false);
+    }
+    
+    // Apply updates if any
+    if (updates.isNotEmpty) {
+      updates['updatedAt'] = FieldValue.serverTimestamp();
+      await _usersCollection.doc(uid).update(updates);
     }
     
     return userModel;

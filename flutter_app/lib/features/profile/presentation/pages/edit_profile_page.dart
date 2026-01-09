@@ -20,29 +20,57 @@ class _EditProfilePageState extends State<EditProfilePage> {
   final LoggingService _log = LoggingService();
   late TextEditingController _displayNameController;
   late TextEditingController _phoneController;
+  late TextEditingController _emailController;
   String? _selectedCurrency;
   File? _selectedImage;
   bool _hasChanges = false;
+  bool _isInitialized = false;
 
   @override
   void initState() {
     super.initState();
     _log.info('EditProfilePage opened', tag: LogTags.ui);
-    final profile = context.read<ProfileBloc>().state.profile;
-    _displayNameController = TextEditingController(
-      text: profile?.displayName ?? '',
-    );
-    _phoneController = TextEditingController(text: profile?.phone ?? '');
-    _selectedCurrency = profile?.defaultCurrency ?? 'INR';
+    _displayNameController = TextEditingController();
+    _phoneController = TextEditingController();
+    _emailController = TextEditingController();
+    _selectedCurrency = 'INR';
 
     _displayNameController.addListener(_onFieldChanged);
     _phoneController.addListener(_onFieldChanged);
+
+    // Try to initialize from existing profile data
+    final profile = context.read<ProfileBloc>().state.profile;
+    if (profile != null) {
+      _initializeFormWithProfile(profile);
+    }
+  }
+
+  void _initializeFormWithProfile(dynamic profile) {
+    if (_isInitialized) return;
+    _isInitialized = true;
+    
+    // Remove listeners temporarily to avoid triggering _hasChanges
+    _displayNameController.removeListener(_onFieldChanged);
+    _phoneController.removeListener(_onFieldChanged);
+    
+    _displayNameController.text = profile.displayName ?? '';
+    _phoneController.text = profile.phone ?? '';
+    _emailController.text = profile.email ?? '';
+    _selectedCurrency = profile.defaultCurrency ?? 'INR';
+    
+    // Re-add listeners
+    _displayNameController.addListener(_onFieldChanged);
+    _phoneController.addListener(_onFieldChanged);
+    
+    // Reset hasChanges since we just initialized
+    _hasChanges = false;
   }
 
   @override
   void dispose() {
     _displayNameController.dispose();
     _phoneController.dispose();
+    _emailController.dispose();
     super.dispose();
   }
 
@@ -56,6 +84,13 @@ class _EditProfilePageState extends State<EditProfilePage> {
   Widget build(BuildContext context) {
     return BlocConsumer<ProfileBloc, ProfileState>(
       listener: (context, state) {
+        // Initialize form when profile loads
+        if (state.profile != null && !_isInitialized) {
+          setState(() {
+            _initializeFormWithProfile(state.profile);
+          });
+        }
+        
         if (state.status == ProfileStatus.updated ||
             state.status == ProfileStatus.photoUpdated) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -129,7 +164,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
 
                   // Email (read-only)
                   TextFormField(
-                    initialValue: profile?.email ?? '',
+                    controller: _emailController,
                     decoration: const InputDecoration(
                       labelText: 'Email',
                       prefixIcon: Icon(Icons.email_outlined),
@@ -164,7 +199,8 @@ class _EditProfilePageState extends State<EditProfilePage> {
 
                   // Currency
                   DropdownButtonFormField<String>(
-                    initialValue: _selectedCurrency,
+                    // ignore: deprecated_member_use
+                    value: _selectedCurrency,
                     decoration: const InputDecoration(
                       labelText: 'Default Currency',
                       prefixIcon: Icon(Icons.currency_exchange),
