@@ -1,69 +1,72 @@
 import 'package:dartz/dartz.dart';
+import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
 
 import '../../../../core/errors/failures.dart';
 import '../entities/user_entity.dart';
 
-/// Abstract repository interface for authentication operations
-/// Implementations will handle Firebase Auth and Firestore
+/// Authentication repository interface
+/// Supports ONLY phone-based authentication
+/// No email/password or social login methods
 abstract class AuthRepository {
+  /// Get the currently authenticated user
+  /// Returns null if no user is signed in
+  Future<Either<Failure, UserEntity?>> getCurrentUser();
+
   /// Stream of authentication state changes
-  /// Emits null when user signs out, UserEntity when signed in
   Stream<UserEntity?> get authStateChanges;
 
-  /// Get currently authenticated user
-  /// Returns null if not authenticated
-  Future<UserEntity?> getCurrentUser();
-
-  /// Sign in with email and password
-  Future<Either<Failure, UserEntity>> signInWithEmail({
-    required String email,
-    required String password,
+  /// Start phone number verification
+  /// Sends OTP to the provided phone number
+  Future<Either<Failure, String>> verifyPhoneNumber({
+    required String phoneNumber,
+    required Duration timeout,
+    required Function(firebase_auth.PhoneAuthCredential) verificationCompleted,
+    required Function(firebase_auth.FirebaseAuthException) verificationFailed,
+    required Function(String verificationId, int? resendToken) codeSent,
+    required Function(String verificationId) codeAutoRetrievalTimeout,
+    int? forceResendingToken,
   });
 
-  /// Sign up with email and password
-  Future<Either<Failure, UserEntity>> signUpWithEmail({
-    required String email,
-    required String password,
-    required String displayName,
+  /// Sign in with phone credential (OTP verification)
+  Future<Either<Failure, UserEntity>> signInWithPhoneCredential({
+    required String verificationId,
+    required String smsCode,
   });
 
-  /// Sign in with Google OAuth
-  Future<Either<Failure, UserEntity>> signInWithGoogle();
+  /// Sign in with auto-retrieved credential (Android only)
+  Future<Either<Failure, UserEntity>> signInWithAutoRetrievedCredential(
+    firebase_auth.PhoneAuthCredential credential,
+  );
 
-  /// Sign out current user
-  Future<Either<Failure, void>> signOut();
-
-  /// Send password reset email
-  Future<Either<Failure, void>> resetPassword({required String email});
-
-  /// Update user profile
+  /// Update user profile after phone verification
   Future<Either<Failure, UserEntity>> updateProfile({
-    String? displayName,
+    required String displayName,
     String? photoUrl,
-    String? phone,
   });
 
-  /// Update user preferences
-  Future<Either<Failure, UserEntity>> updatePreferences({
+  /// Complete user profile setup (for new users)
+  Future<Either<Failure, UserEntity>> completeProfileSetup({
+    required String displayName,
+    String? photoUrl,
     String? defaultCurrency,
-    String? locale,
-    String? timezone,
-    bool? notificationsEnabled,
-    bool? biometricAuthEnabled,
+    String? countryCode,
   });
+
+  /// Sign out the current user
+  Future<Either<Failure, void>> signOut();
 
   /// Delete user account
   Future<Either<Failure, void>> deleteAccount();
 
-  /// Check if email is already registered
-  Future<Either<Failure, bool>> isEmailRegistered(String email);
+  /// Check if a phone number is already registered
+  Future<Either<Failure, bool>> isPhoneNumberRegistered(String phoneNumber);
 
-  /// Verify current password (for sensitive operations)
-  Future<Either<Failure, bool>> verifyPassword(String password);
+  /// Get user by phone number
+  Future<Either<Failure, UserEntity?>> getUserByPhoneNumber(String phoneNumber);
 
-  /// Update password
-  Future<Either<Failure, void>> updatePassword({
-    required String currentPassword,
-    required String newPassword,
-  });
+  /// Update FCM token for push notifications
+  Future<Either<Failure, void>> updateFcmToken(String token);
+
+  /// Remove FCM token on sign out
+  Future<Either<Failure, void>> removeFcmToken(String token);
 }

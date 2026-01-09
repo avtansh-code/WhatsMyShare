@@ -1,24 +1,28 @@
 part of 'auth_bloc.dart';
 
-/// Base class for auth states
-abstract class AuthState extends Equatable {
+/// Base class for authentication states
+abstract class AuthState {
   const AuthState();
 
-  @override
   List<Object?> get props => [];
 }
 
-/// Initial state
+/// Initial state before any auth check
 class AuthInitial extends AuthState {
   const AuthInitial();
 }
 
-/// Loading state
+/// Loading state during auth operations
 class AuthLoading extends AuthState {
   const AuthLoading();
 }
 
-/// Authenticated state
+/// User is not authenticated
+class AuthUnauthenticated extends AuthState {
+  const AuthUnauthenticated();
+}
+
+/// User is authenticated
 class AuthAuthenticated extends AuthState {
   final UserEntity user;
 
@@ -28,12 +32,37 @@ class AuthAuthenticated extends AuthState {
   List<Object?> get props => [user];
 }
 
-/// Unauthenticated state
-class AuthUnauthenticated extends AuthState {
-  const AuthUnauthenticated();
+/// Phone verification is in progress
+class AuthPhoneVerificationInProgress extends AuthState {
+  final String phoneNumber;
+
+  const AuthPhoneVerificationInProgress(this.phoneNumber);
+
+  @override
+  List<Object?> get props => [phoneNumber];
 }
 
-/// Error state
+/// OTP has been sent to the phone
+class AuthOtpSent extends AuthState {
+  final String verificationId;
+
+  const AuthOtpSent({required this.verificationId});
+
+  @override
+  List<Object?> get props => [verificationId];
+}
+
+/// User needs to complete their profile
+class AuthNeedsProfileCompletion extends AuthState {
+  final UserEntity user;
+
+  const AuthNeedsProfileCompletion(this.user);
+
+  @override
+  List<Object?> get props => [user];
+}
+
+/// Authentication error occurred
 class AuthError extends AuthState {
   final String message;
 
@@ -41,14 +70,4 @@ class AuthError extends AuthState {
 
   @override
   List<Object?> get props => [message];
-}
-
-/// Password reset email sent
-class AuthPasswordResetSent extends AuthState {
-  final String email;
-
-  const AuthPasswordResetSent(this.email);
-
-  @override
-  List<Object?> get props => [email];
 }

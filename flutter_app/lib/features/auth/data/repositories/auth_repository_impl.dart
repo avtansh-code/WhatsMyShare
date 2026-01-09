@@ -1,4 +1,5 @@
 import 'package:dartz/dartz.dart';
+import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
 
 import '../../../../core/errors/exceptions.dart';
 import '../../../../core/errors/failures.dart';
@@ -7,389 +8,221 @@ import '../../domain/entities/user_entity.dart';
 import '../../domain/repositories/auth_repository.dart';
 import '../datasources/firebase_auth_datasource.dart';
 
-/// Implementation of AuthRepository
+/// Implementation of AuthRepository for phone-based authentication ONLY
 class AuthRepositoryImpl implements AuthRepository {
   final FirebaseAuthDataSource _dataSource;
-  final LoggingService _log = LoggingService();
+  final LoggingService _loggingService;
 
-  AuthRepositoryImpl({required FirebaseAuthDataSource dataSource})
-    : _dataSource = dataSource {
-    _log.debug('AuthRepository initialized', tag: LogTags.auth);
+  AuthRepositoryImpl({
+    required FirebaseAuthDataSource dataSource,
+    required LoggingService loggingService,
+  })  : _dataSource = dataSource,
+        _loggingService = loggingService;
+
+  @override
+  Future<Either<Failure, UserEntity?>> getCurrentUser() async {
+    try {
+      final user = await _dataSource.getCurrentUser();
+      return Right(user);
+    } on ServerException catch (e) {
+      _loggingService.error('Server error getting current user', e);
+      return Left(ServerFailure(message: e.message));
+    } catch (e) {
+      _loggingService.error('Unexpected error getting current user', e);
+      return Left(ServerFailure(message: 'Failed to get current user'));
+    }
   }
 
   @override
   Stream<UserEntity?> get authStateChanges => _dataSource.authStateChanges;
 
   @override
-  Future<UserEntity?> getCurrentUser() async {
-    _log.debug('Getting current user', tag: LogTags.auth);
-    return await _dataSource.getCurrentUser();
-  }
-
-  @override
-  Future<Either<Failure, UserEntity>> signInWithEmail({
-    required String email,
-    required String password,
+  Future<Either<Failure, String>> verifyPhoneNumber({
+    required String phoneNumber,
+    required Duration timeout,
+    required Function(firebase_auth.PhoneAuthCredential) verificationCompleted,
+    required Function(firebase_auth.FirebaseAuthException) verificationFailed,
+    required Function(String verificationId, int? resendToken) codeSent,
+    required Function(String verificationId) codeAutoRetrievalTimeout,
+    int? forceResendingToken,
   }) async {
-    _log.info(
-      'Sign in with email attempt',
-      tag: LogTags.auth,
-      data: {'email': email},
-    );
     try {
-      final user = await _dataSource.signInWithEmail(email, password);
-      _log.info(
-        'Sign in with email successful',
-        tag: LogTags.auth,
-        data: {'userId': user.id},
+      await _dataSource.verifyPhoneNumber(
+        phoneNumber: phoneNumber,
+        timeout: timeout,
+        verificationCompleted: verificationCompleted,
+        verificationFailed: verificationFailed,
+        codeSent: codeSent,
+        codeAutoRetrievalTimeout: codeAutoRetrievalTimeout,
+        forceResendingToken: forceResendingToken,
       );
-      return Right(user);
+      // Return success - actual verification ID comes via codeSent callback
+      return const Right('Verification started');
     } on AuthException catch (e) {
-      _log.warning(
-        'Sign in with email failed',
-        tag: LogTags.auth,
-        data: {'email': email, 'error': e.message},
-      );
-      return Left(AuthFailure(message: e.message, code: e.code));
-    } on ServerException catch (e) {
-      _log.error(
-        'Server error during sign in',
-        tag: LogTags.auth,
-        data: {'error': e.message},
-      );
-      return Left(ServerFailure(message: e.message));
+      _loggingService.error('Auth error verifying phone', e);
+      return Left(AuthFailure(message: e.message));
     } catch (e) {
-      _log.error(
-        'Unexpected error during sign in',
-        tag: LogTags.auth,
-        data: {'error': e.toString()},
-      );
-      return Left(ServerFailure(message: e.toString()));
+      _loggingService.error('Unexpected error verifying phone', e);
+      return Left(AuthFailure(message: 'Failed to verify phone number'));
     }
   }
 
   @override
-  Future<Either<Failure, UserEntity>> signUpWithEmail({
-    required String email,
-    required String password,
-    required String displayName,
+  Future<Either<Failure, UserEntity>> signInWithPhoneCredential({
+    required String verificationId,
+    required String smsCode,
   }) async {
-    _log.info(
-      'Sign up with email attempt',
-      tag: LogTags.auth,
-      data: {'email': email, 'displayName': displayName},
-    );
     try {
-      final user = await _dataSource.signUpWithEmail(
-        email,
-        password,
-        displayName,
-      );
-      _log.info(
-        'Sign up with email successful',
-        tag: LogTags.auth,
-        data: {'userId': user.id},
+      final user = await _dataSource.signInWithPhoneCredential(
+        verificationId: verificationId,
+        smsCode: smsCode,
       );
       return Right(user);
     } on AuthException catch (e) {
-      _log.warning(
-        'Sign up with email failed',
-        tag: LogTags.auth,
-        data: {'email': email, 'error': e.message},
-      );
-      return Left(AuthFailure(message: e.message, code: e.code));
-    } on ServerException catch (e) {
-      _log.error(
-        'Server error during sign up',
-        tag: LogTags.auth,
-        data: {'error': e.message},
-      );
-      return Left(ServerFailure(message: e.message));
+      _loggingService.error('Auth error signing in with phone', e);
+      return Left(AuthFailure(message: e.message));
     } catch (e) {
-      _log.error(
-        'Unexpected error during sign up',
-        tag: LogTags.auth,
-        data: {'error': e.toString()},
-      );
-      return Left(ServerFailure(message: e.toString()));
+      _loggingService.error('Unexpected error signing in with phone', e);
+      return Left(AuthFailure(message: 'Failed to sign in'));
     }
   }
 
   @override
-  Future<Either<Failure, UserEntity>> signInWithGoogle() async {
-    _log.info('Sign in with Google attempt', tag: LogTags.auth);
+  Future<Either<Failure, UserEntity>> signInWithAutoRetrievedCredential(
+    firebase_auth.PhoneAuthCredential credential,
+  ) async {
     try {
-      final user = await _dataSource.signInWithGoogle();
-      _log.info(
-        'Sign in with Google successful',
-        tag: LogTags.auth,
-        data: {'userId': user.id},
-      );
+      final user = await _dataSource.signInWithAutoRetrievedCredential(credential);
       return Right(user);
     } on AuthException catch (e) {
-      _log.warning(
-        'Sign in with Google failed',
-        tag: LogTags.auth,
-        data: {'error': e.message},
-      );
-      return Left(AuthFailure(message: e.message, code: e.code));
-    } on ServerException catch (e) {
-      _log.error(
-        'Server error during Google sign in',
-        tag: LogTags.auth,
-        data: {'error': e.message},
-      );
-      return Left(ServerFailure(message: e.message));
+      _loggingService.error('Auth error with auto-retrieved credential', e);
+      return Left(AuthFailure(message: e.message));
     } catch (e) {
-      _log.error(
-        'Unexpected error during Google sign in',
-        tag: LogTags.auth,
-        data: {'error': e.toString()},
-      );
-      return Left(ServerFailure(message: e.toString()));
-    }
-  }
-
-  @override
-  Future<Either<Failure, void>> signOut() async {
-    _log.info('Sign out attempt', tag: LogTags.auth);
-    try {
-      await _dataSource.signOut();
-      _log.info('Sign out successful', tag: LogTags.auth);
-      return const Right(null);
-    } catch (e) {
-      _log.error(
-        'Sign out failed',
-        tag: LogTags.auth,
-        data: {'error': e.toString()},
-      );
-      return Left(ServerFailure(message: e.toString()));
-    }
-  }
-
-  @override
-  Future<Either<Failure, void>> resetPassword({required String email}) async {
-    _log.info(
-      'Password reset request',
-      tag: LogTags.auth,
-      data: {'email': email},
-    );
-    try {
-      await _dataSource.sendPasswordResetEmail(email);
-      _log.info(
-        'Password reset email sent',
-        tag: LogTags.auth,
-        data: {'email': email},
-      );
-      return const Right(null);
-    } on AuthException catch (e) {
-      _log.warning(
-        'Password reset failed',
-        tag: LogTags.auth,
-        data: {'email': email, 'error': e.message},
-      );
-      return Left(AuthFailure(message: e.message, code: e.code));
-    } catch (e) {
-      _log.error(
-        'Unexpected error during password reset',
-        tag: LogTags.auth,
-        data: {'error': e.toString()},
-      );
-      return Left(ServerFailure(message: e.toString()));
+      _loggingService.error('Unexpected error with auto-retrieved credential', e);
+      return Left(AuthFailure(message: 'Failed to sign in'));
     }
   }
 
   @override
   Future<Either<Failure, UserEntity>> updateProfile({
-    String? displayName,
+    required String displayName,
     String? photoUrl,
-    String? phone,
   }) async {
-    _log.info('Update profile attempt', tag: LogTags.auth);
     try {
       final user = await _dataSource.updateProfile(
         displayName: displayName,
         photoUrl: photoUrl,
-        phone: phone,
-      );
-      _log.info(
-        'Profile updated successfully',
-        tag: LogTags.auth,
-        data: {'userId': user.id},
       );
       return Right(user);
-    } on AuthException catch (e) {
-      _log.warning(
-        'Update profile failed',
-        tag: LogTags.auth,
-        data: {'error': e.message},
-      );
-      return Left(AuthFailure(message: e.message, code: e.code));
     } on ServerException catch (e) {
-      _log.error(
-        'Server error during profile update',
-        tag: LogTags.auth,
-        data: {'error': e.message},
-      );
+      _loggingService.error('Server error updating profile', e);
       return Left(ServerFailure(message: e.message));
     } catch (e) {
-      _log.error(
-        'Unexpected error during profile update',
-        tag: LogTags.auth,
-        data: {'error': e.toString()},
-      );
-      return Left(ServerFailure(message: e.toString()));
+      _loggingService.error('Unexpected error updating profile', e);
+      return Left(ServerFailure(message: 'Failed to update profile'));
     }
   }
 
   @override
-  Future<Either<Failure, UserEntity>> updatePreferences({
+  Future<Either<Failure, UserEntity>> completeProfileSetup({
+    required String displayName,
+    String? photoUrl,
     String? defaultCurrency,
-    String? locale,
-    String? timezone,
-    bool? notificationsEnabled,
-    bool? biometricAuthEnabled,
+    String? countryCode,
   }) async {
-    _log.info('Update preferences attempt', tag: LogTags.auth);
     try {
-      final user = await _dataSource.updatePreferences(
+      final user = await _dataSource.completeProfileSetup(
+        displayName: displayName,
+        photoUrl: photoUrl,
         defaultCurrency: defaultCurrency,
-        locale: locale,
-        timezone: timezone,
-        notificationsEnabled: notificationsEnabled,
-        biometricAuthEnabled: biometricAuthEnabled,
-      );
-      _log.info(
-        'Preferences updated successfully',
-        tag: LogTags.auth,
-        data: {'userId': user.id},
+        countryCode: countryCode,
       );
       return Right(user);
-    } on AuthException catch (e) {
-      _log.warning(
-        'Update preferences failed',
-        tag: LogTags.auth,
-        data: {'error': e.message},
-      );
-      return Left(AuthFailure(message: e.message, code: e.code));
     } on ServerException catch (e) {
-      _log.error(
-        'Server error during preferences update',
-        tag: LogTags.auth,
-        data: {'error': e.message},
-      );
+      _loggingService.error('Server error completing profile', e);
       return Left(ServerFailure(message: e.message));
     } catch (e) {
-      _log.error(
-        'Unexpected error during preferences update',
-        tag: LogTags.auth,
-        data: {'error': e.toString()},
-      );
-      return Left(ServerFailure(message: e.toString()));
+      _loggingService.error('Unexpected error completing profile', e);
+      return Left(ServerFailure(message: 'Failed to complete profile setup'));
+    }
+  }
+
+  @override
+  Future<Either<Failure, void>> signOut() async {
+    try {
+      await _dataSource.signOut();
+      return const Right(null);
+    } on AuthException catch (e) {
+      _loggingService.error('Auth error signing out', e);
+      return Left(AuthFailure(message: e.message));
+    } catch (e) {
+      _loggingService.error('Unexpected error signing out', e);
+      return Left(AuthFailure(message: 'Failed to sign out'));
     }
   }
 
   @override
   Future<Either<Failure, void>> deleteAccount() async {
-    _log.warning('Delete account attempt', tag: LogTags.auth);
     try {
       await _dataSource.deleteAccount();
-      _log.info('Account deleted successfully', tag: LogTags.auth);
       return const Right(null);
     } on AuthException catch (e) {
-      _log.warning(
-        'Delete account failed',
-        tag: LogTags.auth,
-        data: {'error': e.message},
-      );
-      return Left(AuthFailure(message: e.message, code: e.code));
+      _loggingService.error('Auth error deleting account', e);
+      return Left(AuthFailure(message: e.message));
     } catch (e) {
-      _log.error(
-        'Unexpected error during account deletion',
-        tag: LogTags.auth,
-        data: {'error': e.toString()},
-      );
-      return Left(ServerFailure(message: e.toString()));
+      _loggingService.error('Unexpected error deleting account', e);
+      return Left(AuthFailure(message: 'Failed to delete account'));
     }
   }
 
   @override
-  Future<Either<Failure, bool>> isEmailRegistered(String email) async {
-    _log.debug(
-      'Checking if email is registered',
-      tag: LogTags.auth,
-      data: {'email': email},
-    );
+  Future<Either<Failure, bool>> isPhoneNumberRegistered(String phoneNumber) async {
     try {
-      final isRegistered = await _dataSource.isEmailRegistered(email);
-      _log.debug(
-        'Email registration check complete',
-        tag: LogTags.auth,
-        data: {'isRegistered': isRegistered},
-      );
+      final isRegistered = await _dataSource.isPhoneNumberRegistered(phoneNumber);
       return Right(isRegistered);
+    } on ServerException catch (e) {
+      _loggingService.error('Server error checking phone registration', e);
+      return Left(ServerFailure(message: e.message));
     } catch (e) {
-      _log.error(
-        'Error checking email registration',
-        tag: LogTags.auth,
-        data: {'error': e.toString()},
-      );
-      return Left(ServerFailure(message: e.toString()));
+      _loggingService.error('Unexpected error checking phone registration', e);
+      return Left(ServerFailure(message: 'Failed to check phone registration'));
     }
   }
 
   @override
-  Future<Either<Failure, bool>> verifyPassword(String password) async {
-    _log.debug('Verifying password', tag: LogTags.auth);
+  Future<Either<Failure, UserEntity?>> getUserByPhoneNumber(String phoneNumber) async {
     try {
-      final isValid = await _dataSource.verifyPassword(password);
-      _log.debug(
-        'Password verification complete',
-        tag: LogTags.auth,
-        data: {'isValid': isValid},
-      );
-      return Right(isValid);
-    } on AuthException catch (e) {
-      _log.warning(
-        'Password verification failed',
-        tag: LogTags.auth,
-        data: {'error': e.message},
-      );
-      return Left(AuthFailure(message: e.message, code: e.code));
+      final user = await _dataSource.getUserByPhoneNumber(phoneNumber);
+      return Right(user);
+    } on ServerException catch (e) {
+      _loggingService.error('Server error getting user by phone', e);
+      return Left(ServerFailure(message: e.message));
     } catch (e) {
-      _log.error(
-        'Error verifying password',
-        tag: LogTags.auth,
-        data: {'error': e.toString()},
-      );
-      return Left(ServerFailure(message: e.toString()));
+      _loggingService.error('Unexpected error getting user by phone', e);
+      return Left(ServerFailure(message: 'Failed to get user'));
     }
   }
 
   @override
-  Future<Either<Failure, void>> updatePassword({
-    required String currentPassword,
-    required String newPassword,
-  }) async {
-    _log.info('Update password attempt', tag: LogTags.auth);
+  Future<Either<Failure, void>> updateFcmToken(String token) async {
     try {
-      await _dataSource.updatePassword(currentPassword, newPassword);
-      _log.info('Password updated successfully', tag: LogTags.auth);
+      await _dataSource.updateFcmToken(token);
       return const Right(null);
-    } on AuthException catch (e) {
-      _log.warning(
-        'Update password failed',
-        tag: LogTags.auth,
-        data: {'error': e.message},
-      );
-      return Left(AuthFailure(message: e.message, code: e.code));
     } catch (e) {
-      _log.error(
-        'Error updating password',
-        tag: LogTags.auth,
-        data: {'error': e.toString()},
-      );
-      return Left(ServerFailure(message: e.toString()));
+      _loggingService.error('Error updating FCM token', e);
+      // Don't fail silently for FCM token updates
+      return const Right(null);
+    }
+  }
+
+  @override
+  Future<Either<Failure, void>> removeFcmToken(String token) async {
+    try {
+      await _dataSource.removeFcmToken(token);
+      return const Right(null);
+    } catch (e) {
+      _loggingService.error('Error removing FCM token', e);
+      return const Right(null);
     }
   }
 }

@@ -1,64 +1,60 @@
 import 'dart:async';
 
+import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:equatable/equatable.dart';
 
 import '../../../../core/errors/error_messages.dart';
-import '../../../../core/services/encryption_service.dart';
 import '../../../../core/services/logging_service.dart';
 import '../../domain/entities/user_entity.dart';
-import '../../domain/usecases/get_current_user.dart';
-import '../../domain/usecases/sign_in_with_email.dart';
-import '../../domain/usecases/sign_in_with_google.dart';
-import '../../domain/usecases/sign_out.dart';
-import '../../domain/usecases/sign_up_with_email.dart';
-import '../../domain/usecases/reset_password.dart';
+import '../../domain/repositories/auth_repository.dart';
 
 part 'auth_event.dart';
 part 'auth_state.dart';
 
-/// BLoC for handling authentication state
+/// BLoC for handling phone-based authentication
 class AuthBloc extends Bloc<AuthEvent, AuthState> {
-  final SignInWithEmail _signInWithEmail;
-  final SignUpWithEmail _signUpWithEmail;
-  final SignInWithGoogle _signInWithGoogle;
-  final SignOut _signOut;
-  final GetCurrentUser _getCurrentUser;
-  final ResetPassword _resetPassword;
-  final EncryptionService _encryptionService;
-  final LoggingService _log = LoggingService();
+  final AuthRepository _authRepository;
+  final LoggingService _log;
 
   StreamSubscription<UserEntity?>? _authStateSubscription;
 
+  // Phone verification state
+  String? _verificationId;
+  int? _resendToken;
+
   AuthBloc({
-    required SignInWithEmail signInWithEmail,
-    required SignUpWithEmail signUpWithEmail,
-    required SignInWithGoogle signInWithGoogle,
-    required SignOut signOut,
-    required GetCurrentUser getCurrentUser,
-    required ResetPassword resetPassword,
-    required EncryptionService encryptionService,
-  }) : _signInWithEmail = signInWithEmail,
-       _signUpWithEmail = signUpWithEmail,
-       _signInWithGoogle = signInWithGoogle,
-       _signOut = signOut,
-       _getCurrentUser = getCurrentUser,
-       _resetPassword = resetPassword,
-       _encryptionService = encryptionService,
-       super(AuthInitial()) {
+    required AuthRepository authRepository,
+    required LoggingService loggingService,
+  })  : _authRepository = authRepository,
+        _log = loggingService,
+        super(AuthInitial()) {
+    // Auth check
     on<AuthCheckRequested>(_onAuthCheckRequested);
-    on<AuthSignInWithEmailRequested>(_onSignInWithEmailRequested);
-    on<AuthSignUpWithEmailRequested>(_onSignUpWithEmailRequested);
-    on<AuthSignInWithGoogleRequested>(_onSignInWithGoogleRequested);
+
+    // Phone authentication
+    on<AuthPhoneNumberSubmitted>(_onPhoneNumberSubmitted);
+    on<AuthOtpSubmitted>(_onOtpSubmitted);
+    on<AuthResendOtpRequested>(_onResendOtpRequested);
+
+    // Profile completion
+    on<AuthCompleteProfileRequested>(_onCompleteProfileRequested);
+
+    // Sign out
     on<AuthSignOutRequested>(_onSignOutRequested);
-    on<AuthResetPasswordRequested>(_onResetPasswordRequested);
+
+    // User state changes
     on<AuthUserChanged>(_onUserChanged);
     on<AuthUserPhotoUpdated>(_onUserPhotoUpdated);
 
-    _log.info('AuthBloc initialized', tag: LogTags.auth);
+    // Internal events for phone verification callbacks
+    on<_AuthVerificationCompleted>(_onVerificationCompleted);
+    on<_AuthVerificationFailed>(_onVerificationFailed);
+    on<_AuthCodeSent>(_onCodeSent);
+
+    _log.info('AuthBloc initialized (phone-only auth)', tag: LogTags.auth);
 
     // Listen to auth state changes
-    _authStateSubscription = _getCurrentUser.authStateChanges.listen((user) {
+    _authStateSubscription = _authRepository.authStateChanges.listen((user) {
       add(AuthUserChanged(user));
     });
   }
@@ -71,20 +67,33 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     emit(AuthLoading());
 
     try {
-      final user = await _getCurrentUser();
-      if (user != null) {
-        _log.info(
-          'User authenticated',
-          tag: LogTags.auth,
-          data: {'userId': user.id},
-        );
-        // Initialize encryption service for the authenticated user
-        await _initializeEncryption(user.id);
-        emit(AuthAuthenticated(user));
-      } else {
-        _log.info('User not authenticated', tag: LogTags.auth);
-        emit(AuthUnauthenticated());
-      }
+      final result = await _authRepository.getCurrentUser();
+
+      result.fold(
+        (failure) {
+          _log.error('Auth check failed', tag: LogTags.auth, error: failure);
+          emit(AuthUnauthenticated());
+        },
+        (user) {
+          if (user != null) {
+            _log.info(
+              'User authenticated',
+              tag: LogTags.auth,
+              data: {'userId': user.id, 'hasName': user.displayName != null},
+            );
+
+            // Check if profile is complete (has display name)
+            if (user.displayName == null || user.displayName!.isEmpty) {
+              emit(AuthNeedsProfileCompletion(user));
+            } else {
+              emit(AuthAuthenticated(user));
+            }
+          } else {
+            _log.info('User not authenticated', tag: LogTags.auth);
+            emit(AuthUnauthenticated());
+          }
+        },
+      );
     } catch (e, stackTrace) {
       _log.error(
         'Auth check failed',
@@ -96,115 +105,225 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     }
   }
 
-  Future<void> _onSignInWithEmailRequested(
-    AuthSignInWithEmailRequested event,
+  Future<void> _onPhoneNumberSubmitted(
+    AuthPhoneNumberSubmitted event,
     Emitter<AuthState> emit,
   ) async {
     _log.info(
-      'Sign in with email requested',
+      'Phone number submitted',
       tag: LogTags.auth,
-      data: {'email': event.email},
+      data: {'phone': _maskPhone(event.phoneNumber)},
     );
+    emit(AuthPhoneVerificationInProgress(event.phoneNumber));
+
+    try {
+      await _authRepository.verifyPhoneNumber(
+        phoneNumber: event.phoneNumber,
+        timeout: const Duration(seconds: 60),
+        verificationCompleted: (credential) {
+          add(_AuthVerificationCompleted(credential));
+        },
+        verificationFailed: (exception) {
+          add(_AuthVerificationFailed(exception));
+        },
+        codeSent: (verificationId, resendToken) {
+          add(_AuthCodeSent(verificationId, resendToken));
+        },
+        codeAutoRetrievalTimeout: (verificationId) {
+          _log.debug('Auto retrieval timeout', tag: LogTags.auth);
+          _verificationId = verificationId;
+        },
+        forceResendingToken: _resendToken,
+      );
+    } catch (e, stackTrace) {
+      _log.error(
+        'Phone verification failed',
+        tag: LogTags.auth,
+        error: e,
+        stackTrace: stackTrace,
+      );
+      emit(AuthError('Failed to send verification code'));
+    }
+  }
+
+  void _onCodeSent(
+    _AuthCodeSent event,
+    Emitter<AuthState> emit,
+  ) {
+    _log.info('OTP code sent', tag: LogTags.auth);
+    _verificationId = event.verificationId;
+    _resendToken = event.resendToken;
+    emit(AuthOtpSent(verificationId: event.verificationId));
+  }
+
+  Future<void> _onVerificationCompleted(
+    _AuthVerificationCompleted event,
+    Emitter<AuthState> emit,
+  ) async {
+    _log.info('Auto verification completed (Android)', tag: LogTags.auth);
     emit(AuthLoading());
 
-    final result = await _signInWithEmail(
-      SignInParams(email: event.email, password: event.password),
+    final result = await _authRepository.signInWithAutoRetrievedCredential(
+      event.credential,
     );
 
-    await result.fold(
-      (failure) async {
-        _log.warning(
-          'Sign in failed',
-          tag: LogTags.auth,
-          data: {'email': event.email, 'error': failure.message},
-        );
-        final errorMessage = ErrorMessages.fromFailure(failure);
-        emit(AuthError(errorMessage));
+    result.fold(
+      (failure) {
+        _log.error('Auto sign in failed', tag: LogTags.auth, error: failure);
+        emit(AuthError(failure.message));
       },
-      (user) async {
+      (user) {
         _log.info(
-          'Sign in successful',
+          'Auto sign in successful',
           tag: LogTags.auth,
           data: {'userId': user.id},
         );
-        // Initialize encryption service for the authenticated user
-        await _initializeEncryption(user.id);
-        emit(AuthAuthenticated(user));
+        _handleSuccessfulSignIn(user, emit);
       },
     );
   }
 
-  Future<void> _onSignUpWithEmailRequested(
-    AuthSignUpWithEmailRequested event,
+  void _onVerificationFailed(
+    _AuthVerificationFailed event,
     Emitter<AuthState> emit,
-  ) async {
-    _log.info(
-      'Sign up with email requested',
+  ) {
+    _log.error(
+      'Phone verification failed',
       tag: LogTags.auth,
-      data: {'email': event.email},
-    );
-    emit(AuthLoading());
-
-    final result = await _signUpWithEmail(
-      SignUpParams(
-        email: event.email,
-        password: event.password,
-        displayName: event.displayName,
-      ),
+      error: event.exception,
     );
 
-    await result.fold(
-      (failure) async {
-        _log.warning(
-          'Sign up failed',
-          tag: LogTags.auth,
-          data: {'email': event.email, 'error': failure.message},
-        );
-        final errorMessage = ErrorMessages.fromFailure(failure);
-        emit(AuthError(errorMessage));
-      },
-      (user) async {
-        _log.info(
-          'Sign up successful',
-          tag: LogTags.auth,
-          data: {'userId': user.id},
-        );
-        // Initialize encryption service for the authenticated user
-        await _initializeEncryption(user.id);
-        emit(AuthAuthenticated(user));
-      },
-    );
+    String errorMessage;
+    switch (event.exception.code) {
+      case 'invalid-phone-number':
+        errorMessage = 'Invalid phone number format';
+        break;
+      case 'too-many-requests':
+        errorMessage = 'Too many attempts. Please try again later.';
+        break;
+      case 'quota-exceeded':
+        errorMessage = 'SMS quota exceeded. Please try again later.';
+        break;
+      default:
+        errorMessage = event.exception.message ?? 'Verification failed';
+    }
+
+    emit(AuthError(errorMessage));
   }
 
-  Future<void> _onSignInWithGoogleRequested(
-    AuthSignInWithGoogleRequested event,
+  Future<void> _onOtpSubmitted(
+    AuthOtpSubmitted event,
     Emitter<AuthState> emit,
   ) async {
-    _log.info('Sign in with Google requested', tag: LogTags.auth);
+    _log.info('OTP submitted', tag: LogTags.auth);
+
+    if (_verificationId == null) {
+      _log.error('No verification ID available', tag: LogTags.auth);
+      emit(AuthError('Session expired. Please request a new code.'));
+      return;
+    }
+
     emit(AuthLoading());
 
-    final result = await _signInWithGoogle();
+    final result = await _authRepository.signInWithPhoneCredential(
+      verificationId: _verificationId!,
+      smsCode: event.otp,
+    );
 
-    await result.fold(
-      (failure) async {
+    result.fold(
+      (failure) {
         _log.warning(
-          'Google sign in failed',
+          'OTP verification failed',
           tag: LogTags.auth,
           data: {'error': failure.message},
         );
-        final errorMessage = failure.message.contains('cancelled')
-            ? ErrorMessages.authGoogleSignInCancelled
-            : ErrorMessages.authGoogleSignInFailed;
-        emit(AuthError(errorMessage));
+        emit(AuthError(failure.message));
       },
-      (user) async {
+      (user) {
         _log.info(
-          'Google sign in successful',
+          'OTP verification successful',
           tag: LogTags.auth,
           data: {'userId': user.id},
         );
-        // Initialize encryption service for the authenticated user
-        await _initializeEncryption(user.id);
+        _handleSuccessfulSignIn(user, emit);
+      },
+    );
+  }
+
+  Future<void> _onResendOtpRequested(
+    AuthResendOtpRequested event,
+    Emitter<AuthState> emit,
+  ) async {
+    _log.info(
+      'Resend OTP requested',
+      tag: LogTags.auth,
+      data: {'phone': _maskPhone(event.phoneNumber)},
+    );
+
+    emit(AuthPhoneVerificationInProgress(event.phoneNumber));
+
+    try {
+      await _authRepository.verifyPhoneNumber(
+        phoneNumber: event.phoneNumber,
+        timeout: const Duration(seconds: 60),
+        verificationCompleted: (credential) {
+          add(_AuthVerificationCompleted(credential));
+        },
+        verificationFailed: (exception) {
+          add(_AuthVerificationFailed(exception));
+        },
+        codeSent: (verificationId, resendToken) {
+          add(_AuthCodeSent(verificationId, resendToken));
+        },
+        codeAutoRetrievalTimeout: (verificationId) {
+          _verificationId = verificationId;
+        },
+        forceResendingToken: _resendToken,
+      );
+    } catch (e, stackTrace) {
+      _log.error(
+        'Resend OTP failed',
+        tag: LogTags.auth,
+        error: e,
+        stackTrace: stackTrace,
+      );
+      emit(AuthError('Failed to resend verification code'));
+    }
+  }
+
+  Future<void> _onCompleteProfileRequested(
+    AuthCompleteProfileRequested event,
+    Emitter<AuthState> emit,
+  ) async {
+    _log.info(
+      'Profile completion requested',
+      tag: LogTags.auth,
+      data: {'displayName': event.displayName},
+    );
+    emit(AuthLoading());
+
+    final result = await _authRepository.completeProfileSetup(
+      displayName: event.displayName,
+      photoUrl: event.photoUrl,
+      defaultCurrency: event.defaultCurrency,
+      countryCode: event.countryCode,
+    );
+
+    result.fold(
+      (failure) {
+        _log.error(
+          'Profile completion failed',
+          tag: LogTags.auth,
+          error: failure,
+        );
+        emit(AuthError(failure.message));
+      },
+      (user) {
+        _log.info(
+          'Profile completed successfully',
+          tag: LogTags.auth,
+          data: {'userId': user.id},
+        );
         emit(AuthAuthenticated(user));
       },
     );
@@ -217,7 +336,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     _log.info('Sign out requested', tag: LogTags.auth);
     emit(AuthLoading());
 
-    final result = await _signOut();
+    final result = await _authRepository.signOut();
 
     result.fold(
       (failure) {
@@ -230,65 +349,32 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       },
       (_) {
         _log.info('Sign out successful', tag: LogTags.auth);
-        // Clear encryption cache on sign out
-        _encryptionService.clearCache();
+        _verificationId = null;
+        _resendToken = null;
         emit(AuthUnauthenticated());
       },
     );
   }
 
-  Future<void> _onResetPasswordRequested(
-    AuthResetPasswordRequested event,
-    Emitter<AuthState> emit,
-  ) async {
-    _log.info(
-      'Password reset requested',
-      tag: LogTags.auth,
-      data: {'email': event.email},
-    );
-    emit(AuthLoading());
-
-    final result = await _resetPassword(
-      ResetPasswordParams(email: event.email),
-    );
-
-    result.fold(
-      (failure) {
-        _log.warning(
-          'Password reset failed',
-          tag: LogTags.auth,
-          data: {'email': event.email, 'error': failure.message},
-        );
-        emit(AuthError(ErrorMessages.authResetPasswordFailed));
-      },
-      (_) {
-        _log.info(
-          'Password reset email sent',
-          tag: LogTags.auth,
-          data: {'email': event.email},
-        );
-        emit(AuthPasswordResetSent(event.email));
-      },
-    );
-  }
-
-  Future<void> _onUserChanged(
+  void _onUserChanged(
     AuthUserChanged event,
     Emitter<AuthState> emit,
-  ) async {
+  ) {
     if (event.user != null) {
       _log.debug(
         'Auth state changed: authenticated',
         tag: LogTags.auth,
         data: {'userId': event.user!.id},
       );
-      // Initialize encryption service for the authenticated user
-      await _initializeEncryption(event.user!.id);
-      emit(AuthAuthenticated(event.user!));
+
+      // Check if profile is complete
+      if (event.user!.displayName == null || event.user!.displayName!.isEmpty) {
+        emit(AuthNeedsProfileCompletion(event.user!));
+      } else {
+        emit(AuthAuthenticated(event.user!));
+      }
     } else {
       _log.debug('Auth state changed: unauthenticated', tag: LogTags.auth);
-      // Clear encryption cache on sign out
-      _encryptionService.clearCache();
       emit(AuthUnauthenticated());
     }
   }
@@ -309,32 +395,22 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     }
   }
 
-  /// Initialize encryption service for a user
-  Future<void> _initializeEncryption(String userId) async {
-    if (!_encryptionService.isInitialized) {
-      _log.debug(
-        'Initializing encryption service',
-        tag: LogTags.auth,
-        data: {'userId': userId},
-      );
-      try {
-        await _encryptionService.initialize(userId);
-        _log.info(
-          'Encryption service initialized',
-          tag: LogTags.auth,
-          data: {'userId': userId},
-        );
-      } catch (e, stackTrace) {
-        _log.error(
-          'Failed to initialize encryption service',
-          tag: LogTags.auth,
-          error: e,
-          stackTrace: stackTrace,
-        );
-        // Don't throw - encryption failure shouldn't block auth
-        // Features using encryption will handle the error gracefully
-      }
+  void _handleSuccessfulSignIn(UserEntity user, Emitter<AuthState> emit) {
+    // Clear verification state
+    _verificationId = null;
+    _resendToken = null;
+
+    // Check if profile is complete
+    if (user.displayName == null || user.displayName!.isEmpty) {
+      emit(AuthNeedsProfileCompletion(user));
+    } else {
+      emit(AuthAuthenticated(user));
     }
+  }
+
+  String _maskPhone(String phone) {
+    if (phone.length <= 4) return '****';
+    return '****${phone.substring(phone.length - 4)}';
   }
 
   @override
@@ -343,4 +419,30 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     _authStateSubscription?.cancel();
     return super.close();
   }
+}
+
+// Internal events for phone verification callbacks
+class _AuthVerificationCompleted extends AuthEvent {
+  final firebase_auth.PhoneAuthCredential credential;
+  _AuthVerificationCompleted(this.credential);
+
+  @override
+  List<Object?> get props => [credential];
+}
+
+class _AuthVerificationFailed extends AuthEvent {
+  final firebase_auth.FirebaseAuthException exception;
+  _AuthVerificationFailed(this.exception);
+
+  @override
+  List<Object?> get props => [exception];
+}
+
+class _AuthCodeSent extends AuthEvent {
+  final String verificationId;
+  final int? resendToken;
+  _AuthCodeSent(this.verificationId, this.resendToken);
+
+  @override
+  List<Object?> get props => [verificationId, resendToken];
 }

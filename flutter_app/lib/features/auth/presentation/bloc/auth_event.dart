@@ -1,69 +1,71 @@
 part of 'auth_bloc.dart';
 
-/// Base class for auth events
-abstract class AuthEvent extends Equatable {
+/// Base class for authentication events
+abstract class AuthEvent {
   const AuthEvent();
 
-  @override
   List<Object?> get props => [];
 }
 
-/// Check if user is authenticated
+/// Check if user is currently authenticated
 class AuthCheckRequested extends AuthEvent {
   const AuthCheckRequested();
 }
 
-/// Sign in with email and password
-class AuthSignInWithEmailRequested extends AuthEvent {
-  final String email;
-  final String password;
+/// Submit phone number for verification
+class AuthPhoneNumberSubmitted extends AuthEvent {
+  final String phoneNumber;
 
-  const AuthSignInWithEmailRequested({
-    required this.email,
-    required this.password,
-  });
+  const AuthPhoneNumberSubmitted(this.phoneNumber);
 
   @override
-  List<Object?> get props => [email, password];
+  List<Object?> get props => [phoneNumber];
 }
 
-/// Sign up with email and password
-class AuthSignUpWithEmailRequested extends AuthEvent {
-  final String email;
-  final String password;
+/// Submit OTP for verification
+class AuthOtpSubmitted extends AuthEvent {
+  final String otp;
+
+  const AuthOtpSubmitted(this.otp);
+
+  @override
+  List<Object?> get props => [otp];
+}
+
+/// Request to resend OTP
+class AuthResendOtpRequested extends AuthEvent {
+  final String phoneNumber;
+
+  const AuthResendOtpRequested(this.phoneNumber);
+
+  @override
+  List<Object?> get props => [phoneNumber];
+}
+
+/// Complete user profile after first sign in
+class AuthCompleteProfileRequested extends AuthEvent {
   final String displayName;
+  final String? photoUrl;
+  final String? defaultCurrency;
+  final String? countryCode;
 
-  const AuthSignUpWithEmailRequested({
-    required this.email,
-    required this.password,
+  const AuthCompleteProfileRequested({
     required this.displayName,
+    this.photoUrl,
+    this.defaultCurrency,
+    this.countryCode,
   });
 
   @override
-  List<Object?> get props => [email, password, displayName];
+  List<Object?> get props => [displayName, photoUrl, defaultCurrency, countryCode];
 }
 
-/// Sign in with Google
-class AuthSignInWithGoogleRequested extends AuthEvent {
-  const AuthSignInWithGoogleRequested();
-}
-
-/// Sign out
+/// Request sign out
 class AuthSignOutRequested extends AuthEvent {
   const AuthSignOutRequested();
 }
 
-/// Request password reset email
-class AuthResetPasswordRequested extends AuthEvent {
-  final String email;
-
-  const AuthResetPasswordRequested({required this.email});
-
-  @override
-  List<Object?> get props => [email];
-}
-
-/// Auth state changed (from stream)
+/// User state changed (from auth state stream)
 class AuthUserChanged extends AuthEvent {
   final UserEntity? user;
 
@@ -73,11 +75,11 @@ class AuthUserChanged extends AuthEvent {
   List<Object?> get props => [user];
 }
 
-/// User photo URL updated (sync from ProfileBloc)
+/// User photo was updated
 class AuthUserPhotoUpdated extends AuthEvent {
-  final String? photoUrl;
+  final String photoUrl;
 
-  const AuthUserPhotoUpdated({required this.photoUrl});
+  const AuthUserPhotoUpdated(this.photoUrl);
 
   @override
   List<Object?> get props => [photoUrl];

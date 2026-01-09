@@ -3,15 +3,14 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../domain/entities/user_entity.dart';
 
 /// User model for data layer - handles Firestore serialization
+/// Phone number is the primary identifier - no email authentication
 class UserModel extends UserEntity {
   const UserModel({
     required super.id,
-    required super.email,
-    super.phone,
+    required super.phone,
     super.displayName,
     super.photoUrl,
     super.isPhoneVerified,
-    super.isEmailVerified,
     super.defaultCurrency,
     super.locale,
     super.timezone,
@@ -33,12 +32,10 @@ class UserModel extends UserEntity {
     final data = doc.data()!;
     return UserModel(
       id: doc.id,
-      email: (data['email'] as String?) ?? '',
-      phone: data['phone'] as String?,
+      phone: (data['phone'] as String?) ?? '',
       displayName: data['displayName'] as String?,
       photoUrl: data['photoUrl'] as String?,
       isPhoneVerified: data['isPhoneVerified'] as bool? ?? false,
-      isEmailVerified: data['isEmailVerified'] as bool? ?? false,
       defaultCurrency: data['defaultCurrency'] as String? ?? 'INR',
       locale: data['locale'] as String? ?? 'en-IN',
       timezone: data['timezone'] as String? ?? 'Asia/Kolkata',
@@ -64,12 +61,10 @@ class UserModel extends UserEntity {
   factory UserModel.fromMap(Map<String, dynamic> map) {
     return UserModel(
       id: map['id'] as String,
-      email: (map['email'] as String?) ?? '',
-      phone: map['phone'] as String?,
+      phone: (map['phone'] as String?) ?? '',
       displayName: map['displayName'] as String?,
       photoUrl: map['photoUrl'] as String?,
       isPhoneVerified: map['isPhoneVerified'] as bool? ?? false,
-      isEmailVerified: map['isEmailVerified'] as bool? ?? false,
       defaultCurrency: map['defaultCurrency'] as String? ?? 'INR',
       locale: map['locale'] as String? ?? 'en-IN',
       timezone: map['timezone'] as String? ?? 'Asia/Kolkata',
@@ -101,12 +96,10 @@ class UserModel extends UserEntity {
   factory UserModel.fromEntity(UserEntity entity) {
     return UserModel(
       id: entity.id,
-      email: entity.email,
       phone: entity.phone,
       displayName: entity.displayName,
       photoUrl: entity.photoUrl,
       isPhoneVerified: entity.isPhoneVerified,
-      isEmailVerified: entity.isEmailVerified,
       defaultCurrency: entity.defaultCurrency,
       locale: entity.locale,
       timezone: entity.timezone,
@@ -127,12 +120,10 @@ class UserModel extends UserEntity {
   /// Convert to Firestore document data
   Map<String, dynamic> toFirestore() {
     return {
-      'email': email,
       'phone': phone,
       'displayName': displayName,
       'photoUrl': photoUrl,
       'isPhoneVerified': isPhoneVerified,
-      'isEmailVerified': isEmailVerified,
       'defaultCurrency': defaultCurrency,
       'locale': locale,
       'timezone': timezone,
@@ -152,12 +143,10 @@ class UserModel extends UserEntity {
   /// Convert to Firestore document data for new user creation
   Map<String, dynamic> toFirestoreCreate() {
     return {
-      'email': email,
       'phone': phone,
       'displayName': displayName,
       'photoUrl': photoUrl,
-      'isPhoneVerified': false,
-      'isEmailVerified': false,
+      'isPhoneVerified': isPhoneVerified,
       'defaultCurrency': defaultCurrency,
       'locale': locale,
       'timezone': timezone,
@@ -179,12 +168,10 @@ class UserModel extends UserEntity {
   Map<String, dynamic> toMap() {
     return {
       'id': id,
-      'email': email,
       'phone': phone,
       'displayName': displayName,
       'photoUrl': photoUrl,
       'isPhoneVerified': isPhoneVerified,
-      'isEmailVerified': isEmailVerified,
       'defaultCurrency': defaultCurrency,
       'locale': locale,
       'timezone': timezone,
@@ -205,12 +192,10 @@ class UserModel extends UserEntity {
   /// Create a copy with updated fields
   UserModel copyWithModel({
     String? id,
-    String? email,
     String? phone,
     String? displayName,
     String? photoUrl,
     bool? isPhoneVerified,
-    bool? isEmailVerified,
     String? defaultCurrency,
     String? locale,
     String? timezone,
@@ -228,12 +213,10 @@ class UserModel extends UserEntity {
   }) {
     return UserModel(
       id: id ?? this.id,
-      email: email ?? this.email,
       phone: phone ?? this.phone,
       displayName: displayName ?? this.displayName,
       photoUrl: photoUrl ?? this.photoUrl,
       isPhoneVerified: isPhoneVerified ?? this.isPhoneVerified,
-      isEmailVerified: isEmailVerified ?? this.isEmailVerified,
       defaultCurrency: defaultCurrency ?? this.defaultCurrency,
       locale: locale ?? this.locale,
       timezone: timezone ?? this.timezone,

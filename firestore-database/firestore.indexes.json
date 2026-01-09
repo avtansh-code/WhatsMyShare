@@ -120,7 +120,7 @@
       "collectionGroup": "invitations",
       "queryScope": "COLLECTION",
       "fields": [
-        { "fieldPath": "inviteeEmail", "order": "ASCENDING" },
+        { "fieldPath": "inviteePhone", "order": "ASCENDING" },
         { "fieldPath": "status", "order": "ASCENDING" },
         { "fieldPath": "createdAt", "order": "DESCENDING" }
       ]
@@ -145,14 +145,14 @@
   "fieldOverrides": [
     {
       "collectionGroup": "users",
-      "fieldPath": "email",
+      "fieldPath": "phone",
       "indexes": [
         { "queryScope": "COLLECTION", "order": "ASCENDING" }
       ]
     },
     {
-      "collectionGroup": "users",
-      "fieldPath": "phone",
+      "collectionGroup": "invitations",
+      "fieldPath": "inviteePhone",
       "indexes": [
         { "queryScope": "COLLECTION", "order": "ASCENDING" }
       ]

@@ -1,14 +1,13 @@
 import 'package:equatable/equatable.dart';
 
 /// User entity representing authenticated user
+/// Authentication is ONLY via phone number - no email/password or social login
 class UserEntity extends Equatable {
   final String id;
-  final String email;
   final String? displayName;
   final String? photoUrl;
-  final String? phone;
+  final String phone;
   final bool isPhoneVerified;
-  final bool isEmailVerified;
   final String defaultCurrency;
   final String locale;
   final String timezone;
@@ -26,12 +25,10 @@ class UserEntity extends Equatable {
 
   const UserEntity({
     required this.id,
-    required this.email,
+    required this.phone,
     this.displayName,
     this.photoUrl,
-    this.phone,
     this.isPhoneVerified = false,
-    this.isEmailVerified = false,
     this.defaultCurrency = 'INR',
     this.locale = 'en-IN',
     this.timezone = 'Asia/Kolkata',
@@ -48,23 +45,28 @@ class UserEntity extends Equatable {
     this.fcmTokens = const [],
   });
 
-  /// Check if user has completed profile setup (must have name, email, and phone)
+  /// Check if user has completed profile setup (must have name and verified phone)
   bool get hasCompletedProfile =>
       displayName != null &&
       displayName!.isNotEmpty &&
-      email.isNotEmpty &&
-      phone != null &&
-      phone!.isNotEmpty &&
+      phone.isNotEmpty &&
       isPhoneVerified;
 
-  /// Check if profile is partially complete (has name but missing phone)
-  bool get needsPhoneVerification =>
-      displayName != null &&
-      displayName!.isNotEmpty &&
-      (phone == null || phone!.isEmpty || !isPhoneVerified);
+  /// Check if profile needs name to be set
+  bool get needsProfileCompletion =>
+      displayName == null || displayName!.isEmpty;
 
-  /// Get display name or email as fallback
-  String get displayNameOrEmail => displayName ?? email.split('@').first;
+  /// Get display name or phone as fallback
+  String get displayNameOrPhone => displayName ?? _formatPhone(phone);
+
+  /// Format phone number for display
+  String _formatPhone(String phone) {
+    if (phone.length >= 10) {
+      // Show last 4 digits
+      return '****${phone.substring(phone.length - 4)}';
+    }
+    return phone;
+  }
 
   /// Get initials for avatar
   String get initials {
@@ -75,8 +77,9 @@ class UserEntity extends Equatable {
       }
       return displayName![0].toUpperCase();
     }
-    if (email.isNotEmpty) {
-      return email[0].toUpperCase();
+    // Use phone number last 2 digits as fallback
+    if (phone.length >= 2) {
+      return phone.substring(phone.length - 2);
     }
     return '?';
   }
@@ -90,12 +93,10 @@ class UserEntity extends Equatable {
   @override
   List<Object?> get props => [
     id,
-    email,
     displayName,
     photoUrl,
     phone,
     isPhoneVerified,
-    isEmailVerified,
     defaultCurrency,
     locale,
     timezone,
@@ -115,12 +116,10 @@ class UserEntity extends Equatable {
   /// Create a copy with updated fields
   UserEntity copyWith({
     String? id,
-    String? email,
     String? displayName,
     String? photoUrl,
     String? phone,
     bool? isPhoneVerified,
-    bool? isEmailVerified,
     String? defaultCurrency,
     String? locale,
     String? timezone,
@@ -138,12 +137,10 @@ class UserEntity extends Equatable {
   }) {
     return UserEntity(
       id: id ?? this.id,
-      email: email ?? this.email,
       displayName: displayName ?? this.displayName,
       photoUrl: photoUrl ?? this.photoUrl,
       phone: phone ?? this.phone,
       isPhoneVerified: isPhoneVerified ?? this.isPhoneVerified,
-      isEmailVerified: isEmailVerified ?? this.isEmailVerified,
       defaultCurrency: defaultCurrency ?? this.defaultCurrency,
       locale: locale ?? this.locale,
       timezone: timezone ?? this.timezone,

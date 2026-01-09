@@ -2,17 +2,10 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:get_it/get_it.dart';
-import 'package:google_sign_in/google_sign_in.dart';
 
 import '../../features/auth/data/datasources/firebase_auth_datasource.dart';
 import '../../features/auth/data/repositories/auth_repository_impl.dart';
 import '../../features/auth/domain/repositories/auth_repository.dart';
-import '../../features/auth/domain/usecases/get_current_user.dart';
-import '../../features/auth/domain/usecases/reset_password.dart';
-import '../../features/auth/domain/usecases/sign_in_with_email.dart';
-import '../../features/auth/domain/usecases/sign_in_with_google.dart';
-import '../../features/auth/domain/usecases/sign_out.dart';
-import '../../features/auth/domain/usecases/sign_up_with_email.dart';
 import '../../features/auth/presentation/bloc/auth_bloc.dart';
 import '../../features/profile/data/datasources/user_profile_datasource.dart';
 import '../../features/profile/data/repositories/user_profile_repository_impl.dart';
@@ -101,10 +94,7 @@ void _initExternal() {
   // Firebase Storage
   sl.registerLazySingleton<FirebaseStorage>(() => FirebaseStorage.instance);
 
-  // Google Sign In
-  sl.registerLazySingleton<GoogleSignIn>(
-    () => GoogleSignIn(scopes: ['email', 'profile']),
-  );
+  // Note: Google Sign In removed - app uses phone authentication only
 }
 
 /// Initialize core services
@@ -145,44 +135,37 @@ void _initCore() {
   sl.registerLazySingleton<EncryptionService>(() => EncryptionService());
 }
 
-/// Initialize authentication feature
+/// Initialize authentication feature (phone-only authentication)
 Future<void> _initAuthFeature() async {
-  _log.debug('Initializing auth feature', tag: LogTags.auth);
+  _log.debug('Initializing auth feature (phone-only)', tag: LogTags.auth);
 
   await _initProfileFeature();
 
-  // Data Sources
+  // Data Sources - phone authentication only
   sl.registerLazySingleton<FirebaseAuthDataSource>(
     () => FirebaseAuthDataSourceImpl(
       firebaseAuth: sl<FirebaseAuth>(),
       firestore: sl<FirebaseFirestore>(),
-      googleSignIn: sl<GoogleSignIn>(),
+      loggingService: sl<LoggingService>(),
     ),
   );
 
   // Repositories
   sl.registerLazySingleton<AuthRepository>(
-    () => AuthRepositoryImpl(dataSource: sl<FirebaseAuthDataSource>()),
+    () => AuthRepositoryImpl(
+      dataSource: sl<FirebaseAuthDataSource>(),
+      loggingService: sl<LoggingService>(),
+    ),
   );
 
-  // Use Cases
-  sl.registerLazySingleton(() => SignInWithEmail(sl<AuthRepository>()));
-  sl.registerLazySingleton(() => SignUpWithEmail(sl<AuthRepository>()));
-  sl.registerLazySingleton(() => SignInWithGoogle(sl<AuthRepository>()));
-  sl.registerLazySingleton(() => SignOut(sl<AuthRepository>()));
-  sl.registerLazySingleton(() => GetCurrentUser(sl<AuthRepository>()));
-  sl.registerLazySingleton(() => ResetPassword(sl<AuthRepository>()));
+  // Note: Email/Google usecases removed - phone authentication only
+  // Use AuthRepository directly for phone verification methods
 
-  // BLoC
+  // BLoC - simplified for phone-only auth
   sl.registerFactory<AuthBloc>(
     () => AuthBloc(
-      signInWithEmail: sl<SignInWithEmail>(),
-      signUpWithEmail: sl<SignUpWithEmail>(),
-      signInWithGoogle: sl<SignInWithGoogle>(),
-      signOut: sl<SignOut>(),
-      getCurrentUser: sl<GetCurrentUser>(),
-      resetPassword: sl<ResetPassword>(),
-      encryptionService: sl<EncryptionService>(),
+      authRepository: sl<AuthRepository>(),
+      loggingService: sl<LoggingService>(),
     ),
   );
 }

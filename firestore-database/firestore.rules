@@ -43,16 +43,23 @@ service cloud.firestore {
     // ============================================
     
     match /users/{userId} {
-      // Any authenticated user can read basic user info (for searching friends)
+      // Any authenticated user can read basic user info (for searching friends by phone)
+      // This allows phone number lookup for adding friends
       allow read: if isAuthenticated();
       
       // Only the user can write their own data
-      // Supports email, phone, or social authentication
-      allow create: if isOwner(userId);
+      // Phone authentication is the only supported method
+      allow create: if isOwner(userId) &&
+        // Phone must be provided for new users
+        request.resource.data.phone is string &&
+        request.resource.data.phone.size() > 0;
       
       // User can update their own document
-      // Note: Email changes should be done through Firebase Auth first
-      allow update: if isOwner(userId);
+      // Phone cannot be changed after creation (must match Firebase Auth)
+      allow update: if isOwner(userId) &&
+        // Cannot change phone number
+        (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['phone']) ||
+         request.resource.data.phone == resource.data.phone);
       
       allow delete: if isOwner(userId);
       
@@ -157,22 +164,26 @@ service cloud.firestore {
     
     // ============================================
     // INVITATIONS COLLECTION
+    // Updated for phone-based invitations
     // ============================================
     
     match /invitations/{invitationId} {
-      // Inviter or invitee can read
+      // Inviter can read their own invitations
+      // Invitee can read invitations sent to their phone
       allow read: if isAuthenticated() &&
         (resource.data.inviterId == request.auth.uid ||
-         resource.data.inviteeEmail == request.auth.token.email);
+         resource.data.inviteePhone == request.auth.token.phone_number);
       
       // Any authenticated user can create invitations
       allow create: if isAuthenticated() &&
         request.resource.data.inviterId == request.auth.uid &&
-        request.resource.data.status == 'pending';
+        request.resource.data.status == 'pending' &&
+        // Must have invitee phone number
+        request.resource.data.inviteePhone is string;
       
       // Only invitee can update (accept/decline)
       allow update: if isAuthenticated() &&
-        resource.data.inviteeEmail == request.auth.token.email &&
+        resource.data.inviteePhone == request.auth.token.phone_number &&
         resource.data.status == 'pending';
       
       // Only inviter can delete pending invitations
