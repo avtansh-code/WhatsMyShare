@@ -25,7 +25,6 @@ class _EditProfilePageState extends State<EditProfilePage> {
   final _formKey = GlobalKey<FormState>();
   final LoggingService _log = LoggingService();
   late TextEditingController _displayNameController;
-  String? _selectedCurrency;
   File? _selectedImage;
   bool _hasChanges = false;
   bool _isInitialized = false;
@@ -36,7 +35,6 @@ class _EditProfilePageState extends State<EditProfilePage> {
     super.initState();
     _log.info('EditProfilePage opened', tag: LogTags.ui);
     _displayNameController = TextEditingController();
-    _selectedCurrency = 'INR';
 
     _displayNameController.addListener(_onFieldChanged);
 
@@ -55,7 +53,6 @@ class _EditProfilePageState extends State<EditProfilePage> {
     _displayNameController.removeListener(_onFieldChanged);
 
     _displayNameController.text = profile.displayName ?? '';
-    _selectedCurrency = profile.defaultCurrency ?? 'INR';
 
     // Re-add listeners
     _displayNameController.addListener(_onFieldChanged);
@@ -236,49 +233,8 @@ class _EditProfilePageState extends State<EditProfilePage> {
                       _buildPhoneSection(context, profile),
                       const SizedBox(height: 16),
 
-                      // Currency
-                      DropdownButtonFormField<String>(
-                        initialValue: _selectedCurrency,
-                        decoration: const InputDecoration(
-                          labelText: 'Default Currency',
-                          prefixIcon: Icon(Icons.currency_exchange),
-                          border: OutlineInputBorder(),
-                        ),
-                        items: const [
-                          DropdownMenuItem(
-                            value: 'INR',
-                            child: Text('INR (₹)'),
-                          ),
-                          DropdownMenuItem(
-                            value: 'USD',
-                            child: Text('USD (\$)'),
-                          ),
-                          DropdownMenuItem(
-                            value: 'EUR',
-                            child: Text('EUR (€)'),
-                          ),
-                          DropdownMenuItem(
-                            value: 'GBP',
-                            child: Text('GBP (£)'),
-                          ),
-                          DropdownMenuItem(
-                            value: 'AUD',
-                            child: Text('AUD (A\$)'),
-                          ),
-                          DropdownMenuItem(
-                            value: 'CAD',
-                            child: Text('CAD (C\$)'),
-                          ),
-                        ],
-                        onChanged: _isSaving
-                            ? null
-                            : (value) {
-                                setState(() {
-                                  _selectedCurrency = value;
-                                  _hasChanges = true;
-                                });
-                              },
-                      ),
+                      // Currency - Fixed to INR (read-only display)
+                      _buildCurrencySection(context),
                       const SizedBox(height: 32),
 
                       // Delete Photo Button
@@ -341,12 +297,55 @@ class _EditProfilePageState extends State<EditProfilePage> {
     );
   }
 
+  /// Currency section - fixed to INR since only one currency is supported
+  Widget _buildCurrencySection(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        border: Border.all(color: theme.colorScheme.outline),
+        borderRadius: BorderRadius.circular(4),
+        color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                Icons.currency_rupee,
+                color: theme.colorScheme.onSurfaceVariant,
+                size: 20,
+              ),
+              const SizedBox(width: 8),
+              Text(
+                'INR (₹) - Indian Rupee',
+                style: theme.textTheme.bodyLarge?.copyWith(
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Default currency for all transactions',
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   /// Phone section is now read-only since phone is the user's identity
   Widget _buildPhoneSection(BuildContext context, dynamic profile) {
     final theme = Theme.of(context);
     final phone = profile?.phone ?? '';
     final displayPhone = phone.startsWith('+91') ? phone.substring(3) : phone;
-    final isVerified = profile?.isPhoneVerified ?? false;
+    // Phone is always verified since it's verified during authentication
+    // (phone-only auth means user can't access profile without phone verification)
 
     return Container(
       padding: const EdgeInsets.all(16),
@@ -369,8 +368,8 @@ class _EditProfilePageState extends State<EditProfilePage> {
                 ),
               ),
               const Spacer(),
-              if (isVerified)
-                const Icon(Icons.verified, color: Colors.green, size: 20),
+              // Always show verified since phone auth is the only auth method
+              const Icon(Icons.verified, color: Colors.green, size: 20),
             ],
           ),
           const SizedBox(height: 8),
@@ -596,7 +595,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
       data: {
         'hasImageToUpload': _selectedImage != null,
         'displayName': _displayNameController.text.trim(),
-        'currency': _selectedCurrency,
+        'currency': 'INR',
       },
     );
 
@@ -623,7 +622,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
       context.read<ProfileBloc>().add(
         ProfileUpdateRequested(
           displayName: _displayNameController.text.trim(),
-          defaultCurrency: _selectedCurrency,
+          defaultCurrency: 'INR',
         ),
       );
     }
