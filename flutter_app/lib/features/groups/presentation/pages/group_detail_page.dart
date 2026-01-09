@@ -344,14 +344,13 @@ class _GroupDetailPageState extends State<GroupDetailPage>
         final displayName = member.displayName.isNotEmpty
             ? member.displayName
             : userCache.getCachedDisplayName(member.userId);
-        final photoUrl = member.photoUrl ?? userCache.getCachedPhotoUrl(member.userId);
+        final photoUrl =
+            member.photoUrl ?? userCache.getCachedPhotoUrl(member.userId);
 
         return Card(
           child: ListTile(
             leading: CircleAvatar(
-              backgroundImage: photoUrl != null
-                  ? NetworkImage(photoUrl)
-                  : null,
+              backgroundImage: photoUrl != null ? NetworkImage(photoUrl) : null,
               child: photoUrl == null
                   ? Text(displayName[0].toUpperCase())
                   : null,

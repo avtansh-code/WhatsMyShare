@@ -466,7 +466,9 @@ class UserCacheService {
   /// Returns user ID suffix if not cached
   String getCachedDisplayName(String userId) {
     final cached = _cache[userId];
-    if (cached != null && cached.displayName != null && cached.displayName!.isNotEmpty) {
+    if (cached != null &&
+        cached.displayName != null &&
+        cached.displayName!.isNotEmpty) {
       return cached.displayName!;
     }
     // Return masked ID if not cached

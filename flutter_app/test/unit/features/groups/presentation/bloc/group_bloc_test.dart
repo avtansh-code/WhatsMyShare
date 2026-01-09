@@ -331,10 +331,7 @@ void main() {
           return bloc;
         },
         act: (bloc) => bloc.add(
-          const GroupMemberAddRequested(
-            groupId: 'group-1',
-            userId: 'user-2',
-          ),
+          const GroupMemberAddRequested(groupId: 'group-1', userId: 'user-2'),
         ),
         expect: () => [
           isA<GroupState>().having((s) => s.isUpdating, 'isUpdating', true),

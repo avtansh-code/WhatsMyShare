@@ -368,11 +368,13 @@ class GroupDataSourceImpl implements GroupDataSource {
         for (final memberId in initialMemberIds) {
           if (memberId != userId) {
             memberIds.add(memberId);
-            members.add(GroupMemberModel(
-              userId: memberId,
-              joinedAt: DateTime.now(),
-              role: MemberRole.member,
-            ));
+            members.add(
+              GroupMemberModel(
+                userId: memberId,
+                joinedAt: DateTime.now(),
+                role: MemberRole.member,
+              ),
+            );
             balances[memberId] = 0;
           }
         }
