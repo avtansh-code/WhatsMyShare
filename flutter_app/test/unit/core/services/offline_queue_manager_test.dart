@@ -44,7 +44,7 @@ void main() {
       expect(mock.pendingCount, isNotNull);
       expect(mock.pendingOperations, isNotNull);
       expect(mock.failedOperations, isNotNull);
-      
+
       mock.dispose();
     });
 
@@ -55,7 +55,7 @@ void main() {
       await expectLater(mock.initialize(), completes);
       await expectLater(mock.processQueue(), completes);
       await expectLater(mock.clearCompleted(), completes);
-      
+
       // Dispose at the end
       mock.dispose();
     });
@@ -90,10 +90,7 @@ void main() {
     });
 
     test('can be used in collections', () {
-      final statuses = <SyncStatus>{
-        SyncStatus.idle,
-        SyncStatus.completed,
-      };
+      final statuses = <SyncStatus>{SyncStatus.idle, SyncStatus.completed};
 
       expect(statuses.contains(SyncStatus.idle), isTrue);
       expect(statuses.contains(SyncStatus.syncing), isFalse);
@@ -188,7 +185,7 @@ void main() {
 
     test('can listen to sync status stream multiple times', () {
       final mock = _MockOfflineQueueManager();
-      
+
       final listener1 = mock.syncStatusStream.listen((_) {});
       final listener2 = mock.syncStatusStream.listen((_) {});
 
@@ -203,32 +200,27 @@ void main() {
   group('Enqueue Operation', () {
     test('should return operation id', () async {
       final mock = _MockOfflineQueueManager();
-      final id = await mock.enqueue(
-        OperationType.createExpense,
-        {'test': 'data'},
-      );
+      final id = await mock.enqueue(OperationType.createExpense, {
+        'test': 'data',
+      });
 
       expect(id, isNotEmpty);
     });
 
     test('should support optional entityId', () async {
       final mock = _MockOfflineQueueManager();
-      final id = await mock.enqueue(
-        OperationType.updateExpense,
-        {'test': 'data'},
-        entityId: 'expense-123',
-      );
+      final id = await mock.enqueue(OperationType.updateExpense, {
+        'test': 'data',
+      }, entityId: 'expense-123');
 
       expect(id, isNotEmpty);
     });
 
     test('should support optional groupId', () async {
       final mock = _MockOfflineQueueManager();
-      final id = await mock.enqueue(
-        OperationType.createExpense,
-        {'test': 'data'},
-        groupId: 'group-123',
-      );
+      final id = await mock.enqueue(OperationType.createExpense, {
+        'test': 'data',
+      }, groupId: 'group-123');
 
       expect(id, isNotEmpty);
     });
@@ -251,10 +243,7 @@ void main() {
       final mock = _MockOfflineQueueManager();
 
       // Should not throw
-      await expectLater(
-        mock.retryOperation('operation-123'),
-        completes,
-      );
+      await expectLater(mock.retryOperation('operation-123'), completes);
     });
   });
 
@@ -262,19 +251,13 @@ void main() {
     test('clearCompleted should complete', () async {
       final mock = _MockOfflineQueueManager();
 
-      await expectLater(
-        mock.clearCompleted(),
-        completes,
-      );
+      await expectLater(mock.clearCompleted(), completes);
     });
 
     test('clearFailed should accept operation id', () async {
       final mock = _MockOfflineQueueManager();
 
-      await expectLater(
-        mock.clearFailed('operation-123'),
-        completes,
-      );
+      await expectLater(mock.clearFailed('operation-123'), completes);
     });
   });
 
@@ -282,19 +265,13 @@ void main() {
     test('initialize should complete', () async {
       final mock = _MockOfflineQueueManager();
 
-      await expectLater(
-        mock.initialize(),
-        completes,
-      );
+      await expectLater(mock.initialize(), completes);
     });
 
     test('dispose should not throw', () {
       final mock = _MockOfflineQueueManager();
 
-      expect(
-        () => mock.dispose(),
-        returnsNormally,
-      );
+      expect(() => mock.dispose(), returnsNormally);
     });
   });
 }
@@ -344,9 +321,9 @@ class _MockOfflineQueueManager implements OfflineQueueManager {
   Future<void> processQueue() async {
     _status = SyncStatus.syncing;
     _streamController.add(_status);
-    
+
     await Future.delayed(const Duration(milliseconds: 10));
-    
+
     _status = SyncStatus.completed;
     _streamController.add(_status);
   }

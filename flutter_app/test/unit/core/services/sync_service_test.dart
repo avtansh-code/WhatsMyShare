@@ -56,10 +56,7 @@ void main() {
       final operation = OfflineOperation(
         id: 'test-2',
         type: OperationType.updateExpense,
-        data: {
-          'description': 'Updated expense',
-          'amount': 150.0,
-        },
+        data: {'description': 'Updated expense', 'amount': 150.0},
         createdAt: DateTime.now(),
         entityId: 'expense-123',
         groupId: 'group-123',
@@ -88,10 +85,7 @@ void main() {
       final operation = OfflineOperation(
         id: 'test-4',
         type: OperationType.createGroup,
-        data: {
-          'name': 'Test Group',
-          'type': 'trip',
-        },
+        data: {'name': 'Test Group', 'type': 'trip'},
         createdAt: DateTime.now(),
       );
 
@@ -103,9 +97,7 @@ void main() {
       final operation = OfflineOperation(
         id: 'test-5',
         type: OperationType.updateGroup,
-        data: {
-          'name': 'Updated Group Name',
-        },
+        data: {'name': 'Updated Group Name'},
         createdAt: DateTime.now(),
         entityId: 'group-123',
       );
@@ -118,11 +110,7 @@ void main() {
       final operation = OfflineOperation(
         id: 'test-6',
         type: OperationType.createSettlement,
-        data: {
-          'fromUserId': 'user-1',
-          'toUserId': 'user-2',
-          'amount': 50.0,
-        },
+        data: {'fromUserId': 'user-1', 'toUserId': 'user-2', 'amount': 50.0},
         createdAt: DateTime.now(),
         groupId: 'group-123',
       );
@@ -135,9 +123,7 @@ void main() {
       final operation = OfflineOperation(
         id: 'test-7',
         type: OperationType.updateSettlement,
-        data: {
-          'status': 'confirmed',
-        },
+        data: {'status': 'confirmed'},
         createdAt: DateTime.now(),
         entityId: 'settlement-123',
         groupId: 'group-123',
@@ -166,9 +152,7 @@ void main() {
       final operation = OfflineOperation(
         id: 'test-9',
         type: OperationType.addGroupMember,
-        data: {
-          'email': 'test@example.com',
-        },
+        data: {'email': 'test@example.com'},
         createdAt: DateTime.now(),
         entityId: 'group-123',
       );
@@ -181,9 +165,7 @@ void main() {
       final operation = OfflineOperation(
         id: 'test-10',
         type: OperationType.removeGroupMember,
-        data: {
-          'userId': 'user-to-remove',
-        },
+        data: {'userId': 'user-to-remove'},
         createdAt: DateTime.now(),
         entityId: 'group-123',
       );
@@ -243,11 +225,7 @@ void main() {
       final operation = OfflineOperation(
         id: 'test-1',
         type: OperationType.createGroup,
-        data: {
-          'name': 'Weekend Trip',
-          'type': 'trip',
-          'currency': 'USD',
-        },
+        data: {'name': 'Weekend Trip', 'type': 'trip', 'currency': 'USD'},
         createdAt: DateTime.now(),
       );
 
@@ -436,11 +414,7 @@ void main() {
       final operation = OfflineOperation(
         id: 'test-1',
         type: OperationType.createSettlement,
-        data: {
-          'fromUserId': 'user-1',
-          'toUserId': 'user-2',
-          'amount': 50.0,
-        },
+        data: {'fromUserId': 'user-1', 'toUserId': 'user-2', 'amount': 50.0},
         createdAt: DateTime.now(),
         groupId: 'group-123',
       );

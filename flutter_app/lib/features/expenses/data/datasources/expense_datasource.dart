@@ -8,13 +8,39 @@ import '../../../../core/services/logging_service.dart';
 import '../../domain/entities/expense_entity.dart';
 import '../models/expense_model.dart';
 
+/// Pagination result with cursor for next page
+class ExpensePaginatedResult {
+  final List<ExpenseModel> items;
+  final DocumentSnapshot? lastDocument;
+  final bool hasMore;
+
+  const ExpensePaginatedResult({
+    required this.items,
+    this.lastDocument,
+    this.hasMore = false,
+  });
+}
+
 /// Abstract expense datasource
 abstract class ExpenseDatasource {
   /// Get expenses for a group
   Future<List<ExpenseModel>> getExpenses(String groupId);
 
+  /// Get paginated expenses for a group
+  Future<ExpensePaginatedResult> getExpensesPaginated(
+    String groupId, {
+    int limit = 20,
+    DocumentSnapshot? startAfter,
+  });
+
   /// Watch expenses for a group
   Stream<List<ExpenseModel>> watchExpenses(String groupId);
+
+  /// Watch paginated expenses for a group
+  Stream<List<ExpenseModel>> watchExpensesPaginated(
+    String groupId, {
+    int limit = 20,
+  });
 
   /// Get a single expense
   Future<ExpenseModel> getExpense(String groupId, String expenseId);
@@ -110,6 +136,66 @@ class FirebaseExpenseDatasource implements ExpenseDatasource {
   }
 
   @override
+  Future<ExpensePaginatedResult> getExpensesPaginated(
+    String groupId, {
+    int limit = 20,
+    DocumentSnapshot? startAfter,
+  }) async {
+    _log.debug(
+      'Fetching paginated expenses for group',
+      tag: LogTags.expenses,
+      data: {
+        'groupId': groupId,
+        'limit': limit,
+        'hasStartAfter': startAfter != null,
+      },
+    );
+    try {
+      Query<Map<String, dynamic>> query = _expensesRef(groupId)
+          .where('status', isEqualTo: 'active')
+          .orderBy('date', descending: true)
+          .limit(limit + 1); // Fetch one extra to check if there are more
+
+      if (startAfter != null) {
+        query = query.startAfterDocument(startAfter);
+      }
+
+      final snapshot = await query.get();
+      final hasMore = snapshot.docs.length > limit;
+      final docs = hasMore ? snapshot.docs.take(limit).toList() : snapshot.docs;
+
+      final expenses = docs
+          .map((doc) => ExpenseModel.fromFirestore(doc))
+          .toList();
+
+      _log.info(
+        'Paginated expenses fetched successfully',
+        tag: LogTags.expenses,
+        data: {
+          'groupId': groupId,
+          'count': expenses.length,
+          'hasMore': hasMore,
+        },
+      );
+
+      return ExpensePaginatedResult(
+        items: expenses,
+        lastDocument: docs.isNotEmpty ? docs.last : null,
+        hasMore: hasMore,
+      );
+    } on FirebaseException catch (e) {
+      _log.error(
+        'Failed to get paginated expenses',
+        tag: LogTags.expenses,
+        data: {'groupId': groupId, 'error': e.message},
+      );
+      throw ServerException(
+        message: e.message ?? 'Failed to get paginated expenses',
+      );
+    }
+  }
+
+  @override
   Stream<List<ExpenseModel>> watchExpenses(String groupId) {
     _log.debug(
       'Setting up expenses stream',
@@ -123,6 +209,33 @@ class FirebaseExpenseDatasource implements ExpenseDatasource {
         .map((snapshot) {
           _log.debug(
             'Expenses stream updated',
+            tag: LogTags.expenses,
+            data: {'count': snapshot.docs.length},
+          );
+          return snapshot.docs
+              .map((doc) => ExpenseModel.fromFirestore(doc))
+              .toList();
+        });
+  }
+
+  @override
+  Stream<List<ExpenseModel>> watchExpensesPaginated(
+    String groupId, {
+    int limit = 20,
+  }) {
+    _log.debug(
+      'Setting up paginated expenses stream',
+      tag: LogTags.expenses,
+      data: {'groupId': groupId, 'limit': limit},
+    );
+    return _expensesRef(groupId)
+        .where('status', isEqualTo: 'active')
+        .orderBy('date', descending: true)
+        .limit(limit)
+        .snapshots()
+        .map((snapshot) {
+          _log.debug(
+            'Paginated expenses stream updated',
             tag: LogTags.expenses,
             data: {'count': snapshot.docs.length},
           );

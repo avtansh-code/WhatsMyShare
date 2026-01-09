@@ -34,10 +34,12 @@ void main() {
       connectivityController =
           StreamController<List<ConnectivityResult>>.broadcast();
 
-      when(() => mockConnectivity.onConnectivityChanged)
-          .thenAnswer((_) => connectivityController.stream);
-      when(() => mockConnectivity.checkConnectivity())
-          .thenAnswer((_) async => [ConnectivityResult.wifi]);
+      when(
+        () => mockConnectivity.onConnectivityChanged,
+      ).thenAnswer((_) => connectivityController.stream);
+      when(
+        () => mockConnectivity.checkConnectivity(),
+      ).thenAnswer((_) async => [ConnectivityResult.wifi]);
     });
 
     tearDown(() {
@@ -60,8 +62,9 @@ void main() {
       });
 
       test('should check connectivity on initialization', () async {
-        when(() => mockConnectivity.checkConnectivity())
-            .thenAnswer((_) async => [ConnectivityResult.mobile]);
+        when(
+          () => mockConnectivity.checkConnectivity(),
+        ).thenAnswer((_) async => [ConnectivityResult.mobile]);
 
         ConnectivityServiceImpl(connectivity: mockConnectivity);
 
@@ -72,8 +75,9 @@ void main() {
 
     group('checkConnectivity', () {
       test('should return online when wifi is available', () async {
-        when(() => mockConnectivity.checkConnectivity())
-            .thenAnswer((_) async => [ConnectivityResult.wifi]);
+        when(
+          () => mockConnectivity.checkConnectivity(),
+        ).thenAnswer((_) async => [ConnectivityResult.wifi]);
 
         final service = ConnectivityServiceImpl(connectivity: mockConnectivity);
         final status = await service.checkConnectivity();
@@ -82,8 +86,9 @@ void main() {
       });
 
       test('should return online when mobile is available', () async {
-        when(() => mockConnectivity.checkConnectivity())
-            .thenAnswer((_) async => [ConnectivityResult.mobile]);
+        when(
+          () => mockConnectivity.checkConnectivity(),
+        ).thenAnswer((_) async => [ConnectivityResult.mobile]);
 
         final service = ConnectivityServiceImpl(connectivity: mockConnectivity);
         final status = await service.checkConnectivity();
@@ -92,8 +97,9 @@ void main() {
       });
 
       test('should return online when ethernet is available', () async {
-        when(() => mockConnectivity.checkConnectivity())
-            .thenAnswer((_) async => [ConnectivityResult.ethernet]);
+        when(
+          () => mockConnectivity.checkConnectivity(),
+        ).thenAnswer((_) async => [ConnectivityResult.ethernet]);
 
         final service = ConnectivityServiceImpl(connectivity: mockConnectivity);
         final status = await service.checkConnectivity();
@@ -102,8 +108,9 @@ void main() {
       });
 
       test('should return offline when none is available', () async {
-        when(() => mockConnectivity.checkConnectivity())
-            .thenAnswer((_) async => [ConnectivityResult.none]);
+        when(
+          () => mockConnectivity.checkConnectivity(),
+        ).thenAnswer((_) async => [ConnectivityResult.none]);
 
         final service = ConnectivityServiceImpl(connectivity: mockConnectivity);
         final status = await service.checkConnectivity();
@@ -112,8 +119,9 @@ void main() {
       });
 
       test('should return offline when empty list', () async {
-        when(() => mockConnectivity.checkConnectivity())
-            .thenAnswer((_) async => []);
+        when(
+          () => mockConnectivity.checkConnectivity(),
+        ).thenAnswer((_) async => []);
 
         final service = ConnectivityServiceImpl(connectivity: mockConnectivity);
         final status = await service.checkConnectivity();
@@ -121,25 +129,28 @@ void main() {
         expect(status, equals(ConnectivityStatus.offline));
       });
 
-      test('should return online when multiple connections available',
-          () async {
-        when(() => mockConnectivity.checkConnectivity())
-            .thenAnswer((_) async => [
-                  ConnectivityResult.wifi,
-                  ConnectivityResult.mobile,
-                ]);
+      test(
+        'should return online when multiple connections available',
+        () async {
+          when(() => mockConnectivity.checkConnectivity()).thenAnswer(
+            (_) async => [ConnectivityResult.wifi, ConnectivityResult.mobile],
+          );
 
-        final service = ConnectivityServiceImpl(connectivity: mockConnectivity);
-        final status = await service.checkConnectivity();
+          final service = ConnectivityServiceImpl(
+            connectivity: mockConnectivity,
+          );
+          final status = await service.checkConnectivity();
 
-        expect(status, equals(ConnectivityStatus.online));
-      });
+          expect(status, equals(ConnectivityStatus.online));
+        },
+      );
     });
 
     group('isConnected', () {
       test('should return true when online', () async {
-        when(() => mockConnectivity.checkConnectivity())
-            .thenAnswer((_) async => [ConnectivityResult.wifi]);
+        when(
+          () => mockConnectivity.checkConnectivity(),
+        ).thenAnswer((_) async => [ConnectivityResult.wifi]);
 
         final service = ConnectivityServiceImpl(connectivity: mockConnectivity);
         final isConnected = await service.isConnected;
@@ -148,8 +159,9 @@ void main() {
       });
 
       test('should return false when offline', () async {
-        when(() => mockConnectivity.checkConnectivity())
-            .thenAnswer((_) async => [ConnectivityResult.none]);
+        when(
+          () => mockConnectivity.checkConnectivity(),
+        ).thenAnswer((_) async => [ConnectivityResult.none]);
 
         final service = ConnectivityServiceImpl(connectivity: mockConnectivity);
         final isConnected = await service.isConnected;
@@ -159,45 +171,50 @@ void main() {
     });
 
     group('statusStream', () {
-      test('should emit online status when connectivity changes to wifi',
-          () async {
-        when(() => mockConnectivity.checkConnectivity())
-            .thenAnswer((_) async => [ConnectivityResult.none]);
+      test(
+        'should emit online status when connectivity changes to wifi',
+        () async {
+          when(
+            () => mockConnectivity.checkConnectivity(),
+          ).thenAnswer((_) async => [ConnectivityResult.none]);
 
-        final service = ConnectivityServiceImpl(connectivity: mockConnectivity);
+          final service = ConnectivityServiceImpl(
+            connectivity: mockConnectivity,
+          );
 
-        // Allow initialization to complete
-        await Future.delayed(Duration.zero);
+          // Allow initialization to complete
+          await Future.delayed(Duration.zero);
 
-        expectLater(
-          service.statusStream,
-          emits(ConnectivityStatus.online),
-        );
+          expectLater(service.statusStream, emits(ConnectivityStatus.online));
 
-        connectivityController.add([ConnectivityResult.wifi]);
-      });
+          connectivityController.add([ConnectivityResult.wifi]);
+        },
+      );
 
-      test('should emit offline status when connectivity changes to none',
-          () async {
-        when(() => mockConnectivity.checkConnectivity())
-            .thenAnswer((_) async => [ConnectivityResult.wifi]);
+      test(
+        'should emit offline status when connectivity changes to none',
+        () async {
+          when(
+            () => mockConnectivity.checkConnectivity(),
+          ).thenAnswer((_) async => [ConnectivityResult.wifi]);
 
-        final service = ConnectivityServiceImpl(connectivity: mockConnectivity);
+          final service = ConnectivityServiceImpl(
+            connectivity: mockConnectivity,
+          );
 
-        // Allow initialization to complete
-        await Future.delayed(Duration.zero);
+          // Allow initialization to complete
+          await Future.delayed(Duration.zero);
 
-        expectLater(
-          service.statusStream,
-          emits(ConnectivityStatus.offline),
-        );
+          expectLater(service.statusStream, emits(ConnectivityStatus.offline));
 
-        connectivityController.add([ConnectivityResult.none]);
-      });
+          connectivityController.add([ConnectivityResult.none]);
+        },
+      );
 
       test('should not emit when status does not change', () async {
-        when(() => mockConnectivity.checkConnectivity())
-            .thenAnswer((_) async => [ConnectivityResult.wifi]);
+        when(
+          () => mockConnectivity.checkConnectivity(),
+        ).thenAnswer((_) async => [ConnectivityResult.wifi]);
 
         final service = ConnectivityServiceImpl(connectivity: mockConnectivity);
 
@@ -215,8 +232,9 @@ void main() {
       });
 
       test('should be a broadcast stream', () async {
-        when(() => mockConnectivity.checkConnectivity())
-            .thenAnswer((_) async => [ConnectivityResult.none]);
+        when(
+          () => mockConnectivity.checkConnectivity(),
+        ).thenAnswer((_) async => [ConnectivityResult.none]);
 
         final service = ConnectivityServiceImpl(connectivity: mockConnectivity);
 
@@ -232,8 +250,9 @@ void main() {
       });
 
       test('should emit multiple status changes', () async {
-        when(() => mockConnectivity.checkConnectivity())
-            .thenAnswer((_) async => [ConnectivityResult.wifi]);
+        when(
+          () => mockConnectivity.checkConnectivity(),
+        ).thenAnswer((_) async => [ConnectivityResult.wifi]);
 
         final service = ConnectivityServiceImpl(connectivity: mockConnectivity);
 
@@ -261,10 +280,7 @@ void main() {
       test('should dispose without error', () async {
         final service = ConnectivityServiceImpl(connectivity: mockConnectivity);
 
-        expect(
-          () => service.dispose(),
-          returnsNormally,
-        );
+        expect(() => service.dispose(), returnsNormally);
       });
 
       test('should cancel connectivity subscription on dispose', () async {
@@ -283,8 +299,9 @@ void main() {
 
     group('ConnectivityResult mapping', () {
       test('should map wifi to online', () async {
-        when(() => mockConnectivity.checkConnectivity())
-            .thenAnswer((_) async => [ConnectivityResult.wifi]);
+        when(
+          () => mockConnectivity.checkConnectivity(),
+        ).thenAnswer((_) async => [ConnectivityResult.wifi]);
 
         final service = ConnectivityServiceImpl(connectivity: mockConnectivity);
         final status = await service.checkConnectivity();
@@ -293,8 +310,9 @@ void main() {
       });
 
       test('should map mobile to online', () async {
-        when(() => mockConnectivity.checkConnectivity())
-            .thenAnswer((_) async => [ConnectivityResult.mobile]);
+        when(
+          () => mockConnectivity.checkConnectivity(),
+        ).thenAnswer((_) async => [ConnectivityResult.mobile]);
 
         final service = ConnectivityServiceImpl(connectivity: mockConnectivity);
         final status = await service.checkConnectivity();
@@ -303,8 +321,9 @@ void main() {
       });
 
       test('should map ethernet to online', () async {
-        when(() => mockConnectivity.checkConnectivity())
-            .thenAnswer((_) async => [ConnectivityResult.ethernet]);
+        when(
+          () => mockConnectivity.checkConnectivity(),
+        ).thenAnswer((_) async => [ConnectivityResult.ethernet]);
 
         final service = ConnectivityServiceImpl(connectivity: mockConnectivity);
         final status = await service.checkConnectivity();
@@ -313,8 +332,9 @@ void main() {
       });
 
       test('should map vpn to online', () async {
-        when(() => mockConnectivity.checkConnectivity())
-            .thenAnswer((_) async => [ConnectivityResult.vpn]);
+        when(
+          () => mockConnectivity.checkConnectivity(),
+        ).thenAnswer((_) async => [ConnectivityResult.vpn]);
 
         final service = ConnectivityServiceImpl(connectivity: mockConnectivity);
         final status = await service.checkConnectivity();
@@ -323,8 +343,9 @@ void main() {
       });
 
       test('should map bluetooth to online', () async {
-        when(() => mockConnectivity.checkConnectivity())
-            .thenAnswer((_) async => [ConnectivityResult.bluetooth]);
+        when(
+          () => mockConnectivity.checkConnectivity(),
+        ).thenAnswer((_) async => [ConnectivityResult.bluetooth]);
 
         final service = ConnectivityServiceImpl(connectivity: mockConnectivity);
         final status = await service.checkConnectivity();
@@ -333,8 +354,9 @@ void main() {
       });
 
       test('should map none to offline', () async {
-        when(() => mockConnectivity.checkConnectivity())
-            .thenAnswer((_) async => [ConnectivityResult.none]);
+        when(
+          () => mockConnectivity.checkConnectivity(),
+        ).thenAnswer((_) async => [ConnectivityResult.none]);
 
         final service = ConnectivityServiceImpl(connectivity: mockConnectivity);
         final status = await service.checkConnectivity();
@@ -343,11 +365,9 @@ void main() {
       });
 
       test('should handle list containing none as offline', () async {
-        when(() => mockConnectivity.checkConnectivity())
-            .thenAnswer((_) async => [
-                  ConnectivityResult.wifi,
-                  ConnectivityResult.none,
-                ]);
+        when(() => mockConnectivity.checkConnectivity()).thenAnswer(
+          (_) async => [ConnectivityResult.wifi, ConnectivityResult.none],
+        );
 
         final service = ConnectivityServiceImpl(connectivity: mockConnectivity);
         final status = await service.checkConnectivity();
@@ -359,8 +379,9 @@ void main() {
 
     group('Edge Cases', () {
       test('should handle rapid connectivity changes', () async {
-        when(() => mockConnectivity.checkConnectivity())
-            .thenAnswer((_) async => [ConnectivityResult.wifi]);
+        when(
+          () => mockConnectivity.checkConnectivity(),
+        ).thenAnswer((_) async => [ConnectivityResult.wifi]);
 
         final service = ConnectivityServiceImpl(connectivity: mockConnectivity);
 
@@ -389,10 +410,7 @@ void main() {
 
         // Should still be able to check connectivity (returns cached status)
         // This depends on implementation - adjust based on actual behavior
-        expect(
-          () async => await service.checkConnectivity(),
-          returnsNormally,
-        );
+        expect(() async => await service.checkConnectivity(), returnsNormally);
       });
     });
   });
@@ -423,8 +441,7 @@ void main() {
 
 /// Mock implementation for testing the interface
 class _MockConnectivityService implements ConnectivityService {
-  final _streamController =
-      StreamController<ConnectivityStatus>.broadcast();
+  final _streamController = StreamController<ConnectivityStatus>.broadcast();
 
   @override
   Stream<ConnectivityStatus> get statusStream => _streamController.stream;

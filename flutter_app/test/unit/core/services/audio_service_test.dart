@@ -5,14 +5,22 @@ void main() {
   group('AudioRecordingState', () {
     test('should have all expected states', () {
       expect(AudioRecordingState.values.length, equals(4));
-      expect(AudioRecordingState.values.contains(AudioRecordingState.idle),
-          isTrue);
-      expect(AudioRecordingState.values.contains(AudioRecordingState.recording),
-          isTrue);
-      expect(AudioRecordingState.values.contains(AudioRecordingState.paused),
-          isTrue);
-      expect(AudioRecordingState.values.contains(AudioRecordingState.stopped),
-          isTrue);
+      expect(
+        AudioRecordingState.values.contains(AudioRecordingState.idle),
+        isTrue,
+      );
+      expect(
+        AudioRecordingState.values.contains(AudioRecordingState.recording),
+        isTrue,
+      );
+      expect(
+        AudioRecordingState.values.contains(AudioRecordingState.paused),
+        isTrue,
+      );
+      expect(
+        AudioRecordingState.values.contains(AudioRecordingState.stopped),
+        isTrue,
+      );
     });
 
     test('should have correct names', () {
@@ -34,15 +42,25 @@ void main() {
     test('should have all expected states', () {
       expect(AudioPlaybackState.values.length, equals(5));
       expect(
-          AudioPlaybackState.values.contains(AudioPlaybackState.idle), isTrue);
-      expect(AudioPlaybackState.values.contains(AudioPlaybackState.playing),
-          isTrue);
-      expect(AudioPlaybackState.values.contains(AudioPlaybackState.paused),
-          isTrue);
-      expect(AudioPlaybackState.values.contains(AudioPlaybackState.stopped),
-          isTrue);
-      expect(AudioPlaybackState.values.contains(AudioPlaybackState.completed),
-          isTrue);
+        AudioPlaybackState.values.contains(AudioPlaybackState.idle),
+        isTrue,
+      );
+      expect(
+        AudioPlaybackState.values.contains(AudioPlaybackState.playing),
+        isTrue,
+      );
+      expect(
+        AudioPlaybackState.values.contains(AudioPlaybackState.paused),
+        isTrue,
+      );
+      expect(
+        AudioPlaybackState.values.contains(AudioPlaybackState.stopped),
+        isTrue,
+      );
+      expect(
+        AudioPlaybackState.values.contains(AudioPlaybackState.completed),
+        isTrue,
+      );
     });
 
     test('should have correct names', () {
@@ -156,7 +174,8 @@ void main() {
     test('should format 2 minutes 15 seconds duration', () {
       expect(
         AudioService.formatDurationFromDuration(
-            const Duration(minutes: 2, seconds: 15)),
+          const Duration(minutes: 2, seconds: 15),
+        ),
         equals('2:15'),
       );
     });
@@ -173,7 +192,8 @@ void main() {
     test('should format duration with only milliseconds', () {
       expect(
         AudioService.formatDurationFromDuration(
-            const Duration(milliseconds: 500)),
+          const Duration(milliseconds: 500),
+        ),
         equals('0:00'),
       );
     });
@@ -181,7 +201,8 @@ void main() {
     test('should format duration with milliseconds that round up', () {
       expect(
         AudioService.formatDurationFromDuration(
-            const Duration(seconds: 1, milliseconds: 999)),
+          const Duration(seconds: 1, milliseconds: 999),
+        ),
         equals('0:01'),
       );
     });
@@ -206,10 +227,7 @@ void main() {
     test('should handle negative milliseconds gracefully', () {
       // The implementation handles negative values using absolute value logic
       // The actual behavior may vary - just verify it doesn't throw
-      expect(
-        () => AudioService.formatDuration(-1000),
-        returnsNormally,
-      );
+      expect(() => AudioService.formatDuration(-1000), returnsNormally);
     });
 
     test('should handle very large durations', () {
@@ -239,29 +257,40 @@ void main() {
   group('State Transitions', () {
     test('recording states should follow logical order', () {
       // idle -> recording -> paused -> stopped is the typical flow
-      expect(AudioRecordingState.idle.index <
-          AudioRecordingState.recording.index, isTrue);
-      expect(AudioRecordingState.recording.index <
-          AudioRecordingState.paused.index, isTrue);
-      expect(AudioRecordingState.paused.index <
-          AudioRecordingState.stopped.index, isTrue);
+      expect(
+        AudioRecordingState.idle.index < AudioRecordingState.recording.index,
+        isTrue,
+      );
+      expect(
+        AudioRecordingState.recording.index < AudioRecordingState.paused.index,
+        isTrue,
+      );
+      expect(
+        AudioRecordingState.paused.index < AudioRecordingState.stopped.index,
+        isTrue,
+      );
     });
 
     test('playback states should follow logical order', () {
       // idle -> playing -> paused/stopped -> completed is typical
       expect(
-          AudioPlaybackState.idle.index < AudioPlaybackState.playing.index,
-          isTrue);
+        AudioPlaybackState.idle.index < AudioPlaybackState.playing.index,
+        isTrue,
+      );
       expect(
-          AudioPlaybackState.playing.index < AudioPlaybackState.paused.index,
-          isTrue);
+        AudioPlaybackState.playing.index < AudioPlaybackState.paused.index,
+        isTrue,
+      );
     });
   });
 
   group('Recording State Enum', () {
     test('can compare states', () {
       expect(AudioRecordingState.idle == AudioRecordingState.idle, isTrue);
-      expect(AudioRecordingState.idle == AudioRecordingState.recording, isFalse);
+      expect(
+        AudioRecordingState.idle == AudioRecordingState.recording,
+        isFalse,
+      );
     });
 
     test('can switch on state', () {
@@ -363,33 +392,46 @@ void main() {
   });
 
   group('Duration Format Consistency', () {
-    test('formatDuration and formatDurationFromDuration should be consistent',
-        () {
-      for (var seconds = 0; seconds < 300; seconds += 15) {
-        final ms = seconds * 1000;
-        final duration = Duration(seconds: seconds);
+    test(
+      'formatDuration and formatDurationFromDuration should be consistent',
+      () {
+        for (var seconds = 0; seconds < 300; seconds += 15) {
+          final ms = seconds * 1000;
+          final duration = Duration(seconds: seconds);
 
-        final fromMs = AudioService.formatDuration(ms);
-        final fromDuration = AudioService.formatDurationFromDuration(duration);
+          final fromMs = AudioService.formatDuration(ms);
+          final fromDuration = AudioService.formatDurationFromDuration(
+            duration,
+          );
 
-        expect(fromMs, equals(fromDuration),
-            reason: 'Mismatch at $seconds seconds');
-      }
-    });
+          expect(
+            fromMs,
+            equals(fromDuration),
+            reason: 'Mismatch at $seconds seconds',
+          );
+        }
+      },
+    );
 
     test('should produce same result for equivalent inputs', () {
       // 1 minute 30 seconds
       expect(
         AudioService.formatDuration(90000),
-        equals(AudioService.formatDurationFromDuration(
-            const Duration(minutes: 1, seconds: 30))),
+        equals(
+          AudioService.formatDurationFromDuration(
+            const Duration(minutes: 1, seconds: 30),
+          ),
+        ),
       );
 
       // 5 minutes 15 seconds
       expect(
         AudioService.formatDuration(315000),
-        equals(AudioService.formatDurationFromDuration(
-            const Duration(minutes: 5, seconds: 15))),
+        equals(
+          AudioService.formatDurationFromDuration(
+            const Duration(minutes: 5, seconds: 15),
+          ),
+        ),
       );
     });
   });

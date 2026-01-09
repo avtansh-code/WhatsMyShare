@@ -27,17 +27,11 @@ void main() {
 
     group('Enable/Disable Analytics', () {
       test('should enable analytics without error', () {
-        expect(
-          () => analyticsService.setEnabled(true),
-          returnsNormally,
-        );
+        expect(() => analyticsService.setEnabled(true), returnsNormally);
       });
 
       test('should disable analytics without error', () {
-        expect(
-          () => analyticsService.setEnabled(false),
-          returnsNormally,
-        );
+        expect(() => analyticsService.setEnabled(false), returnsNormally);
       });
 
       test('should toggle analytics state', () {
@@ -51,35 +45,23 @@ void main() {
 
     group('User Identification', () {
       test('setUserId should work with valid userId', () async {
-        await expectLater(
-          analyticsService.setUserId('user123'),
-          completes,
-        );
+        await expectLater(analyticsService.setUserId('user123'), completes);
       });
 
       test('setUserId should work with null userId', () async {
-        await expectLater(
-          analyticsService.setUserId(null),
-          completes,
-        );
+        await expectLater(analyticsService.setUserId(null), completes);
       });
 
       test('setUserProperty should work with name and value', () async {
         await expectLater(
-          analyticsService.setUserProperty(
-            name: 'premium_user',
-            value: 'true',
-          ),
+          analyticsService.setUserProperty(name: 'premium_user', value: 'true'),
           completes,
         );
       });
 
       test('setUserProperty should work with null value', () async {
         await expectLater(
-          analyticsService.setUserProperty(
-            name: 'premium_user',
-            value: null,
-          ),
+          analyticsService.setUserProperty(name: 'premium_user', value: null),
           completes,
         );
       });
@@ -93,16 +75,18 @@ void main() {
         );
       });
 
-      test('logScreenView should work with screenName and screenClass',
-          () async {
-        await expectLater(
-          analyticsService.logScreenView(
-            screenName: 'HomeScreen',
-            screenClass: 'HomePage',
-          ),
-          completes,
-        );
-      });
+      test(
+        'logScreenView should work with screenName and screenClass',
+        () async {
+          await expectLater(
+            analyticsService.logScreenView(
+              screenName: 'HomeScreen',
+              screenClass: 'HomePage',
+            ),
+            completes,
+          );
+        },
+      );
 
       test('should log screen views for all defined screens', () async {
         for (final screen in [
@@ -152,10 +136,7 @@ void main() {
 
       test('logEvent should handle empty parameters', () async {
         await expectLater(
-          analyticsService.logEvent(
-            name: 'custom_event',
-            parameters: {},
-          ),
+          analyticsService.logEvent(name: 'custom_event', parameters: {}),
           completes,
         );
       });
@@ -199,51 +180,33 @@ void main() {
       });
 
       test('logLogout should log logout event', () async {
-        await expectLater(
-          analyticsService.logLogout(),
-          completes,
-        );
+        await expectLater(analyticsService.logLogout(), completes);
       });
 
       test('logPasswordReset should log password reset event', () async {
-        await expectLater(
-          analyticsService.logPasswordReset(),
-          completes,
-        );
+        await expectLater(analyticsService.logPasswordReset(), completes);
       });
     });
 
     group('Group Events', () {
       test('logGroupCreated should log group creation', () async {
         await expectLater(
-          analyticsService.logGroupCreated(
-            groupType: 'trip',
-            memberCount: 5,
-          ),
+          analyticsService.logGroupCreated(groupType: 'trip', memberCount: 5),
           completes,
         );
       });
 
       test('logGroupCreated should work with different group types', () async {
         await expectLater(
-          analyticsService.logGroupCreated(
-            groupType: 'home',
-            memberCount: 3,
-          ),
+          analyticsService.logGroupCreated(groupType: 'home', memberCount: 3),
           completes,
         );
         await expectLater(
-          analyticsService.logGroupCreated(
-            groupType: 'couple',
-            memberCount: 2,
-          ),
+          analyticsService.logGroupCreated(groupType: 'couple', memberCount: 2),
           completes,
         );
         await expectLater(
-          analyticsService.logGroupCreated(
-            groupType: 'other',
-            memberCount: 10,
-          ),
+          analyticsService.logGroupCreated(groupType: 'other', memberCount: 10),
           completes,
         );
       });
@@ -277,42 +240,38 @@ void main() {
         );
       });
 
-      test('logExpenseCreated should work with different split types',
-          () async {
-        await expectLater(
-          analyticsService.logExpenseCreated(
-            amount: 50.0,
-            currency: 'EUR',
-            splitType: 'exact',
-            participantCount: 2,
-            hasReceipt: false,
-          ),
-          completes,
-        );
-        await expectLater(
-          analyticsService.logExpenseCreated(
-            amount: 200.0,
-            currency: 'INR',
-            splitType: 'percentage',
-            participantCount: 5,
-            hasReceipt: true,
-          ),
-          completes,
-        );
-      });
+      test(
+        'logExpenseCreated should work with different split types',
+        () async {
+          await expectLater(
+            analyticsService.logExpenseCreated(
+              amount: 50.0,
+              currency: 'EUR',
+              splitType: 'exact',
+              participantCount: 2,
+              hasReceipt: false,
+            ),
+            completes,
+          );
+          await expectLater(
+            analyticsService.logExpenseCreated(
+              amount: 200.0,
+              currency: 'INR',
+              splitType: 'percentage',
+              participantCount: 5,
+              hasReceipt: true,
+            ),
+            completes,
+          );
+        },
+      );
 
       test('logExpenseDeleted should log expense deletion', () async {
-        await expectLater(
-          analyticsService.logExpenseDeleted(),
-          completes,
-        );
+        await expectLater(analyticsService.logExpenseDeleted(), completes);
       });
 
       test('logExpenseEdited should log expense edit', () async {
-        await expectLater(
-          analyticsService.logExpenseEdited(),
-          completes,
-        );
+        await expectLater(analyticsService.logExpenseEdited(), completes);
       });
     });
 
@@ -329,35 +288,41 @@ void main() {
         );
       });
 
-      test('logSettlementCreated should work with different payment methods',
-          () async {
-        await expectLater(
-          analyticsService.logSettlementCreated(
-            amount: 100.0,
-            currency: 'USD',
-            paymentMethod: 'bank_transfer',
-            biometricUsed: true,
-          ),
-          completes,
-        );
-        await expectLater(
-          analyticsService.logSettlementCreated(
-            amount: 50.0,
-            currency: 'EUR',
-            paymentMethod: 'venmo',
-            biometricUsed: false,
-          ),
-          completes,
-        );
-      });
+      test(
+        'logSettlementCreated should work with different payment methods',
+        () async {
+          await expectLater(
+            analyticsService.logSettlementCreated(
+              amount: 100.0,
+              currency: 'USD',
+              paymentMethod: 'bank_transfer',
+              biometricUsed: true,
+            ),
+            completes,
+          );
+          await expectLater(
+            analyticsService.logSettlementCreated(
+              amount: 50.0,
+              currency: 'EUR',
+              paymentMethod: 'venmo',
+              biometricUsed: false,
+            ),
+            completes,
+          );
+        },
+      );
 
-      test('logSettlementConfirmed should log settlement confirmation',
-          () async {
-        await expectLater(
-          analyticsService.logSettlementConfirmed(settlementId: 'settlement123'),
-          completes,
-        );
-      });
+      test(
+        'logSettlementConfirmed should log settlement confirmation',
+        () async {
+          await expectLater(
+            analyticsService.logSettlementConfirmed(
+              settlementId: 'settlement123',
+            ),
+            completes,
+          );
+        },
+      );
     });
 
     group('Chat Events', () {
@@ -368,21 +333,23 @@ void main() {
         );
       });
 
-      test('logChatMessageSent should work with different message types',
-          () async {
-        await expectLater(
-          analyticsService.logChatMessageSent(messageType: 'image'),
-          completes,
-        );
-        await expectLater(
-          analyticsService.logChatMessageSent(messageType: 'voice'),
-          completes,
-        );
-        await expectLater(
-          analyticsService.logChatMessageSent(messageType: 'system'),
-          completes,
-        );
-      });
+      test(
+        'logChatMessageSent should work with different message types',
+        () async {
+          await expectLater(
+            analyticsService.logChatMessageSent(messageType: 'image'),
+            completes,
+          );
+          await expectLater(
+            analyticsService.logChatMessageSent(messageType: 'voice'),
+            completes,
+          );
+          await expectLater(
+            analyticsService.logChatMessageSent(messageType: 'system'),
+            completes,
+          );
+        },
+      );
 
       test('logVoiceNoteRecorded should log voice note recording', () async {
         await expectLater(
@@ -391,21 +358,23 @@ void main() {
         );
       });
 
-      test('logVoiceNoteRecorded should work with different durations',
-          () async {
-        await expectLater(
-          analyticsService.logVoiceNoteRecorded(durationMs: 1000),
-          completes,
-        );
-        await expectLater(
-          analyticsService.logVoiceNoteRecorded(durationMs: 60000),
-          completes,
-        );
-        await expectLater(
-          analyticsService.logVoiceNoteRecorded(durationMs: 0),
-          completes,
-        );
-      });
+      test(
+        'logVoiceNoteRecorded should work with different durations',
+        () async {
+          await expectLater(
+            analyticsService.logVoiceNoteRecorded(durationMs: 1000),
+            completes,
+          );
+          await expectLater(
+            analyticsService.logVoiceNoteRecorded(durationMs: 60000),
+            completes,
+          );
+          await expectLater(
+            analyticsService.logVoiceNoteRecorded(durationMs: 0),
+            completes,
+          );
+        },
+      );
     });
 
     group('Feature Usage Events', () {
@@ -441,10 +410,7 @@ void main() {
       });
 
       test('logOfflineModeUsed should log offline mode usage', () async {
-        await expectLater(
-          analyticsService.logOfflineModeUsed(),
-          completes,
-        );
+        await expectLater(analyticsService.logOfflineModeUsed(), completes);
       });
 
       test('logSyncCompleted should log sync completion', () async {
@@ -550,10 +516,7 @@ void main() {
           analyticsService.logScreenView(screenName: 'TestScreen'),
           completes,
         );
-        await expectLater(
-          analyticsService.setUserId('user123'),
-          completes,
-        );
+        await expectLater(analyticsService.setUserId('user123'), completes);
       });
     });
   });
@@ -577,7 +540,10 @@ void main() {
 
     test('should have all settlement event names', () {
       expect(AnalyticsEvents.settlementCreated, equals('settlement_created'));
-      expect(AnalyticsEvents.settlementConfirmed, equals('settlement_confirmed'));
+      expect(
+        AnalyticsEvents.settlementConfirmed,
+        equals('settlement_confirmed'),
+      );
     });
 
     test('should have all chat event names', () {

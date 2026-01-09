@@ -89,10 +89,7 @@ void main() {
 
     group('Info Logging', () {
       test('should log info message without error', () {
-        expect(
-          () => loggingService.info('Test info message'),
-          returnsNormally,
-        );
+        expect(() => loggingService.info('Test info message'), returnsNormally);
       });
 
       test('should log info message with tag', () {
@@ -104,10 +101,7 @@ void main() {
 
       test('should log info message with data', () {
         expect(
-          () => loggingService.info(
-            'Test message',
-            data: {'key': 'value'},
-          ),
+          () => loggingService.info('Test message', data: {'key': 'value'}),
           returnsNormally,
         );
       });
@@ -198,20 +192,14 @@ void main() {
     group('Logging with Different Data Types', () {
       test('should handle string values in data', () {
         expect(
-          () => loggingService.debug(
-            'Test',
-            data: {'string': 'value'},
-          ),
+          () => loggingService.debug('Test', data: {'string': 'value'}),
           returnsNormally,
         );
       });
 
       test('should handle numeric values in data', () {
         expect(
-          () => loggingService.debug(
-            'Test',
-            data: {'int': 42, 'double': 3.14},
-          ),
+          () => loggingService.debug('Test', data: {'int': 42, 'double': 3.14}),
           returnsNormally,
         );
       });
@@ -230,7 +218,9 @@ void main() {
         expect(
           () => loggingService.debug(
             'Test',
-            data: {'list': [1, 2, 3]},
+            data: {
+              'list': [1, 2, 3],
+            },
           ),
           returnsNormally,
         );
@@ -250,22 +240,13 @@ void main() {
 
       test('should handle null values in data', () {
         expect(
-          () => loggingService.debug(
-            'Test',
-            data: {'nullable': null},
-          ),
+          () => loggingService.debug('Test', data: {'nullable': null}),
           returnsNormally,
         );
       });
 
       test('should handle empty data map', () {
-        expect(
-          () => loggingService.debug(
-            'Test',
-            data: {},
-          ),
-          returnsNormally,
-        );
+        expect(() => loggingService.debug('Test', data: {}), returnsNormally);
       });
     });
   });
@@ -286,10 +267,7 @@ void main() {
 
     test('logInfo should work on objects', () {
       const testObject = 'test';
-      expect(
-        () => testObject.logInfo('Info from extension'),
-        returnsNormally,
-      );
+      expect(() => testObject.logInfo('Info from extension'), returnsNormally);
     });
 
     test('logWarning should work on objects', () {
@@ -340,18 +318,9 @@ void main() {
       const intObject = 42;
       final listObject = [1, 2, 3];
 
-      expect(
-        () => stringObject.logDebug('String log'),
-        returnsNormally,
-      );
-      expect(
-        () => intObject.logDebug('Int log'),
-        returnsNormally,
-      );
-      expect(
-        () => listObject.logDebug('List log'),
-        returnsNormally,
-      );
+      expect(() => stringObject.logDebug('String log'), returnsNormally);
+      expect(() => intObject.logDebug('Int log'), returnsNormally);
+      expect(() => listObject.logDebug('List log'), returnsNormally);
     });
   });
 
@@ -452,10 +421,7 @@ void main() {
       final loggingService = LoggingService();
       final longMessage = 'A' * 10000;
 
-      expect(
-        () => loggingService.debug(longMessage),
-        returnsNormally,
-      );
+      expect(() => loggingService.debug(longMessage), returnsNormally);
     });
 
     test('should handle messages with special characters', () {
@@ -482,20 +448,14 @@ void main() {
     test('should handle empty message', () {
       final loggingService = LoggingService();
 
-      expect(
-        () => loggingService.debug(''),
-        returnsNormally,
-      );
+      expect(() => loggingService.debug(''), returnsNormally);
     });
 
     test('should handle very long tag', () {
       final loggingService = LoggingService();
       final longTag = 'T' * 1000;
 
-      expect(
-        () => loggingService.debug('Test', tag: longTag),
-        returnsNormally,
-      );
+      expect(() => loggingService.debug('Test', tag: longTag), returnsNormally);
     });
 
     test('should handle complex nested data', () {
@@ -503,9 +463,7 @@ void main() {
       final complexData = {
         'level1': {
           'level2': {
-            'level3': {
-              'value': 'deep',
-            },
+            'level3': {'value': 'deep'},
           },
         },
         'array': [

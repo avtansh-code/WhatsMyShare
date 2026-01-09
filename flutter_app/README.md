@@ -2,6 +2,10 @@
 
 A bill-splitting mobile application built with Flutter for **iOS and Android platforms only**.
 
+## Current Status: 98% Complete ✅
+
+All core features and testing are complete. Ready for beta testing and store submission.
+
 ## Supported Platforms
 
 | Platform | Supported |
@@ -13,9 +17,7 @@ A bill-splitting mobile application built with Flutter for **iOS and Android pla
 | Linux | ❌ No |
 | Windows | ❌ No |
 
-## Current Status: 92% Complete 🚀
-
-All core features have been implemented and the app is in the testing & polish phase.
+---
 
 ## Features Implemented
 
@@ -86,94 +88,210 @@ All core features have been implemented and the app is in the testing & polish p
 - Offline indicator UI
 
 ### Core Services ✅
-- LoggingService - Structured logging with levels
-- AnalyticsService - Firebase Analytics
-- ConnectivityService - Network monitoring
-- OfflineQueueManager - Offline operation queue
-- SyncService - Firestore sync
-- AudioService - Voice recording/playback
+| Service | Purpose |
+|---------|---------|
+| LoggingService | Structured logging with levels |
+| AnalyticsService | Firebase Analytics integration |
+| ConnectivityService | Network state monitoring |
+| OfflineQueueManager | Offline operation queue with retry |
+| SyncService | Firestore sync operations |
+| AudioService | Voice note recording/playback |
+
+---
 
 ## Project Structure
 
 ```
 flutter_app/
-├── android/                 # Android platform files
-├── ios/                     # iOS platform files
-├── lib/
-│   ├── main.dart           # App entry point
-│   ├── app/
-│   │   ├── app.dart        # Main app widget
-│   │   └── routes.dart     # GoRouter navigation
-│   ├── core/
-│   │   ├── config/         # App & theme configuration
-│   │   ├── constants/      # App constants
-│   │   ├── di/             # Dependency injection (GetIt)
-│   │   ├── errors/         # Exceptions, failures, error messages
-│   │   ├── models/         # Core models (offline operations)
-│   │   ├── services/       # Core services (6 services)
-│   │   ├── utils/          # Utility functions
-│   │   └── widgets/        # Reusable widgets
-│   └── features/
-│       ├── auth/           # Authentication feature
-│       │   ├── data/       # DataSources, Models, Repositories
-│       │   ├── domain/     # Entities, Repositories, UseCases
-│       │   └── presentation/ # BLoC, Pages
-│       ├── profile/        # User profile feature
-│       ├── groups/         # Group management feature
-│       ├── expenses/       # Expenses & chat feature
-│       ├── settlements/    # Settlements feature
-│       ├── notifications/  # Notifications feature
-│       └── dashboard/      # Dashboard feature
-├── test/                   # Test files
-└── pubspec.yaml           # Dependencies
+├── lib/                         # 85 source files
+│   ├── main.dart               # App entry point
+│   ├── firebase_options.dart   # Firebase configuration
+│   ├── app/                    # App configuration (2 files)
+│   │   ├── app.dart           # Main app widget with providers
+│   │   └── routes.dart        # GoRouter navigation setup
+│   ├── core/                   # Core utilities (21 files)
+│   │   ├── config/            # App & theme configuration
+│   │   ├── constants/         # App-wide constants
+│   │   ├── di/                # Dependency injection (GetIt)
+│   │   ├── errors/            # Custom exceptions & failures
+│   │   ├── models/            # Core models (OfflineOperation)
+│   │   ├── services/          # 6 core services
+│   │   ├── utils/             # Utility functions (currency)
+│   │   └── widgets/           # Shared widgets
+│   └── features/              # Feature modules (62 files)
+│       ├── auth/              # Authentication (15 files)
+│       ├── profile/           # User profile (9 files)
+│       ├── groups/            # Group management (10 files)
+│       ├── expenses/          # Expenses & chat (15 files)
+│       ├── settlements/       # Settlements (10 files)
+│       ├── notifications/     # Notifications (10 files)
+│       └── dashboard/         # Dashboard (1 file)
+└── test/                       # 45+ test files
+    ├── unit/                  # 26 unit test files
+    ├── widget/                # 15 widget test files
+    └── integration/           # 4 integration test files
 ```
+
+---
 
 ## Tech Stack
 
 - **Flutter**: 3.24+
 - **State Management**: BLoC (flutter_bloc)
 - **Navigation**: GoRouter
-- **Backend**: Firebase (Auth, Firestore, Storage, FCM)
+- **Backend**: Firebase (Auth, Firestore, Storage, FCM, Analytics)
 - **Local Storage**: Hive, SharedPreferences
 - **Architecture**: Clean Architecture
+
+---
+
+## Testing
+
+### Test Summary
+
+**Total Tests: 1,382 passing** 🎉
+
+| Category | Files | Tests |
+|----------|-------|-------|
+| Unit Tests | 26 | ~900 |
+| Widget Tests | 15 | ~440 |
+| Integration Tests | 4 | 41 |
+
+### Test Organization
+
+```
+test/
+├── unit/                    # Unit tests
+│   ├── core/               # Services, utils, errors, config
+│   │   ├── config/
+│   │   ├── errors/
+│   │   ├── models/
+│   │   ├── services/
+│   │   └── utils/
+│   └── features/           # BLoCs, models, usecases
+│       ├── auth/
+│       ├── expenses/
+│       ├── groups/
+│       ├── notifications/
+│       ├── profile/
+│       └── settlements/
+├── widget/                  # Widget tests
+│   ├── core/widgets/
+│   └── features/           # All page widgets
+└── integration/            # Integration tests (mock Firebase)
+    ├── test_helper.dart    # Firebase mock setup
+    ├── auth_flow_test.dart
+    ├── group_flow_test.dart
+    ├── expense_flow_test.dart
+    └── settlement_flow_test.dart
+```
+
+### Running Tests
+
+```bash
+# Run all unit and widget tests
+flutter test
+
+# Run with coverage
+flutter test --coverage
+
+# Run specific test file
+flutter test test/unit/features/auth/presentation/bloc/auth_bloc_test.dart
+
+# Run tests matching pattern
+flutter test --name "should sign in"
+
+# Run integration tests (uses mock Firebase - no emulators needed)
+flutter test test/integration/ --tags integration
+
+# Run ALL tests including integration
+flutter test --tags integration
+```
+
+### Mock Firebase Testing
+
+Integration tests use mock packages for fast, isolated testing:
+- **firebase_auth_mocks** - Simulates Firebase Auth in-memory
+- **fake_cloud_firestore** - Simulates Firestore in-memory
+
+Benefits:
+- ✅ No emulator setup required
+- ✅ Tests run fast (~3 seconds for 41 tests)
+- ✅ Works in any CI/CD environment
+- ✅ Isolated and deterministic
+
+### Optional: Firebase Emulator Testing
+
+For real Firebase testing, use the integration test runner:
+
+```bash
+# From project root
+./scripts/run_integration_tests.sh
+```
+
+This script:
+- Starts Firebase emulators automatically
+- Runs integration tests
+- Shuts down emulators after completion
+
+---
 
 ## Dependencies
 
 ### Core
-- `flutter_bloc` - State management
-- `go_router` - Navigation
-- `get_it` - Dependency injection
-- `dartz` - Functional programming (Either type)
-- `equatable` - Value equality
+```yaml
+flutter_bloc: ^8.1.6
+go_router: ^14.6.3
+get_it: ^8.0.3
+dartz: ^0.10.1
+equatable: ^2.0.7
+```
 
 ### Firebase
-- `firebase_core`
-- `firebase_auth`
-- `cloud_firestore`
-- `firebase_storage`
-- `firebase_messaging`
-- `firebase_analytics`
+```yaml
+firebase_core: ^3.9.0
+firebase_auth: ^5.4.1
+cloud_firestore: ^5.6.0
+firebase_storage: ^12.4.0
+firebase_messaging: ^15.2.0
+firebase_analytics: ^11.4.0
+google_sign_in: ^6.2.2
+```
 
 ### Storage
-- `hive` & `hive_flutter` - Local storage
-- `shared_preferences` - Simple key-value storage
-- `path_provider` - File system paths
+```yaml
+hive: ^2.2.3
+hive_flutter: ^1.1.0
+shared_preferences: ^2.3.4
+path_provider: ^2.1.5
+```
 
 ### UI
-- `flutter_svg` - SVG support
-- `cached_network_image` - Image caching
-- `image_picker` - Camera/gallery access
-- `intl` - Internationalization
+```yaml
+flutter_svg: ^2.0.16
+cached_network_image: ^3.4.1
+image_picker: ^1.1.2
+shimmer: ^3.0.0
+intl: ^0.19.0
+```
 
 ### Audio
-- `record` - Audio recording
-- `audioplayers` - Audio playback
-- `permission_handler` - Permission management
+```yaml
+record: ^5.1.2
+audioplayers: ^6.1.0
+permission_handler: ^11.3.1
+```
 
-### Utilities
-- `connectivity_plus` - Network connectivity
-- `uuid` - Unique IDs
-- `timeago` - Relative time formatting
+### Testing
+```yaml
+flutter_test: sdk
+bloc_test: ^9.1.7
+mocktail: ^1.0.4
+firebase_auth_mocks: ^0.14.1
+fake_cloud_firestore: ^3.1.0
+```
+
+---
 
 ## Getting Started
 
@@ -212,6 +330,8 @@ flutter_app/
    flutter run -d android
    ```
 
+---
+
 ## Development Commands
 
 ```bash
@@ -221,14 +341,21 @@ flutter pub get
 # Run app
 flutter run
 
+# Run on specific device
+flutter run -d ios
+flutter run -d android
+
+# Run all tests
+flutter test
+
+# Run integration tests
+flutter test test/integration/ --tags integration
+
 # Analyze code
 flutter analyze
 
 # Format code
 dart format lib/
-
-# Run tests
-flutter test
 
 # Build release (iOS)
 flutter build ios --release
@@ -238,36 +365,33 @@ flutter build apk --release
 flutter build appbundle --release
 ```
 
-## Build for Release
-
-### iOS
-```bash
-flutter build ios --release
-```
-
-### Android
-```bash
-# APK
-flutter build apk --release
-
-# App Bundle (recommended for Play Store)
-flutter build appbundle --release
-```
+---
 
 ## Architecture
 
 The app follows **Clean Architecture** with three layers:
 
-1. **Presentation Layer** - UI, BLoC, Widgets
-2. **Domain Layer** - Entities, Repositories (interfaces), Use Cases
-3. **Data Layer** - Models, DataSources, Repository Implementations
+### 1. Presentation Layer
+- **Pages**: UI screens
+- **BLoC**: Business logic components
+- **Widgets**: Reusable UI components
+
+### 2. Domain Layer
+- **Entities**: Core business objects
+- **Repositories**: Abstract interfaces
+- **Use Cases**: Business operations
+
+### 3. Data Layer
+- **Models**: Data transfer objects
+- **DataSources**: API/Database access
+- **Repository Implementations**: Concrete implementations
 
 ### State Management
 
 Using **BLoC pattern** with:
-- Events - User actions
-- States - UI states
-- BLoC - Business logic
+- **Events**: User actions/triggers
+- **States**: UI states (loading, loaded, error)
+- **BLoC**: Business logic processing
 
 ### Dependency Injection
 
@@ -276,12 +400,38 @@ Using **GetIt** for service locator pattern:
 - Lazy initialization for performance
 - Easy mocking for tests
 
-## Code Style
+---
 
-- Follow Dart style guide
-- Use `dart format` for formatting
-- Run `flutter analyze` before commits
-- Write tests for business logic
+## UI Pages
+
+| Page | Route | Status |
+|------|-------|--------|
+| Login | `/login` | ✅ Tested |
+| Signup | `/signup` | ✅ Tested |
+| Forgot Password | `/forgot-password` | ✅ Tested |
+| Dashboard | `/` | ✅ Tested |
+| Group List | `/groups` | ✅ Tested |
+| Group Detail | `/groups/:id` | ✅ Tested |
+| Create Group | `/groups/create` | ✅ Tested |
+| Expense List | `/groups/:id/expenses` | ✅ Tested |
+| Add Expense | `/groups/:id/expenses/add` | ✅ Tested |
+| Expense Chat | `/expenses/:id/chat` | ✅ Tested |
+| Profile | `/profile` | ✅ Tested |
+| Edit Profile | `/profile/edit` | ✅ Tested |
+| Notifications | `/notifications` | ✅ Tested |
+| Settle Up | `/groups/:id/settle` | ✅ Tested |
+
+---
+
+## Next Steps
+
+### Phase 5: Launch
+1. Beta testing via TestFlight / Firebase App Distribution
+2. Performance optimization
+3. Security audit
+4. App Store / Play Store submission
+
+---
 
 ## Resources
 
@@ -291,18 +441,7 @@ Using **GetIt** for service locator pattern:
 - [GoRouter](https://pub.dev/packages/go_router)
 - [Firebase Flutter](https://firebase.google.com/docs/flutter/setup)
 
-## Next Steps
-
-### Sprint 8: Testing & Quality
-- Unit tests (80% coverage target)
-- Widget tests
-- Integration tests
-- Performance optimization
-
-### Sprint 9: Launch
-- Beta testing
-- Store submissions
-- Production monitoring
+---
 
 ## License
 

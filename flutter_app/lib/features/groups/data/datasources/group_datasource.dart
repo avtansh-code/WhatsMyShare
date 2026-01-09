@@ -9,13 +9,35 @@ import '../../../../core/services/logging_service.dart';
 import '../../domain/entities/group_entity.dart';
 import '../models/group_model.dart';
 
+/// Pagination result with cursor for next page
+class PaginatedResult<T> {
+  final List<T> items;
+  final DocumentSnapshot? lastDocument;
+  final bool hasMore;
+
+  const PaginatedResult({
+    required this.items,
+    this.lastDocument,
+    this.hasMore = false,
+  });
+}
+
 /// Data source interface for group operations
 abstract class GroupDataSource {
   /// Get all groups for the current user
   Future<List<GroupModel>> getGroups();
 
+  /// Get paginated groups for the current user
+  Future<PaginatedResult<GroupModel>> getGroupsPaginated({
+    int limit = 20,
+    DocumentSnapshot? startAfter,
+  });
+
   /// Watch groups for real-time updates
   Stream<List<GroupModel>> watchGroups();
+
+  /// Watch paginated groups for real-time updates
+  Stream<List<GroupModel>> watchGroupsPaginated({int limit = 20});
 
   /// Get a single group by ID
   Future<GroupModel> getGroupById(String groupId);
@@ -146,6 +168,56 @@ class GroupDataSourceImpl implements GroupDataSource {
   }
 
   @override
+  Future<PaginatedResult<GroupModel>> getGroupsPaginated({
+    int limit = 20,
+    DocumentSnapshot? startAfter,
+  }) async {
+    _log.debug(
+      'Fetching paginated groups',
+      tag: LogTags.groups,
+      data: {'limit': limit, 'hasStartAfter': startAfter != null},
+    );
+    try {
+      final userId = _currentUserId;
+      Query<Map<String, dynamic>> query = _groupsCollection
+          .where('memberIds', arrayContains: userId)
+          .orderBy('lastActivityAt', descending: true)
+          .limit(limit + 1); // Fetch one extra to check if there are more
+
+      if (startAfter != null) {
+        query = query.startAfterDocument(startAfter);
+      }
+
+      final snapshot = await query.get();
+      final hasMore = snapshot.docs.length > limit;
+      final docs = hasMore ? snapshot.docs.take(limit).toList() : snapshot.docs;
+
+      final groups = docs.map((doc) => GroupModel.fromFirestore(doc)).toList();
+
+      _log.info(
+        'Paginated groups fetched successfully',
+        tag: LogTags.groups,
+        data: {'count': groups.length, 'hasMore': hasMore},
+      );
+
+      return PaginatedResult(
+        items: groups,
+        lastDocument: docs.isNotEmpty ? docs.last : null,
+        hasMore: hasMore,
+      );
+    } on FirebaseException catch (e) {
+      _log.error(
+        'Failed to get paginated groups',
+        tag: LogTags.groups,
+        data: {'error': e.message},
+      );
+      throw ServerException(
+        message: 'Failed to get paginated groups: ${e.message}',
+      );
+    }
+  }
+
+  @override
   Stream<List<GroupModel>> watchGroups() {
     _log.debug('Setting up groups stream', tag: LogTags.groups);
     try {
@@ -171,6 +243,42 @@ class GroupDataSourceImpl implements GroupDataSource {
         data: {'error': e.message},
       );
       throw ServerException(message: 'Failed to watch groups: ${e.message}');
+    }
+  }
+
+  @override
+  Stream<List<GroupModel>> watchGroupsPaginated({int limit = 20}) {
+    _log.debug(
+      'Setting up paginated groups stream',
+      tag: LogTags.groups,
+      data: {'limit': limit},
+    );
+    try {
+      final userId = _currentUserId;
+      return _groupsCollection
+          .where('memberIds', arrayContains: userId)
+          .orderBy('lastActivityAt', descending: true)
+          .limit(limit)
+          .snapshots()
+          .map((snapshot) {
+            _log.debug(
+              'Paginated groups stream updated',
+              tag: LogTags.groups,
+              data: {'count': snapshot.docs.length},
+            );
+            return snapshot.docs
+                .map((doc) => GroupModel.fromFirestore(doc))
+                .toList();
+          });
+    } on FirebaseException catch (e) {
+      _log.error(
+        'Failed to watch paginated groups',
+        tag: LogTags.groups,
+        data: {'error': e.message},
+      );
+      throw ServerException(
+        message: 'Failed to watch paginated groups: ${e.message}',
+      );
     }
   }
 
