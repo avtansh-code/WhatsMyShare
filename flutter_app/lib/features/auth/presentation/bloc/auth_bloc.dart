@@ -111,8 +111,8 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       SignInParams(email: event.email, password: event.password),
     );
 
-    result.fold(
-      (failure) {
+    await result.fold(
+      (failure) async {
         _log.warning(
           'Sign in failed',
           tag: LogTags.auth,
@@ -153,8 +153,8 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       ),
     );
 
-    result.fold(
-      (failure) {
+    await result.fold(
+      (failure) async {
         _log.warning(
           'Sign up failed',
           tag: LogTags.auth,
@@ -185,8 +185,8 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
 
     final result = await _signInWithGoogle();
 
-    result.fold(
-      (failure) {
+    await result.fold(
+      (failure) async {
         _log.warning(
           'Google sign in failed',
           tag: LogTags.auth,
