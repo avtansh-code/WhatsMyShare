@@ -119,33 +119,21 @@ class GroupDeleteRequested extends GroupEvent {
   List<Object?> get props => [groupId];
 }
 
-/// Event to add a member to a group
+/// Event to add a member to a group (by user ID only)
+/// Display properties are resolved via UserCacheService
 class GroupMemberAddRequested extends GroupEvent {
   final String groupId;
   final String userId;
-  final String displayName;
-  final String? phone;
-  final String? photoUrl;
   final MemberRole role;
 
   const GroupMemberAddRequested({
     required this.groupId,
     required this.userId,
-    required this.displayName,
-    this.phone,
-    this.photoUrl,
     this.role = MemberRole.member,
   });
 
   @override
-  List<Object?> get props => [
-    groupId,
-    userId,
-    displayName,
-    phone,
-    photoUrl,
-    role,
-  ];
+  List<Object?> get props => [groupId, userId, role];
 }
 
 /// Event to remove a member from a group

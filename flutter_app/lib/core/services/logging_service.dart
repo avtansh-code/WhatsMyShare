@@ -197,4 +197,5 @@ class LogTags {
   static const String ui = 'UI';
   static const String performance = 'Performance';
   static const String friends = 'Friends';
+  static const String cache = 'Cache';
 }

@@ -395,9 +395,6 @@ class GroupRepositoryImpl implements GroupRepository {
   Future<Either<Failure, GroupEntity>> addMember({
     required String groupId,
     required String userId,
-    required String displayName,
-    String? phone,
-    String? photoUrl,
     MemberRole role = MemberRole.member,
   }) async {
     _log.info(
@@ -409,9 +406,6 @@ class GroupRepositoryImpl implements GroupRepository {
       final group = await _dataSource.addMember(
         groupId: groupId,
         userId: userId,
-        displayName: displayName,
-        phone: phone,
-        photoUrl: photoUrl,
         role: role,
       );
       _log.info(

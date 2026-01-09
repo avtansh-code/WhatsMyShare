@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../core/di/injection_container.dart';
 import '../../../../core/services/logging_service.dart';
+import '../../../../core/services/user_cache_service.dart';
 import '../../../../core/utils/currency_utils.dart';
 import '../../domain/entities/group_entity.dart';
 import '../bloc/group_bloc.dart';
@@ -321,6 +323,7 @@ class _GroupDetailPageState extends State<GroupDetailPage>
     }
 
     final balanceEntries = group.balances.entries.toList();
+    final userCache = sl<UserCacheService>();
 
     return ListView.builder(
       padding: const EdgeInsets.all(16),
@@ -331,24 +334,29 @@ class _GroupDetailPageState extends State<GroupDetailPage>
           (m) => m.userId == entry.key,
           orElse: () => GroupMember(
             userId: entry.key,
-            displayName: 'Unknown',
             joinedAt: DateTime.now(),
             role: MemberRole.member,
           ),
         );
         final balance = entry.value;
 
+        // Resolve display name via cache
+        final displayName = member.displayName.isNotEmpty
+            ? member.displayName
+            : userCache.getCachedDisplayName(member.userId);
+        final photoUrl = member.photoUrl ?? userCache.getCachedPhotoUrl(member.userId);
+
         return Card(
           child: ListTile(
             leading: CircleAvatar(
-              backgroundImage: member.photoUrl != null
-                  ? NetworkImage(member.photoUrl!)
+              backgroundImage: photoUrl != null
+                  ? NetworkImage(photoUrl)
                   : null,
-              child: member.photoUrl == null
-                  ? Text(member.displayName[0].toUpperCase())
+              child: photoUrl == null
+                  ? Text(displayName[0].toUpperCase())
                   : null,
             ),
-            title: Text(member.displayName),
+            title: Text(displayName),
             trailing: Text(
               CurrencyUtils.formatWithSign(balance, group.currency),
               style: TextStyle(

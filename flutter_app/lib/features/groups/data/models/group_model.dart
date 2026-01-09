@@ -2,25 +2,23 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 
 import '../../domain/entities/group_entity.dart';
 
-/// Group member model for Firestore
-/// Phone number is the primary identifier for users
-class GroupMemberModel extends GroupMember {
+/// Group member model for Firestore - stores only UID and role
+/// Display properties are resolved via UserCacheService
+class GroupMemberModel {
+  final String userId;
+  final MemberRole role;
+  final DateTime joinedAt;
+
   const GroupMemberModel({
-    required super.userId,
-    required super.displayName,
-    super.photoUrl,
-    super.phone,
-    required super.joinedAt,
-    required super.role,
+    required this.userId,
+    required this.role,
+    required this.joinedAt,
   });
 
-  /// Create from Firestore map
+  /// Create from Firestore map (UID-only storage)
   factory GroupMemberModel.fromMap(Map<String, dynamic> map) {
     return GroupMemberModel(
       userId: map['userId'] as String,
-      displayName: map['displayName'] as String,
-      photoUrl: map['photoUrl'] as String?,
-      phone: map['phone'] as String? ?? '',
       joinedAt: (map['joinedAt'] as Timestamp).toDate(),
       role: MemberRole.values.firstWhere(
         (e) => e.name == map['role'],
@@ -33,44 +31,59 @@ class GroupMemberModel extends GroupMember {
   factory GroupMemberModel.fromEntity(GroupMember entity) {
     return GroupMemberModel(
       userId: entity.userId,
-      displayName: entity.displayName,
-      photoUrl: entity.photoUrl,
-      phone: entity.phone,
-      joinedAt: entity.joinedAt,
       role: entity.role,
+      joinedAt: entity.joinedAt,
     );
   }
 
-  /// Convert to Firestore map
+  /// Convert to Firestore map (UID-only storage)
   Map<String, dynamic> toMap() {
     return {
       'userId': userId,
-      'displayName': displayName,
-      'photoUrl': photoUrl,
-      'phone': phone,
       'joinedAt': Timestamp.fromDate(joinedAt),
       'role': role.name,
     };
   }
+
+  /// Convert to entity (without cached data)
+  GroupMember toEntity() {
+    return GroupMember(userId: userId, role: role, joinedAt: joinedAt);
+  }
+
+  /// Convert to entity with cached user data
+  GroupMember toEntityWithCache({
+    String? displayName,
+    String? phone,
+    String? photoUrl,
+  }) {
+    return GroupMember(
+      userId: userId,
+      role: role,
+      joinedAt: joinedAt,
+      cachedDisplayName: displayName,
+      cachedPhone: phone,
+      cachedPhotoUrl: photoUrl,
+    );
+  }
 }
 
-/// Simplified debt model for Firestore
-class SimplifiedDebtModel extends SimplifiedDebt {
+/// Simplified debt model for Firestore - stores only UIDs
+class SimplifiedDebtModel {
+  final String fromUserId;
+  final String toUserId;
+  final int amount;
+
   const SimplifiedDebtModel({
-    required super.fromUserId,
-    required super.fromUserName,
-    required super.toUserId,
-    required super.toUserName,
-    required super.amount,
+    required this.fromUserId,
+    required this.toUserId,
+    required this.amount,
   });
 
   /// Create from Firestore map
   factory SimplifiedDebtModel.fromMap(Map<String, dynamic> map) {
     return SimplifiedDebtModel(
       fromUserId: map['from'] as String,
-      fromUserName: map['fromName'] as String? ?? '',
       toUserId: map['to'] as String,
-      toUserName: map['toName'] as String? ?? '',
       amount: map['amount'] as int,
     );
   }
@@ -79,54 +92,86 @@ class SimplifiedDebtModel extends SimplifiedDebt {
   factory SimplifiedDebtModel.fromEntity(SimplifiedDebt entity) {
     return SimplifiedDebtModel(
       fromUserId: entity.fromUserId,
-      fromUserName: entity.fromUserName,
       toUserId: entity.toUserId,
-      toUserName: entity.toUserName,
       amount: entity.amount,
     );
   }
 
-  /// Convert to Firestore map
+  /// Convert to Firestore map (UID-only)
   Map<String, dynamic> toMap() {
-    return {
-      'from': fromUserId,
-      'fromName': fromUserName,
-      'to': toUserId,
-      'toName': toUserName,
-      'amount': amount,
-    };
+    return {'from': fromUserId, 'to': toUserId, 'amount': amount};
+  }
+
+  /// Convert to entity (without cached names)
+  SimplifiedDebt toEntity() {
+    return SimplifiedDebt(
+      fromUserId: fromUserId,
+      toUserId: toUserId,
+      amount: amount,
+    );
+  }
+
+  /// Convert to entity with cached user names
+  SimplifiedDebt toEntityWithCache({String? fromUserName, String? toUserName}) {
+    return SimplifiedDebt(
+      fromUserId: fromUserId,
+      toUserId: toUserId,
+      amount: amount,
+      cachedFromUserName: fromUserName,
+      cachedToUserName: toUserName,
+    );
   }
 }
 
 /// Group model for Firestore serialization
-class GroupModel extends GroupEntity {
+class GroupModel {
+  final String id;
+  final String name;
+  final String? description;
+  final String? imageUrl;
+  final GroupType type;
+  final List<GroupMemberModel> members;
+  final List<String> memberIds;
+  final int memberCount;
+  final String currency;
+  final bool simplifyDebts;
+  final String createdBy;
+  final List<String> admins;
+  final DateTime createdAt;
+  final DateTime updatedAt;
+  final int totalExpenses;
+  final int expenseCount;
+  final DateTime? lastActivityAt;
+  final Map<String, int> balances;
+  final List<SimplifiedDebtModel>? simplifiedDebts;
+
   const GroupModel({
-    required super.id,
-    required super.name,
-    super.description,
-    super.imageUrl,
-    required super.type,
-    required super.members,
-    required super.memberIds,
-    required super.memberCount,
-    required super.currency,
-    required super.simplifyDebts,
-    required super.createdBy,
-    required super.admins,
-    required super.createdAt,
-    required super.updatedAt,
-    required super.totalExpenses,
-    required super.expenseCount,
-    super.lastActivityAt,
-    required super.balances,
-    super.simplifiedDebts,
+    required this.id,
+    required this.name,
+    this.description,
+    this.imageUrl,
+    required this.type,
+    required this.members,
+    required this.memberIds,
+    required this.memberCount,
+    required this.currency,
+    required this.simplifyDebts,
+    required this.createdBy,
+    required this.admins,
+    required this.createdAt,
+    required this.updatedAt,
+    required this.totalExpenses,
+    required this.expenseCount,
+    this.lastActivityAt,
+    required this.balances,
+    this.simplifiedDebts,
   });
 
   /// Create from Firestore document
   factory GroupModel.fromFirestore(DocumentSnapshot doc) {
     final data = doc.data() as Map<String, dynamic>;
 
-    // Parse members
+    // Parse members (UID-only)
     final membersData = data['members'] as List<dynamic>? ?? [];
     final members = membersData
         .map((m) => GroupMemberModel.fromMap(m as Map<String, dynamic>))
@@ -138,7 +183,7 @@ class GroupModel extends GroupEntity {
       (key, value) => MapEntry(key, value as int),
     );
 
-    // Parse simplified debts
+    // Parse simplified debts (UID-only)
     final simplifiedDebtsData = data['simplifiedDebts'] as List<dynamic>?;
     final simplifiedDebts = simplifiedDebtsData
         ?.map((d) => SimplifiedDebtModel.fromMap(d as Map<String, dynamic>))
@@ -178,7 +223,9 @@ class GroupModel extends GroupEntity {
       description: entity.description,
       imageUrl: entity.imageUrl,
       type: entity.type,
-      members: entity.members,
+      members: entity.members
+          .map((m) => GroupMemberModel.fromEntity(m))
+          .toList(),
       memberIds: entity.memberIds,
       memberCount: entity.memberCount,
       currency: entity.currency,
@@ -191,7 +238,34 @@ class GroupModel extends GroupEntity {
       expenseCount: entity.expenseCount,
       lastActivityAt: entity.lastActivityAt,
       balances: entity.balances,
-      simplifiedDebts: entity.simplifiedDebts,
+      simplifiedDebts: entity.simplifiedDebts
+          ?.map((d) => SimplifiedDebtModel.fromEntity(d))
+          .toList(),
+    );
+  }
+
+  /// Convert to entity (without cached data)
+  GroupEntity toEntity() {
+    return GroupEntity(
+      id: id,
+      name: name,
+      description: description,
+      imageUrl: imageUrl,
+      type: type,
+      members: members.map((m) => m.toEntity()).toList(),
+      memberIds: memberIds,
+      memberCount: memberCount,
+      currency: currency,
+      simplifyDebts: simplifyDebts,
+      createdBy: createdBy,
+      admins: admins,
+      createdAt: createdAt,
+      updatedAt: updatedAt,
+      totalExpenses: totalExpenses,
+      expenseCount: expenseCount,
+      lastActivityAt: lastActivityAt,
+      balances: balances,
+      simplifiedDebts: simplifiedDebts?.map((d) => d.toEntity()).toList(),
     );
   }
 
@@ -202,9 +276,7 @@ class GroupModel extends GroupEntity {
       'description': description,
       'imageUrl': imageUrl,
       'type': type.name,
-      'members': members
-          .map((m) => GroupMemberModel.fromEntity(m).toMap())
-          .toList(),
+      'members': members.map((m) => m.toMap()).toList(),
       'memberIds': memberIds,
       'memberCount': memberCount,
       'currency': currency,
@@ -219,9 +291,7 @@ class GroupModel extends GroupEntity {
           ? Timestamp.fromDate(lastActivityAt!)
           : FieldValue.serverTimestamp(),
       'balances': balances,
-      'simplifiedDebts': simplifiedDebts
-          ?.map((d) => SimplifiedDebtModel.fromEntity(d).toMap())
-          .toList(),
+      'simplifiedDebts': simplifiedDebts?.map((d) => d.toMap()).toList(),
     };
   }
 

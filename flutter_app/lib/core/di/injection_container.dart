@@ -40,6 +40,7 @@ import '../services/analytics_service.dart';
 import '../services/connectivity_service.dart';
 import '../services/offline_queue_manager.dart';
 import '../services/sync_service.dart';
+import '../services/user_cache_service.dart';
 
 /// Global service locator instance
 final sl = GetIt.instance;
@@ -133,6 +134,11 @@ void _initCore() {
 
   // Encryption Service (singleton - uses same key for all encryption)
   sl.registerLazySingleton<EncryptionService>(() => EncryptionService());
+
+  // User Cache Service (singleton - central service for resolving UIDs to user info)
+  sl.registerLazySingleton<UserCacheService>(
+    () => UserCacheService(firestore: sl<FirebaseFirestore>()),
+  );
 }
 
 /// Initialize authentication feature (phone-only authentication)

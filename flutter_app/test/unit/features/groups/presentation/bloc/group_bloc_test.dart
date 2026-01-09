@@ -40,8 +40,6 @@ void main() {
     members: [
       GroupMember(
         userId: 'user-1',
-        displayName: 'John Doe',
-        phone: '+919876543210',
         role: MemberRole.admin,
         joinedAt: testDateTime,
       ),
@@ -68,8 +66,6 @@ void main() {
     members: [
       GroupMember(
         userId: 'user-1',
-        displayName: 'John Doe',
-        phone: '+919876543210',
         role: MemberRole.admin,
         joinedAt: DateTime(2026, 1, 8),
       ),
@@ -329,9 +325,6 @@ void main() {
             () => mockRepository.addMember(
               groupId: any(named: 'groupId'),
               userId: any(named: 'userId'),
-              displayName: any(named: 'displayName'),
-              phone: any(named: 'phone'),
-              photoUrl: any(named: 'photoUrl'),
               role: any(named: 'role'),
             ),
           ).thenAnswer((_) async => Right(updatedGroup));
@@ -341,8 +334,6 @@ void main() {
           const GroupMemberAddRequested(
             groupId: 'group-1',
             userId: 'user-2',
-            displayName: 'Jane Doe',
-            phone: '+919876543211',
           ),
         ),
         expect: () => [

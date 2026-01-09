@@ -424,9 +424,6 @@ class GroupBloc extends Bloc<GroupEvent, GroupState> {
     final result = await _groupRepository.addMember(
       groupId: event.groupId,
       userId: event.userId,
-      displayName: event.displayName,
-      phone: event.phone,
-      photoUrl: event.photoUrl,
       role: event.role,
     );
 

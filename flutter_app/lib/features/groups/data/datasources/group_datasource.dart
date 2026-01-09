@@ -23,30 +23,31 @@ class PaginatedResult<T> {
 }
 
 /// Data source interface for group operations
+/// Returns GroupEntity (converted from GroupModel)
 abstract class GroupDataSource {
   /// Get all groups for the current user
-  Future<List<GroupModel>> getGroups();
+  Future<List<GroupEntity>> getGroups();
 
   /// Get paginated groups for the current user
-  Future<PaginatedResult<GroupModel>> getGroupsPaginated({
+  Future<PaginatedResult<GroupEntity>> getGroupsPaginated({
     int limit = 20,
     DocumentSnapshot? startAfter,
   });
 
   /// Watch groups for real-time updates
-  Stream<List<GroupModel>> watchGroups();
+  Stream<List<GroupEntity>> watchGroups();
 
   /// Watch paginated groups for real-time updates
-  Stream<List<GroupModel>> watchGroupsPaginated({int limit = 20});
+  Stream<List<GroupEntity>> watchGroupsPaginated({int limit = 20});
 
   /// Get a single group by ID
-  Future<GroupModel> getGroupById(String groupId);
+  Future<GroupEntity> getGroupById(String groupId);
 
   /// Watch a single group
-  Stream<GroupModel> watchGroupById(String groupId);
+  Stream<GroupEntity> watchGroupById(String groupId);
 
   /// Create a new group
-  Future<GroupModel> createGroup({
+  Future<GroupEntity> createGroup({
     required String name,
     String? description,
     required GroupType type,
@@ -56,7 +57,7 @@ abstract class GroupDataSource {
   });
 
   /// Update group details
-  Future<GroupModel> updateGroup({
+  Future<GroupEntity> updateGroup({
     required String groupId,
     String? name,
     String? description,
@@ -77,24 +78,21 @@ abstract class GroupDataSource {
   /// Delete a group
   Future<void> deleteGroup(String groupId);
 
-  /// Add a member to the group
-  Future<GroupModel> addMember({
+  /// Add a member to the group (by user ID only)
+  Future<GroupEntity> addMember({
     required String groupId,
     required String userId,
-    required String displayName,
-    String? phone,
-    String? photoUrl,
     MemberRole role = MemberRole.member,
   });
 
   /// Remove a member from the group
-  Future<GroupModel> removeMember({
+  Future<GroupEntity> removeMember({
     required String groupId,
     required String userId,
   });
 
   /// Update a member's role
-  Future<GroupModel> updateMemberRole({
+  Future<GroupEntity> updateMemberRole({
     required String groupId,
     required String userId,
     required MemberRole newRole,
@@ -139,7 +137,7 @@ class GroupDataSourceImpl implements GroupDataSource {
       _firestore.collection('groups');
 
   @override
-  Future<List<GroupModel>> getGroups() async {
+  Future<List<GroupEntity>> getGroups() async {
     _log.debug('Fetching user groups', tag: LogTags.groups);
     try {
       final userId = _currentUserId;
@@ -149,7 +147,7 @@ class GroupDataSourceImpl implements GroupDataSource {
           .get();
 
       final groups = snapshot.docs
-          .map((doc) => GroupModel.fromFirestore(doc))
+          .map((doc) => GroupModel.fromFirestore(doc).toEntity())
           .toList();
       _log.info(
         'Groups fetched successfully',
@@ -168,7 +166,7 @@ class GroupDataSourceImpl implements GroupDataSource {
   }
 
   @override
-  Future<PaginatedResult<GroupModel>> getGroupsPaginated({
+  Future<PaginatedResult<GroupEntity>> getGroupsPaginated({
     int limit = 20,
     DocumentSnapshot? startAfter,
   }) async {
@@ -182,7 +180,7 @@ class GroupDataSourceImpl implements GroupDataSource {
       Query<Map<String, dynamic>> query = _groupsCollection
           .where('memberIds', arrayContains: userId)
           .orderBy('lastActivityAt', descending: true)
-          .limit(limit + 1); // Fetch one extra to check if there are more
+          .limit(limit + 1);
 
       if (startAfter != null) {
         query = query.startAfterDocument(startAfter);
@@ -192,7 +190,9 @@ class GroupDataSourceImpl implements GroupDataSource {
       final hasMore = snapshot.docs.length > limit;
       final docs = hasMore ? snapshot.docs.take(limit).toList() : snapshot.docs;
 
-      final groups = docs.map((doc) => GroupModel.fromFirestore(doc)).toList();
+      final groups = docs
+          .map((doc) => GroupModel.fromFirestore(doc).toEntity())
+          .toList();
 
       _log.info(
         'Paginated groups fetched successfully',
@@ -218,7 +218,7 @@ class GroupDataSourceImpl implements GroupDataSource {
   }
 
   @override
-  Stream<List<GroupModel>> watchGroups() {
+  Stream<List<GroupEntity>> watchGroups() {
     _log.debug('Setting up groups stream', tag: LogTags.groups);
     try {
       final userId = _currentUserId;
@@ -233,7 +233,7 @@ class GroupDataSourceImpl implements GroupDataSource {
               data: {'count': snapshot.docs.length},
             );
             return snapshot.docs
-                .map((doc) => GroupModel.fromFirestore(doc))
+                .map((doc) => GroupModel.fromFirestore(doc).toEntity())
                 .toList();
           });
     } on FirebaseException catch (e) {
@@ -247,7 +247,7 @@ class GroupDataSourceImpl implements GroupDataSource {
   }
 
   @override
-  Stream<List<GroupModel>> watchGroupsPaginated({int limit = 20}) {
+  Stream<List<GroupEntity>> watchGroupsPaginated({int limit = 20}) {
     _log.debug(
       'Setting up paginated groups stream',
       tag: LogTags.groups,
@@ -267,7 +267,7 @@ class GroupDataSourceImpl implements GroupDataSource {
               data: {'count': snapshot.docs.length},
             );
             return snapshot.docs
-                .map((doc) => GroupModel.fromFirestore(doc))
+                .map((doc) => GroupModel.fromFirestore(doc).toEntity())
                 .toList();
           });
     } on FirebaseException catch (e) {
@@ -283,7 +283,7 @@ class GroupDataSourceImpl implements GroupDataSource {
   }
 
   @override
-  Future<GroupModel> getGroupById(String groupId) async {
+  Future<GroupEntity> getGroupById(String groupId) async {
     _log.debug(
       'Fetching group by ID',
       tag: LogTags.groups,
@@ -304,7 +304,7 @@ class GroupDataSourceImpl implements GroupDataSource {
         tag: LogTags.groups,
         data: {'groupId': groupId},
       );
-      return GroupModel.fromFirestore(doc);
+      return GroupModel.fromFirestore(doc).toEntity();
     } on FirebaseException catch (e) {
       _log.error(
         'Failed to get group',
@@ -316,7 +316,7 @@ class GroupDataSourceImpl implements GroupDataSource {
   }
 
   @override
-  Stream<GroupModel> watchGroupById(String groupId) {
+  Stream<GroupEntity> watchGroupById(String groupId) {
     _log.debug(
       'Setting up single group stream',
       tag: LogTags.groups,
@@ -331,12 +331,12 @@ class GroupDataSourceImpl implements GroupDataSource {
         );
         throw const NotFoundException(message: 'Group not found');
       }
-      return GroupModel.fromFirestore(doc);
+      return GroupModel.fromFirestore(doc).toEntity();
     });
   }
 
   @override
-  Future<GroupModel> createGroup({
+  Future<GroupEntity> createGroup({
     required String name,
     String? description,
     required GroupType type,
@@ -351,14 +351,10 @@ class GroupDataSourceImpl implements GroupDataSource {
     );
     try {
       final userId = _currentUserId;
-      final user = _auth.currentUser!;
 
-      // Create creator as first member
+      // Create creator as first member (UID only)
       final creatorMember = GroupMemberModel(
         userId: userId,
-        displayName: user.displayName ?? 'Unknown',
-        photoUrl: user.photoURL,
-        phone: user.phoneNumber,
         joinedAt: DateTime.now(),
         role: MemberRole.admin,
       );
@@ -372,6 +368,11 @@ class GroupDataSourceImpl implements GroupDataSource {
         for (final memberId in initialMemberIds) {
           if (memberId != userId) {
             memberIds.add(memberId);
+            members.add(GroupMemberModel(
+              userId: memberId,
+              joinedAt: DateTime.now(),
+              role: MemberRole.member,
+            ));
             balances[memberId] = 0;
           }
         }
@@ -383,7 +384,7 @@ class GroupDataSourceImpl implements GroupDataSource {
       }
 
       final group = GroupModel(
-        id: '', // Will be set by Firestore
+        id: '',
         name: name,
         description: description,
         type: type,
@@ -408,7 +409,7 @@ class GroupDataSourceImpl implements GroupDataSource {
         tag: LogTags.groups,
         data: {'groupId': docRef.id, 'name': name},
       );
-      return GroupModel.fromFirestore(newDoc);
+      return GroupModel.fromFirestore(newDoc).toEntity();
     } on FirebaseException catch (e) {
       _log.error(
         'Failed to create group',
@@ -420,7 +421,7 @@ class GroupDataSourceImpl implements GroupDataSource {
   }
 
   @override
-  Future<GroupModel> updateGroup({
+  Future<GroupEntity> updateGroup({
     required String groupId,
     String? name,
     String? description,
@@ -539,19 +540,12 @@ class GroupDataSourceImpl implements GroupDataSource {
       data: {'groupId': groupId},
     );
     try {
-      // Delete the group document
       await _groupsCollection.doc(groupId).delete();
       _log.info(
         'Group deleted successfully',
         tag: LogTags.groups,
         data: {'groupId': groupId},
       );
-
-      // Note: In production, you'd also want to:
-      // 1. Delete all expenses in the group
-      // 2. Delete all settlements
-      // 3. Delete the group image from storage
-      // This should be handled by a Cloud Function for consistency
     } on FirebaseException catch (e) {
       _log.error(
         'Failed to delete group',
@@ -563,25 +557,20 @@ class GroupDataSourceImpl implements GroupDataSource {
   }
 
   @override
-  Future<GroupModel> addMember({
+  Future<GroupEntity> addMember({
     required String groupId,
     required String userId,
-    required String displayName,
-    String? phone,
-    String? photoUrl,
     MemberRole role = MemberRole.member,
   }) async {
     _log.info(
       'Adding member to group',
       tag: LogTags.groups,
-      data: {'groupId': groupId, 'userId': userId, 'displayName': displayName},
+      data: {'groupId': groupId, 'userId': userId},
     );
     try {
+      // Create member with UID only
       final newMember = GroupMemberModel(
         userId: userId,
-        displayName: displayName,
-        photoUrl: photoUrl,
-        phone: phone,
         joinedAt: DateTime.now(),
         role: role,
       );
@@ -611,7 +600,7 @@ class GroupDataSourceImpl implements GroupDataSource {
   }
 
   @override
-  Future<GroupModel> removeMember({
+  Future<GroupEntity> removeMember({
     required String groupId,
     required String userId,
   }) async {
@@ -635,7 +624,12 @@ class GroupDataSourceImpl implements GroupDataSource {
         },
       );
 
-      final memberModel = GroupMemberModel.fromEntity(member);
+      // Create the member model to remove from array
+      final memberModel = GroupMemberModel(
+        userId: member.userId,
+        joinedAt: member.joinedAt,
+        role: member.role,
+      );
 
       await _groupsCollection.doc(groupId).update({
         'members': FieldValue.arrayRemove([memberModel.toMap()]),
@@ -663,7 +657,7 @@ class GroupDataSourceImpl implements GroupDataSource {
   }
 
   @override
-  Future<GroupModel> updateMemberRole({
+  Future<GroupEntity> updateMemberRole({
     required String groupId,
     required String userId,
     required MemberRole newRole,
@@ -682,14 +676,15 @@ class GroupDataSourceImpl implements GroupDataSource {
         if (m.userId == userId) {
           return GroupMemberModel(
             userId: m.userId,
-            displayName: m.displayName,
-            photoUrl: m.photoUrl,
-            phone: m.phone,
             joinedAt: m.joinedAt,
             role: newRole,
           );
         }
-        return m;
+        return GroupMemberModel(
+          userId: m.userId,
+          joinedAt: m.joinedAt,
+          role: m.role,
+        );
       }).toList();
 
       // Update admins list
@@ -701,9 +696,7 @@ class GroupDataSourceImpl implements GroupDataSource {
       }
 
       await _groupsCollection.doc(groupId).update({
-        'members': updatedMembers
-            .map((m) => GroupMemberModel.fromEntity(m).toMap())
-            .toList(),
+        'members': updatedMembers.map((m) => m.toMap()).toList(),
         'admins': updatedAdmins,
         'updatedAt': FieldValue.serverTimestamp(),
       });

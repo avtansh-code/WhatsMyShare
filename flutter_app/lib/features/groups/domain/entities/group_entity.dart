@@ -6,65 +6,161 @@ enum GroupType { trip, home, couple, other }
 /// Member role enumeration
 enum MemberRole { admin, member }
 
-/// Group member entity
-/// Phone number is the primary identifier for users
+/// Group member entity - stores only UID, display properties come from cache
+///
+/// Backend storage: Only stores userId (UID) and role
+/// Display properties (displayName, phone, photoUrl) are resolved from the
+/// UserCacheService using the userId
 class GroupMember extends Equatable {
+  /// The member's user ID (PRIMARY identifier)
   final String userId;
-  final String displayName;
-  final String? photoUrl;
-  final String?
-  phone; // Phone number (optional, may be null during group creation)
-  final DateTime joinedAt;
+
+  /// The member's role in the group
   final MemberRole role;
+
+  /// When the member joined the group
+  final DateTime joinedAt;
+
+  // ============================================
+  // CACHED DISPLAY PROPERTIES (populated from UserCacheService)
+  // These are NOT stored in the backend, only used for UI display
+  // ============================================
+
+  /// Display name (cached from user profile)
+  final String? cachedDisplayName;
+
+  /// Phone number (cached from user profile)
+  final String? cachedPhone;
+
+  /// Photo URL (cached from user profile)
+  final String? cachedPhotoUrl;
 
   const GroupMember({
     required this.userId,
-    required this.displayName,
-    this.photoUrl,
-    this.phone,
-    required this.joinedAt,
     required this.role,
+    required this.joinedAt,
+    this.cachedDisplayName,
+    this.cachedPhone,
+    this.cachedPhotoUrl,
   });
 
   /// Check if member is admin
   bool get isAdmin => role == MemberRole.admin;
 
+  /// Get display name or fallback
+  String get displayName {
+    if (cachedDisplayName != null && cachedDisplayName!.isNotEmpty) {
+      return cachedDisplayName!;
+    }
+    if (cachedPhone != null && cachedPhone!.length >= 4) {
+      return '****${cachedPhone!.substring(cachedPhone!.length - 4)}';
+    }
+    return 'Unknown';
+  }
+
+  /// Get phone number
+  String? get phone => cachedPhone;
+
+  /// Get photo URL
+  String? get photoUrl => cachedPhotoUrl;
+
   /// Get initials for avatar
   String get initials {
-    final parts = displayName.trim().split(' ');
-    if (parts.isEmpty) return '?';
-    if (parts.length == 1) return parts[0][0].toUpperCase();
-    return '${parts[0][0]}${parts[parts.length - 1][0]}'.toUpperCase();
+    if (cachedDisplayName != null && cachedDisplayName!.isNotEmpty) {
+      final parts = cachedDisplayName!.trim().split(' ');
+      if (parts.isEmpty) return '?';
+      if (parts.length == 1) return parts[0][0].toUpperCase();
+      return '${parts[0][0]}${parts[parts.length - 1][0]}'.toUpperCase();
+    }
+    if (cachedPhone != null && cachedPhone!.length >= 2) {
+      return cachedPhone!.substring(cachedPhone!.length - 2);
+    }
+    return '??';
   }
 
   /// Get masked phone for display (show last 4 digits)
   String get maskedPhone {
-    if (phone == null || phone!.isEmpty) return '';
-    if (phone!.length >= 4) {
-      return '****${phone!.substring(phone!.length - 4)}';
+    if (cachedPhone == null || cachedPhone!.isEmpty) return '';
+    if (cachedPhone!.length >= 4) {
+      return '****${cachedPhone!.substring(cachedPhone!.length - 4)}';
     }
-    return phone!;
+    return cachedPhone!;
+  }
+
+  /// Check if cache is populated
+  bool get hasCachedData =>
+      cachedDisplayName != null ||
+      cachedPhone != null ||
+      cachedPhotoUrl != null;
+
+  /// Create a copy with updated cached data
+  GroupMember withCachedData({
+    String? displayName,
+    String? phone,
+    String? photoUrl,
+  }) {
+    return GroupMember(
+      userId: userId,
+      role: role,
+      joinedAt: joinedAt,
+      cachedDisplayName: displayName,
+      cachedPhone: phone,
+      cachedPhotoUrl: photoUrl,
+    );
+  }
+
+  GroupMember copyWith({
+    String? userId,
+    MemberRole? role,
+    DateTime? joinedAt,
+    String? cachedDisplayName,
+    String? cachedPhone,
+    String? cachedPhotoUrl,
+  }) {
+    return GroupMember(
+      userId: userId ?? this.userId,
+      role: role ?? this.role,
+      joinedAt: joinedAt ?? this.joinedAt,
+      cachedDisplayName: cachedDisplayName ?? this.cachedDisplayName,
+      cachedPhone: cachedPhone ?? this.cachedPhone,
+      cachedPhotoUrl: cachedPhotoUrl ?? this.cachedPhotoUrl,
+    );
   }
 
   @override
-  List<Object?> get props => [userId, phone, role, joinedAt];
+  List<Object?> get props => [userId, role, joinedAt];
 }
 
 /// Simplified debt between two users
 class SimplifiedDebt extends Equatable {
   final String fromUserId;
-  final String fromUserName;
   final String toUserId;
-  final String toUserName;
   final int amount; // in paisa
+
+  // Cached display names (populated from UserCacheService)
+  final String? cachedFromUserName;
+  final String? cachedToUserName;
 
   const SimplifiedDebt({
     required this.fromUserId,
-    required this.fromUserName,
     required this.toUserId,
-    required this.toUserName,
     required this.amount,
+    this.cachedFromUserName,
+    this.cachedToUserName,
   });
+
+  String get fromUserName => cachedFromUserName ?? 'Unknown';
+  String get toUserName => cachedToUserName ?? 'Unknown';
+
+  SimplifiedDebt withCachedNames({String? fromUserName, String? toUserName}) {
+    return SimplifiedDebt(
+      fromUserId: fromUserId,
+      toUserId: toUserId,
+      amount: amount,
+      cachedFromUserName: fromUserName,
+      cachedToUserName: toUserName,
+    );
+  }
 
   @override
   List<Object?> get props => [fromUserId, toUserId, amount];

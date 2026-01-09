@@ -51,13 +51,11 @@ abstract class GroupRepository {
   /// Delete a group (admin only)
   Future<Either<Failure, void>> deleteGroup(String groupId);
 
-  /// Add a member to the group
+  /// Add a member to the group (by user ID only)
+  /// Display properties are resolved via UserCacheService
   Future<Either<Failure, GroupEntity>> addMember({
     required String groupId,
     required String userId,
-    required String displayName,
-    String? phone,
-    String? photoUrl,
     MemberRole role = MemberRole.member,
   });
 
