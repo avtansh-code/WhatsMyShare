@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_native_splash/flutter_native_splash.dart';
 import 'package:go_router/go_router.dart';
@@ -83,10 +84,15 @@ class _SplashPageState extends State<SplashPage>
     // Start animation and navigate after completion
     _animationController.forward();
 
-    // Navigate to login after splash animation
+    // Navigate to appropriate page based on auth state after splash animation
     Timer(const Duration(milliseconds: 2500), () {
       if (mounted) {
-        context.go('/login');
+        final isLoggedIn = FirebaseAuth.instance.currentUser != null;
+        if (isLoggedIn) {
+          context.go('/dashboard');
+        } else {
+          context.go('/login');
+        }
       }
     });
   }

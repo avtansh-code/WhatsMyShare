@@ -165,9 +165,10 @@ class AppRouter {
           'Navigating to complete profile page',
           tag: LogTags.navigation,
         );
-        final user = state.extra as UserEntity;
+        // User can be passed via extra, or will be loaded by the page
+        final user = state.extra as UserEntity?;
         return BlocProvider(
-          create: (_) => sl<AuthBloc>(),
+          create: (_) => sl<AuthBloc>()..add(const AuthCheckRequested()),
           child: CompleteProfilePage(user: user),
         );
       },

@@ -1,11 +1,13 @@
 import 'dart:async';
 
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_native_splash/flutter_native_splash.dart';
 import 'package:hive_flutter/hive_flutter.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'app/app.dart';
 import 'core/di/injection_container.dart';
@@ -76,6 +78,10 @@ Future<void> main() async {
       );
       _log.info('Firebase initialized', tag: LogTags.firebase);
 
+      // Handle first launch - clear stale auth state from iOS Keychain
+      // This fixes the issue where Firebase Auth persists across app uninstalls on iOS
+      await _handleFirstLaunchAuthCleanup();
+
       // Initialize dependency injection
       _log.debug('Initializing dependencies', tag: LogTags.app);
       await initializeDependencies();
@@ -99,4 +105,51 @@ Future<void> main() async {
       );
     },
   );
+}
+
+/// Handles first launch auth cleanup to clear stale Firebase Auth state
+///
+/// On iOS, Firebase Auth stores credentials in the Keychain, which persists
+/// across app uninstalls. This function detects if this is a fresh install
+/// and signs out any stale user session.
+Future<void> _handleFirstLaunchAuthCleanup() async {
+  const String hasLaunchedKey = 'has_launched_before';
+
+  try {
+    final prefs = await SharedPreferences.getInstance();
+    final hasLaunchedBefore = prefs.getBool(hasLaunchedKey) ?? false;
+
+    if (!hasLaunchedBefore) {
+      _log.info(
+        'First launch detected - clearing stale auth state',
+        tag: LogTags.auth,
+      );
+
+      // Check if there's a stale user session
+      final currentUser = FirebaseAuth.instance.currentUser;
+      if (currentUser != null) {
+        _log.warning(
+          'Found stale auth session on first launch, signing out',
+          tag: LogTags.auth,
+          data: {'uid': currentUser.uid},
+        );
+        await FirebaseAuth.instance.signOut();
+        _log.info('Stale auth session cleared', tag: LogTags.auth);
+      }
+
+      // Mark that the app has been launched
+      await prefs.setBool(hasLaunchedKey, true);
+      _log.debug('First launch flag set', tag: LogTags.app);
+    } else {
+      _log.debug('Not first launch, skipping auth cleanup', tag: LogTags.app);
+    }
+  } catch (e, stackTrace) {
+    _log.error(
+      'Error during first launch auth cleanup',
+      tag: LogTags.auth,
+      error: e,
+      stackTrace: stackTrace,
+    );
+    // Don't rethrow - we don't want to crash the app if this fails
+  }
 }

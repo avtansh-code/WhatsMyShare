@@ -51,6 +51,7 @@ abstract class FirebaseAuthDataSource {
   Future<UserModel> linkPhoneNumber({
     required String verificationId,
     required String smsCode,
+    required String phoneNumber,
   });
 
   /// Sign out
@@ -307,15 +308,25 @@ class FirebaseAuthDataSourceImpl implements FirebaseAuthDataSource {
         return userModel;
       }
 
-      // Update last active
+      // Existing user - update last active
       await _updateLastActive(user.uid);
 
+      // Fetch user data from Firestore
+      final existingUser = await _getUserFromFirestore(user.uid);
+      
       _log.info(
-        'Google sign in successful',
+        'Google sign in successful - returning user',
         tag: LogTags.auth,
-        data: {'uid': user.uid},
+        data: {
+          'uid': user.uid,
+          'email': existingUser.email,
+          'displayName': existingUser.displayName,
+          'phone': existingUser.phone,
+          'isPhoneVerified': existingUser.isPhoneVerified,
+          'hasCompletedProfile': existingUser.hasCompletedProfile,
+        },
       );
-      return await _getUserFromFirestore(user.uid);
+      return existingUser;
     } on firebase_auth.FirebaseAuthException catch (e) {
       _log.error(
         'Firebase auth exception during Google sign in',
@@ -704,8 +715,13 @@ class FirebaseAuthDataSourceImpl implements FirebaseAuthDataSource {
   Future<UserModel> linkPhoneNumber({
     required String verificationId,
     required String smsCode,
+    required String phoneNumber,
   }) async {
-    _log.info('Linking phone number to user', tag: LogTags.auth);
+    _log.info(
+      'Linking phone number to user',
+      tag: LogTags.auth,
+      data: {'phoneNumber': phoneNumber},
+    );
 
     final user = _firebaseAuth.currentUser;
     if (user == null) {
@@ -720,14 +736,22 @@ class FirebaseAuthDataSourceImpl implements FirebaseAuthDataSource {
 
       await user.linkWithCredential(credential);
 
+      // Normalize and use the provided phone number
+      // (Firebase Auth user.phoneNumber may not be immediately updated)
+      final normalizedPhone = _normalizePhoneNumber(phoneNumber);
+
       // Update Firestore with the phone number
       await _usersCollection.doc(user.uid).update({
-        'phone': user.phoneNumber,
+        'phone': normalizedPhone,
         'isPhoneVerified': true,
         'updatedAt': FieldValue.serverTimestamp(),
       });
 
-      _log.info('Phone number linked successfully', tag: LogTags.auth);
+      _log.info(
+        'Phone number linked successfully',
+        tag: LogTags.auth,
+        data: {'phone': normalizedPhone},
+      );
       return await _getUserFromFirestore(user.uid);
     } on firebase_auth.FirebaseAuthException catch (e) {
       _log.error(

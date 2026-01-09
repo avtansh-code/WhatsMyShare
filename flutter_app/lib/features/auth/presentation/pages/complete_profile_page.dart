@@ -11,9 +11,9 @@ import '../bloc/auth_bloc.dart';
 
 /// Page for completing user profile with required information
 class CompleteProfilePage extends StatefulWidget {
-  final UserEntity user;
+  final UserEntity? user;
 
-  const CompleteProfilePage({super.key, required this.user});
+  const CompleteProfilePage({super.key, this.user});
 
   @override
   State<CompleteProfilePage> createState() => _CompleteProfilePageState();
@@ -35,6 +35,10 @@ class _CompleteProfilePageState extends State<CompleteProfilePage> {
   String? _errorMessage;
   String? _emailWarning;
   String? _phoneWarning;
+  bool _controllersInitialized = false;
+
+  // Current user entity - either from widget or loaded from bloc
+  UserEntity? _currentUser;
 
   late FirebaseAuthDataSource _authDataSource;
 
@@ -44,11 +48,46 @@ class _CompleteProfilePageState extends State<CompleteProfilePage> {
     _log.info('CompleteProfilePage opened', tag: LogTags.ui);
     _authDataSource = sl<FirebaseAuthDataSource>();
 
-    _nameController = TextEditingController(
-      text: widget.user.displayName ?? '',
+    // Initialize controllers with empty values first
+    _nameController = TextEditingController();
+    _emailController = TextEditingController();
+    _phoneController = TextEditingController();
+
+    // Initialize with widget.user if provided
+    if (widget.user != null) {
+      _initializeFromUser(widget.user!);
+    }
+  }
+
+  void _initializeFromUser(UserEntity user) {
+    if (_controllersInitialized) return;
+    
+    _currentUser = user;
+    _nameController.text = user.displayName ?? '';
+    _emailController.text = user.email;
+    
+    // Extract 10-digit phone number (remove country code if present)
+    String phone = user.phone ?? '';
+    if (phone.startsWith('+91')) {
+      phone = phone.substring(3);
+    } else if (phone.startsWith('91') && phone.length > 10) {
+      phone = phone.substring(2);
+    }
+    _phoneController.text = phone;
+    
+    _controllersInitialized = true;
+    
+    _log.debug(
+      'Initialized controllers from user',
+      tag: LogTags.auth,
+      data: {
+        'displayName': user.displayName,
+        'email': user.email,
+        'phone': user.phone,
+        'isPhoneVerified': user.isPhoneVerified,
+        'hasCompletedProfile': user.hasCompletedProfile,
+      },
     );
-    _emailController = TextEditingController(text: widget.user.email);
-    _phoneController = TextEditingController(text: widget.user.phone ?? '');
   }
 
   @override
@@ -62,14 +101,19 @@ class _CompleteProfilePageState extends State<CompleteProfilePage> {
 
   Future<void> _checkEmailUniqueness() async {
     final email = _emailController.text.trim();
-    if (email.isEmpty || email == widget.user.email) {
+    final currentUserEmail = _currentUser?.email ?? '';
+    final currentUserId = _currentUser?.id ?? '';
+
+    if (email.isEmpty || email == currentUserEmail) {
       setState(() => _emailWarning = null);
       return;
     }
 
+    if (currentUserId.isEmpty) return;
+
     final isRegisteredByOther = await _authDataSource.isEmailRegisteredByOther(
       email,
-      widget.user.id,
+      currentUserId,
     );
 
     setState(() {
@@ -81,14 +125,16 @@ class _CompleteProfilePageState extends State<CompleteProfilePage> {
 
   Future<void> _checkPhoneUniqueness() async {
     final phone = _phoneController.text.trim();
-    if (phone.isEmpty) {
+    final currentUserId = _currentUser?.id ?? '';
+
+    if (phone.isEmpty || currentUserId.isEmpty) {
       setState(() => _phoneWarning = null);
       return;
     }
 
     final isRegisteredByOther = await _authDataSource.isPhoneRegisteredByOther(
       phone,
-      widget.user.id,
+      currentUserId,
     );
 
     setState(() {
@@ -191,14 +237,19 @@ class _CompleteProfilePageState extends State<CompleteProfilePage> {
       _errorMessage = null;
     });
 
+    // Get the phone number from the controller
+    final phone = _phoneController.text.trim();
+
     try {
       await _authDataSource.linkPhoneNumber(
         verificationId: _verificationId!,
         smsCode: otp,
+        phoneNumber: phone,
       );
 
       // Update name if changed
-      if (_nameController.text.trim() != widget.user.displayName) {
+      final currentDisplayName = _currentUser?.displayName ?? '';
+      if (_nameController.text.trim() != currentDisplayName) {
         await _authDataSource.updateProfile(
           displayName: _nameController.text.trim(),
         );
@@ -238,7 +289,8 @@ class _CompleteProfilePageState extends State<CompleteProfilePage> {
         await _authDataSource.markPhoneVerified();
 
         // Update name if changed
-        if (_nameController.text.trim() != widget.user.displayName) {
+        final currentDisplayName = _currentUser?.displayName ?? '';
+        if (_nameController.text.trim() != currentDisplayName) {
           await _authDataSource.updateProfile(
             displayName: _nameController.text.trim(),
           );
@@ -267,298 +319,354 @@ class _CompleteProfilePageState extends State<CompleteProfilePage> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Complete Your Profile'),
-        automaticallyImplyLeading: false,
-        actions: [
-          TextButton(
-            onPressed: () {
-              context.read<AuthBloc>().add(const AuthSignOutRequested());
-            },
-            child: const Text('Sign Out'),
+    return BlocConsumer<AuthBloc, AuthState>(
+      listener: (context, state) {
+        if (state is AuthAuthenticated) {
+          // Initialize controllers from loaded user if not already done
+          _initializeFromUser(state.user);
+        } else if (state is AuthUnauthenticated) {
+          context.go('/login');
+        }
+      },
+      builder: (context, state) {
+        // Show loading if we don't have user data yet
+        if (_currentUser == null && state is! AuthAuthenticated) {
+          return Scaffold(
+            appBar: AppBar(
+              title: const Text('Complete Your Profile'),
+              automaticallyImplyLeading: false,
+            ),
+            body: const Center(child: CircularProgressIndicator()),
+          );
+        }
+
+        // Get user from state if available
+        final user =
+            _currentUser ?? (state is AuthAuthenticated ? state.user : null);
+        if (user == null) {
+          return Scaffold(
+            appBar: AppBar(
+              title: const Text('Complete Your Profile'),
+              automaticallyImplyLeading: false,
+            ),
+            body: const Center(child: CircularProgressIndicator()),
+          );
+        }
+
+        final isPhoneVerified = user.isPhoneVerified;
+        final userEmail = user.email;
+
+        return Scaffold(
+          appBar: AppBar(
+            title: const Text('Complete Your Profile'),
+            automaticallyImplyLeading: false,
+            actions: [
+              TextButton(
+                onPressed: () {
+                  context.read<AuthBloc>().add(const AuthSignOutRequested());
+                },
+                child: const Text('Sign Out'),
+              ),
+            ],
           ),
-        ],
-      ),
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24),
-          child: Form(
-            key: _formKey,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                // Header
-                Icon(
-                  Icons.person_add_outlined,
-                  size: 64,
-                  color: theme.colorScheme.primary,
-                ),
-                const SizedBox(height: 16),
-                Text(
-                  'Almost there!',
-                  style: theme.textTheme.headlineSmall?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  'Please complete your profile to continue using the app.',
-                  style: theme.textTheme.bodyMedium?.copyWith(
-                    color: theme.colorScheme.onSurfaceVariant,
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 32),
-
-                // Name Field
-                TextFormField(
-                  controller: _nameController,
-                  decoration: const InputDecoration(
-                    labelText: 'Full Name *',
-                    hintText: 'Enter your full name',
-                    prefixIcon: Icon(Icons.person_outline),
-                    border: OutlineInputBorder(),
-                  ),
-                  textCapitalization: TextCapitalization.words,
-                  validator: (value) {
-                    if (value == null || value.trim().isEmpty) {
-                      return 'Name is required';
-                    }
-                    if (value.trim().length < 2) {
-                      return 'Name must be at least 2 characters';
-                    }
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 16),
-
-                // Email Field (read-only for Google users)
-                TextFormField(
-                  controller: _emailController,
-                  decoration: InputDecoration(
-                    labelText: 'Email *',
-                    prefixIcon: const Icon(Icons.email_outlined),
-                    border: const OutlineInputBorder(),
-                    helperText: widget.user.email.isNotEmpty
-                        ? 'Email from your sign-in method'
-                        : null,
-                    errorText: _emailWarning,
-                  ),
-                  readOnly: widget.user.email.isNotEmpty,
-                  enabled: widget.user.email.isEmpty,
-                  onChanged: (_) => _checkEmailUniqueness(),
-                ),
-                const SizedBox(height: 16),
-
-                // Phone Field with India country code
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+          body: SafeArea(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(24),
+              child: Form(
+                key: _formKey,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    // Fixed India country code prefix
-                    Container(
-                      height: 56,
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      decoration: BoxDecoration(
-                        border: Border.all(color: theme.colorScheme.outline),
-                        borderRadius: const BorderRadius.only(
-                          topLeft: Radius.circular(4),
-                          bottomLeft: Radius.circular(4),
-                        ),
-                        color: theme.colorScheme.surfaceContainerHighest,
+                    // Header
+                    Icon(
+                      Icons.person_add_outlined,
+                      size: 64,
+                      color: theme.colorScheme.primary,
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      'Almost there!',
+                      style: theme.textTheme.headlineSmall?.copyWith(
+                        fontWeight: FontWeight.bold,
                       ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const Text('🇮🇳', style: TextStyle(fontSize: 20)),
-                          const SizedBox(width: 8),
-                          Text(
-                            '+91',
-                            style: theme.textTheme.bodyLarge?.copyWith(
-                              fontWeight: FontWeight.w500,
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Please complete your profile to continue using the app.',
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 32),
+
+                    // Name Field
+                    TextFormField(
+                      controller: _nameController,
+                      decoration: const InputDecoration(
+                        labelText: 'Full Name *',
+                        hintText: 'Enter your full name',
+                        prefixIcon: Icon(Icons.person_outline),
+                        border: OutlineInputBorder(),
+                      ),
+                      textCapitalization: TextCapitalization.words,
+                      validator: (value) {
+                        if (value == null || value.trim().isEmpty) {
+                          return 'Name is required';
+                        }
+                        if (value.trim().length < 2) {
+                          return 'Name must be at least 2 characters';
+                        }
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 16),
+
+                    // Email Field (read-only for Google users)
+                    TextFormField(
+                      controller: _emailController,
+                      decoration: InputDecoration(
+                        labelText: 'Email *',
+                        prefixIcon: const Icon(Icons.email_outlined),
+                        border: const OutlineInputBorder(),
+                        helperText: userEmail.isNotEmpty
+                            ? 'Email from your sign-in method'
+                            : null,
+                        errorText: _emailWarning,
+                      ),
+                      readOnly: userEmail.isNotEmpty,
+                      enabled: userEmail.isEmpty,
+                      onChanged: (_) => _checkEmailUniqueness(),
+                    ),
+                    const SizedBox(height: 16),
+
+                    // Phone Field with India country code
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Fixed India country code prefix
+                        Container(
+                          height: 56,
+                          padding: const EdgeInsets.symmetric(horizontal: 16),
+                          decoration: BoxDecoration(
+                            border: Border.all(
+                              color: theme.colorScheme.outline,
                             ),
+                            borderRadius: const BorderRadius.only(
+                              topLeft: Radius.circular(4),
+                              bottomLeft: Radius.circular(4),
+                            ),
+                            color: theme.colorScheme.surfaceContainerHighest,
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Text(
+                                '🇮🇳',
+                                style: TextStyle(fontSize: 20),
+                              ),
+                              const SizedBox(width: 8),
+                              Text(
+                                '+91',
+                                style: theme.textTheme.bodyLarge?.copyWith(
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        // Phone number input (10 digits only)
+                        Expanded(
+                          child: TextFormField(
+                            controller: _phoneController,
+                            decoration: InputDecoration(
+                              labelText: 'Phone Number *',
+                              hintText: 'XXXXXXXXXX',
+                              border: const OutlineInputBorder(
+                                borderRadius: BorderRadius.only(
+                                  topRight: Radius.circular(4),
+                                  bottomRight: Radius.circular(4),
+                                ),
+                              ),
+                              errorText: _phoneWarning,
+                              suffixIcon: isPhoneVerified
+                                  ? const Icon(
+                                      Icons.verified,
+                                      color: Colors.green,
+                                    )
+                                  : null,
+                            ),
+                            keyboardType: TextInputType.phone,
+                            maxLength: 10,
+                            enabled: !_isOtpSent && !isPhoneVerified,
+                            onChanged: (_) => _checkPhoneUniqueness(),
+                            validator: (value) {
+                              if (value == null || value.trim().isEmpty) {
+                                return 'Phone number is required';
+                              }
+                              final phone = value.replaceAll(
+                                RegExp(r'[^0-9]'),
+                                '',
+                              );
+                              if (phone.length != 10) {
+                                return 'Enter a valid 10-digit mobile number';
+                              }
+                              // Validate Indian mobile number format (starts with 6-9)
+                              if (!RegExp(r'^[6-9]').hasMatch(phone)) {
+                                return 'Indian mobile numbers start with 6, 7, 8 or 9';
+                              }
+                              return null;
+                            },
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+
+                    // OTP Section
+                    if (_isOtpSent && !isPhoneVerified) ...[
+                      TextFormField(
+                        controller: _otpController,
+                        decoration: const InputDecoration(
+                          labelText: 'Enter OTP',
+                          hintText: '6-digit code',
+                          prefixIcon: Icon(Icons.lock_outline),
+                          border: OutlineInputBorder(),
+                        ),
+                        keyboardType: TextInputType.number,
+                        maxLength: 6,
+                      ),
+                      const SizedBox(height: 8),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          TextButton(
+                            onPressed: _isVerifyingPhone
+                                ? null
+                                : () {
+                                    setState(() {
+                                      _isOtpSent = false;
+                                      _otpController.clear();
+                                    });
+                                  },
+                            child: const Text('Change Number'),
+                          ),
+                          TextButton(
+                            onPressed: _isVerifyingPhone ? null : _sendOtp,
+                            child: const Text('Resend OTP'),
                           ),
                         ],
                       ),
-                    ),
-                    // Phone number input (10 digits only)
-                    Expanded(
-                      child: TextFormField(
-                        controller: _phoneController,
-                        decoration: InputDecoration(
-                          labelText: 'Phone Number *',
-                          hintText: 'XXXXXXXXXX',
-                          border: const OutlineInputBorder(
-                            borderRadius: BorderRadius.only(
-                              topRight: Radius.circular(4),
-                              bottomRight: Radius.circular(4),
-                            ),
-                          ),
-                          errorText: _phoneWarning,
-                          suffixIcon: widget.user.isPhoneVerified
-                              ? const Icon(Icons.verified, color: Colors.green)
-                              : null,
-                        ),
-                        keyboardType: TextInputType.phone,
-                        maxLength: 10,
-                        enabled: !_isOtpSent && !widget.user.isPhoneVerified,
-                        onChanged: (_) => _checkPhoneUniqueness(),
-                        validator: (value) {
-                          if (value == null || value.trim().isEmpty) {
-                            return 'Phone number is required';
-                          }
-                          final phone = value.replaceAll(RegExp(r'[^0-9]'), '');
-                          if (phone.length != 10) {
-                            return 'Enter a valid 10-digit mobile number';
-                          }
-                          // Validate Indian mobile number format (starts with 6-9)
-                          if (!RegExp(r'^[6-9]').hasMatch(phone)) {
-                            return 'Indian mobile numbers start with 6, 7, 8 or 9';
-                          }
-                          return null;
-                        },
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 16),
+                      const SizedBox(height: 16),
+                    ],
 
-                // OTP Section
-                if (_isOtpSent && !widget.user.isPhoneVerified) ...[
-                  TextFormField(
-                    controller: _otpController,
-                    decoration: const InputDecoration(
-                      labelText: 'Enter OTP',
-                      hintText: '6-digit code',
-                      prefixIcon: Icon(Icons.lock_outline),
-                      border: OutlineInputBorder(),
-                    ),
-                    keyboardType: TextInputType.number,
-                    maxLength: 6,
-                  ),
-                  const SizedBox(height: 8),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      TextButton(
-                        onPressed: _isVerifyingPhone
+                    // Error Message
+                    if (_errorMessage != null)
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: theme.colorScheme.errorContainer,
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Text(
+                          _errorMessage!,
+                          style: TextStyle(
+                            color: theme.colorScheme.onErrorContainer,
+                          ),
+                        ),
+                      ),
+                    const SizedBox(height: 24),
+
+                    // Action Button
+                    if (isPhoneVerified) ...[
+                      // Just update name
+                      FilledButton(
+                        onPressed: _isLoading
+                            ? null
+                            : () async {
+                                if (!_formKey.currentState!.validate()) return;
+
+                                setState(() => _isLoading = true);
+
+                                try {
+                                  await _authDataSource.updateProfile(
+                                    displayName: _nameController.text.trim(),
+                                  );
+
+                                  if (mounted) {
+                                    context.read<AuthBloc>().add(
+                                      const AuthCheckRequested(),
+                                    );
+                                    context.go('/dashboard');
+                                  }
+                                } catch (e) {
+                                  setState(() {
+                                    _isLoading = false;
+                                    _errorMessage = e.toString();
+                                  });
+                                }
+                              },
+                        style: FilledButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                        ),
+                        child: _isLoading
+                            ? const SizedBox(
+                                height: 20,
+                                width: 20,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                ),
+                              )
+                            : const Text('Continue'),
+                      ),
+                    ] else if (!_isOtpSent) ...[
+                      // Send OTP
+                      FilledButton(
+                        onPressed: (_isVerifyingPhone || _phoneWarning != null)
                             ? null
                             : () {
-                                setState(() {
-                                  _isOtpSent = false;
-                                  _otpController.clear();
-                                });
+                                if (!_formKey.currentState!.validate()) return;
+                                _sendOtp();
                               },
-                        child: const Text('Change Number'),
+                        style: FilledButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                        ),
+                        child: _isVerifyingPhone
+                            ? const SizedBox(
+                                height: 20,
+                                width: 20,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                ),
+                              )
+                            : const Text('Verify Phone Number'),
                       ),
-                      TextButton(
-                        onPressed: _isVerifyingPhone ? null : _sendOtp,
-                        child: const Text('Resend OTP'),
+                    ] else ...[
+                      // Verify OTP
+                      FilledButton(
+                        onPressed: _isLoading ? null : _verifyOtp,
+                        style: FilledButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                        ),
+                        child: _isLoading
+                            ? const SizedBox(
+                                height: 20,
+                                width: 20,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                ),
+                              )
+                            : const Text('Verify & Continue'),
                       ),
                     ],
-                  ),
-                  const SizedBox(height: 16),
-                ],
-
-                // Error Message
-                if (_errorMessage != null)
-                  Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: theme.colorScheme.errorContainer,
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Text(
-                      _errorMessage!,
-                      style: TextStyle(
-                        color: theme.colorScheme.onErrorContainer,
-                      ),
-                    ),
-                  ),
-                const SizedBox(height: 24),
-
-                // Action Button
-                if (widget.user.isPhoneVerified) ...[
-                  // Just update name
-                  FilledButton(
-                    onPressed: _isLoading
-                        ? null
-                        : () async {
-                            if (!_formKey.currentState!.validate()) return;
-
-                            setState(() => _isLoading = true);
-
-                            try {
-                              await _authDataSource.updateProfile(
-                                displayName: _nameController.text.trim(),
-                              );
-
-                              if (mounted) {
-                                context.read<AuthBloc>().add(
-                                  const AuthCheckRequested(),
-                                );
-                                context.go('/dashboard');
-                              }
-                            } catch (e) {
-                              setState(() {
-                                _isLoading = false;
-                                _errorMessage = e.toString();
-                              });
-                            }
-                          },
-                    style: FilledButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                    ),
-                    child: _isLoading
-                        ? const SizedBox(
-                            height: 20,
-                            width: 20,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          )
-                        : const Text('Continue'),
-                  ),
-                ] else if (!_isOtpSent) ...[
-                  // Send OTP
-                  FilledButton(
-                    onPressed: (_isVerifyingPhone || _phoneWarning != null)
-                        ? null
-                        : () {
-                            if (!_formKey.currentState!.validate()) return;
-                            _sendOtp();
-                          },
-                    style: FilledButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                    ),
-                    child: _isVerifyingPhone
-                        ? const SizedBox(
-                            height: 20,
-                            width: 20,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          )
-                        : const Text('Verify Phone Number'),
-                  ),
-                ] else ...[
-                  // Verify OTP
-                  FilledButton(
-                    onPressed: _isLoading ? null : _verifyOtp,
-                    style: FilledButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                    ),
-                    child: _isLoading
-                        ? const SizedBox(
-                            height: 20,
-                            width: 20,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          )
-                        : const Text('Verify & Continue'),
-                  ),
-                ],
-              ],
+                  ],
+                ),
+              ),
             ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 }

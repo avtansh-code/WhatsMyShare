@@ -83,6 +83,10 @@ class _LoginPageState extends State<LoginPage> {
               tag: LogTags.ui,
               data: {
                 'userId': user.id,
+                'email': user.email,
+                'displayName': user.displayName,
+                'phone': user.phone,
+                'isPhoneVerified': user.isPhoneVerified,
                 'hasCompletedProfile': user.hasCompletedProfile,
               },
             );
@@ -92,7 +96,19 @@ class _LoginPageState extends State<LoginPage> {
               _log.info('Navigating to dashboard', tag: LogTags.ui);
               context.go('/dashboard');
             } else {
-              _log.info('Navigating to complete profile', tag: LogTags.ui);
+              _log.info(
+                'Navigating to complete profile',
+                tag: LogTags.ui,
+                data: {
+                  'reason': user.displayName == null || user.displayName!.isEmpty
+                      ? 'missing displayName'
+                      : user.phone == null || user.phone!.isEmpty
+                          ? 'missing phone'
+                          : !user.isPhoneVerified
+                              ? 'phone not verified'
+                              : 'unknown',
+                },
+              );
               context.go('/complete-profile', extra: user);
             }
           }
