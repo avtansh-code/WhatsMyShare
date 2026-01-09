@@ -42,17 +42,8 @@ void main() {
     updatedAt: DateTime.now(),
   );
 
-  // Profile with photo URL for specific tests
-  final testProfileWithPhoto = UserProfileEntity(
-    id: 'user1',
-    email: 'test@example.com',
-    displayName: 'John Doe',
-    photoUrl: 'https://example.com/photo.jpg',
-    phone: '+1234567890',
-    defaultCurrency: 'INR',
-    createdAt: DateTime.now(),
-    updatedAt: DateTime.now(),
-  );
+  // Note: testProfileWithPhoto was removed as it caused unused variable warning
+  // and NetworkImage doesn't work in test environment anyway
 
   Widget createWidget() {
     return MaterialApp(
@@ -469,16 +460,22 @@ class _TestEditProfilePageState extends State<_TestEditProfilePage> {
                   ),
                   const SizedBox(height: 16),
 
-                  // Email (read-only)
-                  TextFormField(
-                    initialValue: profile?.email ?? '',
-                    decoration: const InputDecoration(
-                      labelText: 'Email',
-                      prefixIcon: Icon(Icons.email_outlined),
-                      border: OutlineInputBorder(),
-                    ),
-                    readOnly: true,
-                    enabled: false,
+                  // Email (read-only) - Using controller to avoid deprecated initialValue with enabled:false
+                  Builder(
+                    builder: (context) {
+                      return TextFormField(
+                        controller: TextEditingController(
+                          text: profile?.email ?? '',
+                        ),
+                        decoration: const InputDecoration(
+                          labelText: 'Email',
+                          prefixIcon: Icon(Icons.email_outlined),
+                          border: OutlineInputBorder(),
+                        ),
+                        readOnly: true,
+                        enabled: false,
+                      );
+                    },
                   ),
                   const SizedBox(height: 16),
 
@@ -506,7 +503,7 @@ class _TestEditProfilePageState extends State<_TestEditProfilePage> {
 
                   // Currency
                   DropdownButtonFormField<String>(
-                    value: _selectedCurrency,
+                    initialValue: _selectedCurrency,
                     decoration: const InputDecoration(
                       labelText: 'Default Currency',
                       prefixIcon: Icon(Icons.currency_exchange),
@@ -518,9 +515,9 @@ class _TestEditProfilePageState extends State<_TestEditProfilePage> {
                       DropdownMenuItem(value: 'EUR', child: Text('EUR (€)')),
                       DropdownMenuItem(value: 'GBP', child: Text('GBP (£)')),
                     ],
-                    onChanged: (value) {
+                    onChanged: (newValue) {
                       setState(() {
-                        _selectedCurrency = value;
+                        _selectedCurrency = newValue;
                         _hasChanges = true;
                       });
                     },
