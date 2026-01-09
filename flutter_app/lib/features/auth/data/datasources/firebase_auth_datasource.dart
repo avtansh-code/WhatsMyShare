@@ -106,6 +106,40 @@ abstract class FirebaseAuthDataSource {
     String? displayName,
     String? phone,
   });
+
+  /// Check email status for linking/merging
+  /// Returns: 'new' | 'exists_no_phone' | 'exists_with_phone'
+  Future<EmailLinkStatus> checkEmailLinkStatus(String email);
+
+  /// Link email to current phone-authenticated user (for new emails)
+  /// This updates both Firebase Auth and Firestore
+  Future<UserModel> linkEmailToPhoneUser({
+    required String email,
+    String? displayName,
+  });
+
+  /// Merge email account into phone account
+  /// This requires the user to provide credentials to prove ownership of the email
+  /// For email/password: requires password
+  /// For Google: requires Google sign-in
+  Future<UserModel> mergeEmailAccountIntoPhoneUser({
+    required String email,
+    required String password,
+    String? displayName,
+  });
+
+  /// Get the sign-in methods for an email
+  Future<List<String>> getSignInMethodsForEmail(String email);
+}
+
+/// Status of an email for linking purposes
+enum EmailLinkStatus {
+  /// Email is not registered in Firebase Auth - can be added to current user
+  newEmail,
+  /// Email exists in Auth but the user doesn't have a phone linked - can be merged
+  existsWithoutPhone,
+  /// Email exists in Auth and the user has a phone linked - cannot be merged
+  existsWithPhone,
 }
 
 /// Implementation of FirebaseAuthDataSource
@@ -1047,6 +1081,303 @@ class FirebaseAuthDataSourceImpl implements FirebaseAuthDataSource {
     }
 
     return normalized;
+  }
+
+  @override
+  Future<List<String>> getSignInMethodsForEmail(String email) async {
+    _log.debug(
+      'Getting sign-in methods for email',
+      tag: LogTags.auth,
+      data: {'email': email},
+    );
+    try {
+      // Note: fetchSignInMethodsForEmail is deprecated but still works
+      // and is the only client-side way to check this
+      final methods = await _firebaseAuth.fetchSignInMethodsForEmail(
+        email.toLowerCase().trim(),
+      );
+      _log.debug(
+        'Sign-in methods retrieved',
+        tag: LogTags.auth,
+        data: {'methods': methods},
+      );
+      return methods;
+    } catch (e) {
+      _log.warning(
+        'Failed to get sign-in methods for email: $e',
+        tag: LogTags.auth,
+      );
+      return [];
+    }
+  }
+
+  @override
+  Future<EmailLinkStatus> checkEmailLinkStatus(String email) async {
+    _log.info(
+      'Checking email link status',
+      tag: LogTags.auth,
+      data: {'email': email},
+    );
+
+    final normalizedEmail = email.toLowerCase().trim();
+
+    // First, check Firestore for existing user with this email
+    final querySnapshot = await _usersCollection
+        .where('email', isEqualTo: normalizedEmail)
+        .limit(1)
+        .get();
+
+    if (querySnapshot.docs.isEmpty) {
+      // Email not in Firestore - check Firebase Auth as well
+      final signInMethods = await getSignInMethodsForEmail(normalizedEmail);
+      if (signInMethods.isEmpty) {
+        _log.info('Email is new - not found in Auth or Firestore', tag: LogTags.auth);
+        return EmailLinkStatus.newEmail;
+      }
+      // Email exists in Auth but not Firestore - treat as existing without phone
+      _log.info('Email exists in Auth but not Firestore', tag: LogTags.auth);
+      return EmailLinkStatus.existsWithoutPhone;
+    }
+
+    // Email found in Firestore - check if that user has a phone
+    final existingUserDoc = querySnapshot.docs.first;
+    final existingUserId = existingUserDoc.id;
+    final existingUserData = existingUserDoc.data();
+    
+    // Check if this is the current user
+    final currentUser = _firebaseAuth.currentUser;
+    if (currentUser != null && existingUserId == currentUser.uid) {
+      // This is the same user - email is already theirs
+      _log.info('Email belongs to current user', tag: LogTags.auth);
+      return EmailLinkStatus.newEmail;
+    }
+
+    final phone = existingUserData['phone'] as String?;
+    final isPhoneVerified = existingUserData['isPhoneVerified'] as bool? ?? false;
+
+    if (phone != null && phone.isNotEmpty && isPhoneVerified) {
+      _log.info(
+        'Email exists with verified phone - cannot merge',
+        tag: LogTags.auth,
+        data: {'existingUserId': existingUserId},
+      );
+      return EmailLinkStatus.existsWithPhone;
+    }
+
+    _log.info(
+      'Email exists without phone - can merge',
+      tag: LogTags.auth,
+      data: {'existingUserId': existingUserId},
+    );
+    return EmailLinkStatus.existsWithoutPhone;
+  }
+
+  @override
+  Future<UserModel> linkEmailToPhoneUser({
+    required String email,
+    String? displayName,
+  }) async {
+    _log.info(
+      'Linking email to phone user',
+      tag: LogTags.auth,
+      data: {'email': email, 'displayName': displayName},
+    );
+
+    final user = _firebaseAuth.currentUser;
+    if (user == null) {
+      throw const AuthException(message: 'User not authenticated');
+    }
+
+    final normalizedEmail = email.toLowerCase().trim();
+
+    // Update Firebase Auth email (this is allowed for phone-auth users)
+    try {
+      // First, check if user already has email provider
+      final hasEmailProvider = user.providerData.any(
+        (info) => info.providerId == firebase_auth.EmailAuthProvider.PROVIDER_ID,
+      );
+
+      if (!hasEmailProvider) {
+        // For phone-auth users, we can update the email directly
+        // This adds the email to their profile without requiring password
+        await user.verifyBeforeUpdateEmail(normalizedEmail);
+        _log.info(
+          'Verification email sent to new email address',
+          tag: LogTags.auth,
+        );
+      }
+    } on firebase_auth.FirebaseAuthException catch (e) {
+      _log.error(
+        'Failed to update email in Firebase Auth',
+        tag: LogTags.auth,
+        data: {'code': e.code, 'message': e.message},
+      );
+      // If email update fails, we still update Firestore
+      // This handles cases where email verification is pending
+    }
+
+    // Update Firestore
+    final updates = <String, dynamic>{
+      'email': normalizedEmail,
+      'updatedAt': FieldValue.serverTimestamp(),
+    };
+    if (displayName != null) {
+      updates['displayName'] = displayName;
+      await user.updateDisplayName(displayName);
+    }
+
+    await _usersCollection.doc(user.uid).update(updates);
+
+    _log.info('Email linked to phone user successfully', tag: LogTags.auth);
+    return await _getUserFromFirestore(user.uid);
+  }
+
+  @override
+  Future<UserModel> mergeEmailAccountIntoPhoneUser({
+    required String email,
+    required String password,
+    String? displayName,
+  }) async {
+    _log.info(
+      'Merging email account into phone user',
+      tag: LogTags.auth,
+      data: {'email': email},
+    );
+
+    final currentUser = _firebaseAuth.currentUser;
+    if (currentUser == null) {
+      throw const AuthException(message: 'User not authenticated');
+    }
+
+    final normalizedEmail = email.toLowerCase().trim();
+    final currentUserId = currentUser.uid;
+    final currentPhone = currentUser.phoneNumber;
+
+    // Step 1: Get the existing email user's data from Firestore
+    final emailUserQuery = await _usersCollection
+        .where('email', isEqualTo: normalizedEmail)
+        .limit(1)
+        .get();
+
+    String? emailUserId;
+    Map<String, dynamic>? emailUserData;
+
+    if (emailUserQuery.docs.isNotEmpty) {
+      final emailUserDoc = emailUserQuery.docs.first;
+      emailUserId = emailUserDoc.id;
+      emailUserData = emailUserDoc.data();
+
+      // Double-check this is not the same user
+      if (emailUserId == currentUserId) {
+        _log.info('Email already belongs to current user', tag: LogTags.auth);
+        return await _getUserFromFirestore(currentUserId);
+      }
+    }
+
+    // Step 2: Verify the password by creating a credential
+    final emailCredential = firebase_auth.EmailAuthProvider.credential(
+      email: normalizedEmail,
+      password: password,
+    );
+
+    try {
+      // Step 3: Link the email credential to the current phone user
+      await currentUser.linkWithCredential(emailCredential);
+
+      _log.info(
+        'Email credential linked to phone user',
+        tag: LogTags.auth,
+        data: {'phone': currentPhone, 'email': normalizedEmail},
+      );
+
+      // Step 4: Update the current user's Firestore document with email
+      final updates = <String, dynamic>{
+        'email': normalizedEmail,
+        'updatedAt': FieldValue.serverTimestamp(),
+      };
+
+      // Merge any useful data from the old email user
+      if (emailUserData != null) {
+        // Preserve display name if current user doesn't have one
+        if (displayName == null && emailUserData['displayName'] != null) {
+          updates['displayName'] = emailUserData['displayName'];
+        }
+        // Preserve photo URL if current user doesn't have one
+        if (emailUserData['photoUrl'] != null) {
+          final currentDoc = await _usersCollection.doc(currentUserId).get();
+          if (currentDoc.exists) {
+            final currentData = currentDoc.data()!;
+            if (currentData['photoUrl'] == null) {
+              updates['photoUrl'] = emailUserData['photoUrl'];
+            }
+          }
+        }
+      }
+
+      if (displayName != null) {
+        updates['displayName'] = displayName;
+        await currentUser.updateDisplayName(displayName);
+      }
+
+      await _usersCollection.doc(currentUserId).update(updates);
+
+      // Step 5: Delete the old email user's Firestore document
+      // (The Firebase Auth user will be orphaned but that's okay - 
+      // Firebase will eventually clean it up or we can do it via Cloud Functions)
+      if (emailUserId != null && emailUserId != currentUserId) {
+        try {
+          await _usersCollection.doc(emailUserId).delete();
+          _log.info(
+            'Deleted old email user Firestore document',
+            tag: LogTags.auth,
+            data: {'deletedUserId': emailUserId},
+          );
+        } catch (e) {
+          _log.warning(
+            'Failed to delete old email user document: $e',
+            tag: LogTags.auth,
+          );
+          // Non-fatal - continue
+        }
+      }
+
+      _log.info('Account merge completed successfully', tag: LogTags.auth);
+      return await _getUserFromFirestore(currentUserId);
+    } on firebase_auth.FirebaseAuthException catch (e) {
+      _log.error(
+        'Failed to merge email account',
+        tag: LogTags.auth,
+        data: {'code': e.code, 'message': e.message},
+      );
+
+      // Handle specific error cases
+      if (e.code == 'email-already-in-use') {
+        // This means the email is associated with a different auth account
+        throw const AuthException(
+          message: 'This email is already linked to another account',
+          code: 'email-already-in-use',
+        );
+      }
+      if (e.code == 'wrong-password' || e.code == 'invalid-credential') {
+        throw const AuthException(
+          message: 'Incorrect password for this email account',
+          code: 'wrong-password',
+        );
+      }
+      if (e.code == 'user-not-found') {
+        throw const AuthException(
+          message: 'No account found with this email',
+          code: 'user-not-found',
+        );
+      }
+      if (e.code == 'provider-already-linked') {
+        // Email provider already linked to this user
+        _log.info('Email provider already linked', tag: LogTags.auth);
+        return await _getUserFromFirestore(currentUserId);
+      }
+
+      throw _mapFirebaseAuthException(e);
+    }
   }
 
   /// Map Firebase Auth exceptions to custom exceptions
