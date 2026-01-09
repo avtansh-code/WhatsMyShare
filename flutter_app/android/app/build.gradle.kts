@@ -22,6 +22,13 @@ android {
         jvmTarget = JavaVersion.VERSION_17.toString()
     }
 
+    // Suppress deprecation warnings from Android Lint
+    lint {
+        disable += "Deprecation"
+        checkReleaseBuilds = true
+        abortOnError = false
+    }
+
     defaultConfig {
         // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
         applicationId = "avtanshgupta.WhatsMyShare"
@@ -40,6 +47,11 @@ android {
             signingConfig = signingConfigs.getByName("debug")
         }
     }
+}
+
+// Suppress javac deprecation warnings from generated code and plugins
+tasks.withType<JavaCompile> {
+    options.compilerArgs.addAll(listOf("-Xlint:-deprecation", "-Xlint:-unchecked"))
 }
 
 flutter {

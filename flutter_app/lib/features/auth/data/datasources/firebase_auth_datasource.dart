@@ -508,7 +508,7 @@ class FirebaseAuthDataSourceImpl implements FirebaseAuthDataSource {
     }
   }
 
-  /// Get user from Firestore
+  /// Get user from Firestore, creating the document if it doesn't exist
   Future<UserModel> _getUserFromFirestore(String uid) async {
     _log.debug(
       'Fetching user from Firestore',
@@ -517,26 +517,53 @@ class FirebaseAuthDataSourceImpl implements FirebaseAuthDataSource {
     );
     final doc = await _usersCollection.doc(uid).get();
     if (!doc.exists) {
-      _log.error(
-        'User document not found in Firestore',
+      _log.warning(
+        'User document not found in Firestore, creating one',
         tag: LogTags.auth,
         data: {'uid': uid},
       );
-      throw const ServerException(message: 'User document not found');
+      // Get the Firebase Auth user to get email and display name
+      final firebaseUser = _firebaseAuth.currentUser;
+      if (firebaseUser == null) {
+        _log.error(
+          'Cannot create user document: Firebase user is null',
+          tag: LogTags.auth,
+        );
+        throw const ServerException(message: 'User not authenticated');
+      }
+      
+      // Create a new user document
+      final userModel = UserModel(
+        id: uid,
+        email: firebaseUser.email ?? '',
+        displayName: firebaseUser.displayName,
+        photoUrl: firebaseUser.photoURL,
+      );
+      
+      await _usersCollection.doc(uid).set(userModel.toFirestoreCreate());
+      _log.info(
+        'Created missing user document',
+        tag: LogTags.auth,
+        data: {'uid': uid},
+      );
+      
+      // Fetch the newly created document
+      final newDoc = await _usersCollection.doc(uid).get();
+      return UserModel.fromFirestore(newDoc);
     }
     return UserModel.fromFirestore(doc);
   }
 
-  /// Update last active timestamp
+  /// Update last active timestamp (uses set with merge to handle missing documents)
   Future<void> _updateLastActive(String uid) async {
     _log.debug(
       'Updating last active timestamp',
       tag: LogTags.auth,
       data: {'uid': uid},
     );
-    await _usersCollection.doc(uid).update({
+    await _usersCollection.doc(uid).set({
       'lastActiveAt': FieldValue.serverTimestamp(),
-    });
+    }, SetOptions(merge: true));
   }
 
   /// Map Firebase Auth exceptions to custom exceptions
