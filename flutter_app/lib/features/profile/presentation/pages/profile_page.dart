@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../../core/services/logging_service.dart';
 import '../../../../core/utils/currency_utils.dart';
@@ -361,7 +362,7 @@ class _ProfilePageState extends State<ProfilePage> {
   }
 
   void _navigateToEditProfile(BuildContext context) {
-    Navigator.pushNamed(context, '/profile/edit');
+    context.push('/profile/edit');
   }
 
   void _showCurrencyPicker(BuildContext context, String currentCurrency) {
@@ -408,12 +409,8 @@ class _ProfilePageState extends State<ProfilePage> {
           TextButton(
             onPressed: () {
               Navigator.pop(context);
-              // Trigger sign out through auth bloc
-              Navigator.pushNamedAndRemoveUntil(
-                context,
-                '/login',
-                (route) => false,
-              );
+              // Trigger sign out and navigate to login
+              context.go('/login');
             },
             child: Text(
               'Sign Out',

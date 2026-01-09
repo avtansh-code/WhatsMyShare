@@ -15,11 +15,44 @@ class DashboardPage extends StatefulWidget {
 
 class _DashboardPageState extends State<DashboardPage> {
   final LoggingService _log = LoggingService();
+  int _selectedIndex = 0;
 
   @override
   void initState() {
     super.initState();
     _log.info('DashboardPage opened', tag: LogTags.ui);
+  }
+
+  void _onDestinationSelected(int index) {
+    _log.debug('Navigation destination selected: $index', tag: LogTags.ui);
+    
+    // Only update state and navigate if switching to a different tab
+    if (index == _selectedIndex) {
+      return;
+    }
+    
+    setState(() {
+      _selectedIndex = index;
+    });
+    
+    switch (index) {
+      case 0:
+        // Home - go to dashboard
+        context.go('/dashboard');
+        break;
+      case 1:
+        // Groups - go to groups list
+        context.go('/groups');
+        break;
+      case 2:
+        // Friends - go to friends page
+        context.go('/friends');
+        break;
+      case 3:
+        // Activity - go to notifications
+        context.go('/notifications');
+        break;
+    }
   }
 
   @override
@@ -43,7 +76,7 @@ class _DashboardPageState extends State<DashboardPage> {
               IconButton(
                 icon: const Icon(Icons.notifications_outlined),
                 onPressed: () {
-                  // TODO: Navigate to notifications
+                  context.push('/notifications');
                 },
               ),
               PopupMenuButton<String>(
@@ -77,9 +110,9 @@ class _DashboardPageState extends State<DashboardPage> {
                 onSelected: (value) {
                   _log.debug('Menu item selected: $value', tag: LogTags.ui);
                   if (value == 'profile') {
-                    // TODO: Navigate to profile
+                    context.push('/profile');
                   } else if (value == 'settings') {
-                    // TODO: Navigate to settings
+                    context.push('/profile');  // Settings is part of profile page
                   } else if (value == 'logout') {
                     _log.info(
                       'Sign out requested from dashboard',
@@ -158,10 +191,8 @@ class _DashboardPageState extends State<DashboardPage> {
             label: const Text('Add Expense'),
           ),
           bottomNavigationBar: NavigationBar(
-            selectedIndex: 0,
-            onDestinationSelected: (index) {
-              // TODO: Navigate to different tabs
-            },
+            selectedIndex: _selectedIndex,
+            onDestinationSelected: _onDestinationSelected,
             destinations: const [
               NavigationDestination(
                 icon: Icon(Icons.home_outlined),
@@ -346,7 +377,7 @@ class _DashboardPageState extends State<DashboardPage> {
                 Icons.group_add,
                 'New Group',
                 () {
-                  // TODO: Create new group
+                  context.push('/groups/create');
                 },
               ),
             ),
@@ -358,7 +389,7 @@ class _DashboardPageState extends State<DashboardPage> {
                 Icons.person_add,
                 'Add Friend',
                 () {
-                  // TODO: Add friend
+                  context.push('/friends');  // Navigate to friends page
                 },
               ),
             ),
@@ -370,7 +401,7 @@ class _DashboardPageState extends State<DashboardPage> {
                 Icons.payments,
                 'Settle Up',
                 () {
-                  // TODO: Settle up
+                  context.push('/groups');  // Navigate to groups to select for settle up
                 },
               ),
             ),
@@ -426,7 +457,7 @@ class _DashboardPageState extends State<DashboardPage> {
             ),
             TextButton(
               onPressed: () {
-                // TODO: View all activity
+                context.push('/notifications');
               },
               child: const Text('View All'),
             ),
@@ -486,7 +517,7 @@ class _DashboardPageState extends State<DashboardPage> {
             ),
             TextButton(
               onPressed: () {
-                // TODO: View all groups
+                context.push('/groups');
               },
               child: const Text('View All'),
             ),
@@ -516,7 +547,7 @@ class _DashboardPageState extends State<DashboardPage> {
                   const SizedBox(height: 12),
                   FilledButton.icon(
                     onPressed: () {
-                      // TODO: Create group
+                      context.push('/groups/create');
                     },
                     icon: const Icon(Icons.add),
                     label: const Text('Create Group'),
@@ -547,7 +578,7 @@ class _DashboardPageState extends State<DashboardPage> {
                   subtitle: const Text('Split a bill with your group'),
                   onTap: () {
                     Navigator.pop(context);
-                    // TODO: Navigate to add expense
+                    context.push('/groups');  // First select a group, then add expense
                   },
                 ),
                 ListTile(
@@ -556,7 +587,7 @@ class _DashboardPageState extends State<DashboardPage> {
                   subtitle: const Text('Start a new expense group'),
                   onTap: () {
                     Navigator.pop(context);
-                    // TODO: Navigate to create group
+                    context.push('/groups/create');
                   },
                 ),
                 ListTile(
@@ -565,7 +596,7 @@ class _DashboardPageState extends State<DashboardPage> {
                   subtitle: const Text('Record a payment'),
                   onTap: () {
                     Navigator.pop(context);
-                    // TODO: Navigate to settle up
+                    context.push('/groups');  // First select a group, then settle up
                   },
                 ),
               ],

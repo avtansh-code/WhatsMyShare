@@ -153,7 +153,7 @@ class _SplashPageState extends State<SplashPage>
                   child: ClipRRect(
                     borderRadius: BorderRadius.circular(32),
                     child: Image.asset(
-                      'assets/app_icon.jpeg',
+                      'assets/app_icon.png',
                       fit: BoxFit.cover,
                     ),
                   ),

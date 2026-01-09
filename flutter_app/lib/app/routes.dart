@@ -21,6 +21,7 @@ import '../features/groups/presentation/pages/group_detail_page.dart';
 import '../features/notifications/presentation/bloc/notification_bloc.dart';
 import '../features/notifications/presentation/bloc/notification_event.dart';
 import '../features/notifications/presentation/pages/notifications_page.dart';
+import '../features/friends/presentation/pages/friends_page.dart';
 import '../features/expenses/presentation/bloc/chat_bloc.dart';
 import '../features/expenses/presentation/pages/expense_chat_page.dart';
 import '../features/expenses/domain/entities/expense_entity.dart';
@@ -198,6 +199,16 @@ class AppRouter {
           create: (_) => sl<NotificationBloc>()..add(const LoadNotifications()),
           child: const NotificationsPage(),
         );
+      },
+    ),
+
+    // Friends Routes
+    GoRoute(
+      path: '/friends',
+      name: 'friends',
+      builder: (context, state) {
+        _log.debug('Navigating to friends page', tag: LogTags.navigation);
+        return const FriendsPage();
       },
     ),
 

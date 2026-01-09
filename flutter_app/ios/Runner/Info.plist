@@ -45,7 +45,20 @@
 		<true/>
 		<key>UIApplicationSupportsIndirectInputEvents</key>
 		<true/>
-		<key>UIStatusBarHidden</key>
-		<false/>
-	</dict>
+<key>UIStatusBarHidden</key>
+<false/>
+<key>GIDClientID</key>
+<string>134877705970-rrvb0mgc2mbnviiblml6l3k6pi1o5qdj.apps.googleusercontent.com</string>
+<key>CFBundleURLTypes</key>
+<array>
+<dict>
+<key>CFBundleTypeRole</key>
+<string>Editor</string>
+<key>CFBundleURLSchemes</key>
+<array>
+<string>com.googleusercontent.apps.134877705970-rrvb0mgc2mbnviiblml6l3k6pi1o5qdj</string>
+</array>
+</dict>
+</array>
+</dict>
 </plist>
