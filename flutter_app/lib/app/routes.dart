@@ -5,7 +5,9 @@ import 'package:go_router/go_router.dart';
 
 import '../core/di/injection_container.dart';
 import '../core/services/logging_service.dart';
+import '../features/auth/domain/entities/user_entity.dart';
 import '../features/auth/presentation/bloc/auth_bloc.dart';
+import '../features/auth/presentation/pages/complete_profile_page.dart';
 import '../features/auth/presentation/pages/forgot_password_page.dart';
 import '../features/auth/presentation/pages/login_page.dart';
 import '../features/auth/presentation/pages/signup_page.dart';
@@ -148,6 +150,18 @@ class AppRouter {
         return BlocProvider(
           create: (_) => sl<AuthBloc>(),
           child: const ForgotPasswordPage(),
+        );
+      },
+    ),
+    GoRoute(
+      path: '/complete-profile',
+      name: 'complete-profile',
+      builder: (context, state) {
+        _log.debug('Navigating to complete profile page', tag: LogTags.navigation);
+        final user = state.extra as UserEntity;
+        return BlocProvider(
+          create: (_) => sl<AuthBloc>(),
+          child: CompleteProfilePage(user: user),
         );
       },
     ),

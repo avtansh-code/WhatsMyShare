@@ -7,6 +7,8 @@ class UserEntity extends Equatable {
   final String? displayName;
   final String? photoUrl;
   final String? phone;
+  final bool isPhoneVerified;
+  final bool isEmailVerified;
   final String defaultCurrency;
   final String locale;
   final String timezone;
@@ -28,6 +30,8 @@ class UserEntity extends Equatable {
     this.displayName,
     this.photoUrl,
     this.phone,
+    this.isPhoneVerified = false,
+    this.isEmailVerified = false,
     this.defaultCurrency = 'INR',
     this.locale = 'en-IN',
     this.timezone = 'Asia/Kolkata',
@@ -44,9 +48,20 @@ class UserEntity extends Equatable {
     this.fcmTokens = const [],
   });
 
-  /// Check if user has completed profile setup
+  /// Check if user has completed profile setup (must have name, email, and phone)
   bool get hasCompletedProfile =>
-      displayName != null && displayName!.isNotEmpty;
+      displayName != null && 
+      displayName!.isNotEmpty &&
+      email.isNotEmpty &&
+      phone != null && 
+      phone!.isNotEmpty &&
+      isPhoneVerified;
+
+  /// Check if profile is partially complete (has name but missing phone)
+  bool get needsPhoneVerification =>
+      displayName != null && 
+      displayName!.isNotEmpty &&
+      (phone == null || phone!.isEmpty || !isPhoneVerified);
 
   /// Get display name or email as fallback
   String get displayNameOrEmail => displayName ?? email.split('@').first;
@@ -76,6 +91,8 @@ class UserEntity extends Equatable {
     displayName,
     photoUrl,
     phone,
+    isPhoneVerified,
+    isEmailVerified,
     defaultCurrency,
     locale,
     timezone,
@@ -99,6 +116,8 @@ class UserEntity extends Equatable {
     String? displayName,
     String? photoUrl,
     String? phone,
+    bool? isPhoneVerified,
+    bool? isEmailVerified,
     String? defaultCurrency,
     String? locale,
     String? timezone,
@@ -120,6 +139,8 @@ class UserEntity extends Equatable {
       displayName: displayName ?? this.displayName,
       photoUrl: photoUrl ?? this.photoUrl,
       phone: phone ?? this.phone,
+      isPhoneVerified: isPhoneVerified ?? this.isPhoneVerified,
+      isEmailVerified: isEmailVerified ?? this.isEmailVerified,
       defaultCurrency: defaultCurrency ?? this.defaultCurrency,
       locale: locale ?? this.locale,
       timezone: timezone ?? this.timezone,

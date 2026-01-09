@@ -77,12 +77,24 @@ class _LoginPageState extends State<LoginPage> {
               ),
             );
           } else if (state is AuthAuthenticated) {
+            final user = state.user;
             _log.info(
-              'User authenticated, navigating to dashboard',
+              'User authenticated',
               tag: LogTags.ui,
-              data: {'userId': state.user.id},
+              data: {
+                'userId': user.id,
+                'hasCompletedProfile': user.hasCompletedProfile,
+              },
             );
-            context.go('/dashboard');
+            
+            // Check if profile is complete (has name, email, and verified phone)
+            if (user.hasCompletedProfile) {
+              _log.info('Navigating to dashboard', tag: LogTags.ui);
+              context.go('/dashboard');
+            } else {
+              _log.info('Navigating to complete profile', tag: LogTags.ui);
+              context.go('/complete-profile', extra: user);
+            }
           }
         },
         builder: (context, state) {

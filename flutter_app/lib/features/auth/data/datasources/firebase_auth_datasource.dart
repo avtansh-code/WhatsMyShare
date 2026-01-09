@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
 import 'package:google_sign_in/google_sign_in.dart';
@@ -27,6 +29,28 @@ abstract class FirebaseAuthDataSource {
   /// Sign in with Google
   Future<UserModel> signInWithGoogle();
 
+  /// Sign in with phone number - initiates verification
+  Future<void> signInWithPhone({
+    required String phoneNumber,
+    required void Function(String verificationId, int? resendToken) codeSent,
+    required void Function(firebase_auth.PhoneAuthCredential credential) verificationCompleted,
+    required void Function(firebase_auth.FirebaseAuthException error) verificationFailed,
+    required void Function(String verificationId) codeAutoRetrievalTimeout,
+    int? resendToken,
+  });
+
+  /// Verify phone OTP and link to current user
+  Future<UserModel> verifyPhoneOTP({
+    required String verificationId,
+    required String smsCode,
+  });
+
+  /// Link phone number to existing user
+  Future<UserModel> linkPhoneNumber({
+    required String verificationId,
+    required String smsCode,
+  });
+
   /// Sign out
   Future<void> signOut();
 
@@ -55,11 +79,30 @@ abstract class FirebaseAuthDataSource {
   /// Check if email is already registered
   Future<bool> isEmailRegistered(String email);
 
+  /// Check if phone number is already registered
+  Future<bool> isPhoneRegistered(String phone);
+
+  /// Check if email is registered by another user (not the current user)
+  Future<bool> isEmailRegisteredByOther(String email, String currentUserId);
+
+  /// Check if phone is registered by another user (not the current user)
+  Future<bool> isPhoneRegisteredByOther(String phone, String currentUserId);
+
   /// Verify current password
   Future<bool> verifyPassword(String password);
 
   /// Update password
   Future<void> updatePassword(String currentPassword, String newPassword);
+
+  /// Mark phone as verified
+  Future<UserModel> markPhoneVerified();
+
+  /// Update profile with email
+  Future<UserModel> updateProfileWithEmail({
+    required String email,
+    String? displayName,
+    String? phone,
+  });
 }
 
 /// Implementation of FirebaseAuthDataSource
@@ -566,6 +609,288 @@ class FirebaseAuthDataSourceImpl implements FirebaseAuthDataSource {
     }, SetOptions(merge: true));
   }
 
+  @override
+  Future<void> signInWithPhone({
+    required String phoneNumber,
+    required void Function(String verificationId, int? resendToken) codeSent,
+    required void Function(firebase_auth.PhoneAuthCredential credential) verificationCompleted,
+    required void Function(firebase_auth.FirebaseAuthException error) verificationFailed,
+    required void Function(String verificationId) codeAutoRetrievalTimeout,
+    int? resendToken,
+  }) async {
+    _log.info(
+      'Initiating phone verification',
+      tag: LogTags.auth,
+      data: {'phoneNumber': phoneNumber},
+    );
+
+    await _firebaseAuth.verifyPhoneNumber(
+      phoneNumber: phoneNumber,
+      verificationCompleted: verificationCompleted,
+      verificationFailed: verificationFailed,
+      codeSent: codeSent,
+      codeAutoRetrievalTimeout: codeAutoRetrievalTimeout,
+      forceResendingToken: resendToken,
+      timeout: const Duration(seconds: 60),
+    );
+  }
+
+  @override
+  Future<UserModel> verifyPhoneOTP({
+    required String verificationId,
+    required String smsCode,
+  }) async {
+    _log.info('Verifying phone OTP', tag: LogTags.auth);
+    
+    try {
+      final credential = firebase_auth.PhoneAuthProvider.credential(
+        verificationId: verificationId,
+        smsCode: smsCode,
+      );
+
+      // If user is already signed in, link the phone credential
+      final currentUser = _firebaseAuth.currentUser;
+      if (currentUser != null) {
+        await currentUser.linkWithCredential(credential);
+        _log.info('Phone number linked to existing user', tag: LogTags.auth);
+        return await markPhoneVerified();
+      }
+
+      // Otherwise, sign in with the phone credential
+      final userCredential = await _firebaseAuth.signInWithCredential(credential);
+      final user = userCredential.user;
+
+      if (user == null) {
+        throw const AuthException(message: 'Phone verification failed');
+      }
+
+      // Check if user document exists, create if not
+      final userDoc = await _usersCollection.doc(user.uid).get();
+      if (!userDoc.exists) {
+        final userModel = UserModel(
+          id: user.uid,
+          email: user.email ?? '',
+          phone: user.phoneNumber,
+          isPhoneVerified: true,
+        );
+        await _usersCollection.doc(user.uid).set(userModel.toFirestoreCreate());
+      } else {
+        // Update phone number and verification status
+        await _usersCollection.doc(user.uid).update({
+          'phone': user.phoneNumber,
+          'isPhoneVerified': true,
+          'updatedAt': FieldValue.serverTimestamp(),
+        });
+      }
+
+      return await _getUserFromFirestore(user.uid);
+    } on firebase_auth.FirebaseAuthException catch (e) {
+      _log.error(
+        'Phone OTP verification failed',
+        tag: LogTags.auth,
+        data: {'code': e.code, 'message': e.message},
+      );
+      throw _mapFirebaseAuthException(e);
+    }
+  }
+
+  @override
+  Future<UserModel> linkPhoneNumber({
+    required String verificationId,
+    required String smsCode,
+  }) async {
+    _log.info('Linking phone number to user', tag: LogTags.auth);
+    
+    final user = _firebaseAuth.currentUser;
+    if (user == null) {
+      throw const AuthException(message: 'User not authenticated');
+    }
+
+    try {
+      final credential = firebase_auth.PhoneAuthProvider.credential(
+        verificationId: verificationId,
+        smsCode: smsCode,
+      );
+
+      await user.linkWithCredential(credential);
+      
+      // Update Firestore with the phone number
+      await _usersCollection.doc(user.uid).update({
+        'phone': user.phoneNumber,
+        'isPhoneVerified': true,
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+
+      _log.info('Phone number linked successfully', tag: LogTags.auth);
+      return await _getUserFromFirestore(user.uid);
+    } on firebase_auth.FirebaseAuthException catch (e) {
+      _log.error(
+        'Failed to link phone number',
+        tag: LogTags.auth,
+        data: {'code': e.code, 'message': e.message},
+      );
+      throw _mapFirebaseAuthException(e);
+    }
+  }
+
+  @override
+  Future<bool> isPhoneRegistered(String phone) async {
+    _log.debug(
+      'Checking if phone is registered',
+      tag: LogTags.auth,
+      data: {'phone': phone},
+    );
+    try {
+      final normalizedPhone = _normalizePhoneNumber(phone);
+      final querySnapshot = await _usersCollection
+          .where('phone', isEqualTo: normalizedPhone)
+          .where('isPhoneVerified', isEqualTo: true)
+          .limit(1)
+          .get();
+      final isRegistered = querySnapshot.docs.isNotEmpty;
+      _log.debug(
+        'Phone registration check result',
+        tag: LogTags.auth,
+        data: {'isRegistered': isRegistered},
+      );
+      return isRegistered;
+    } catch (e) {
+      _log.warning(
+        'Phone registration check failed',
+        tag: LogTags.auth,
+      );
+      return false;
+    }
+  }
+
+  @override
+  Future<bool> isEmailRegisteredByOther(String email, String currentUserId) async {
+    _log.debug(
+      'Checking if email is registered by another user',
+      tag: LogTags.auth,
+      data: {'email': email, 'currentUserId': currentUserId},
+    );
+    try {
+      final querySnapshot = await _usersCollection
+          .where('email', isEqualTo: email.toLowerCase().trim())
+          .limit(2)
+          .get();
+      
+      // Check if any user other than current user has this email
+      for (final doc in querySnapshot.docs) {
+        if (doc.id != currentUserId) {
+          return true;
+        }
+      }
+      return false;
+    } catch (e) {
+      _log.warning(
+        'Email registration check failed',
+        tag: LogTags.auth,
+      );
+      return false;
+    }
+  }
+
+  @override
+  Future<bool> isPhoneRegisteredByOther(String phone, String currentUserId) async {
+    _log.debug(
+      'Checking if phone is registered by another user',
+      tag: LogTags.auth,
+      data: {'phone': phone, 'currentUserId': currentUserId},
+    );
+    try {
+      final normalizedPhone = _normalizePhoneNumber(phone);
+      final querySnapshot = await _usersCollection
+          .where('phone', isEqualTo: normalizedPhone)
+          .where('isPhoneVerified', isEqualTo: true)
+          .limit(2)
+          .get();
+      
+      // Check if any user other than current user has this phone
+      for (final doc in querySnapshot.docs) {
+        if (doc.id != currentUserId) {
+          return true;
+        }
+      }
+      return false;
+    } catch (e) {
+      _log.warning(
+        'Phone registration check failed',
+        tag: LogTags.auth,
+      );
+      return false;
+    }
+  }
+
+  @override
+  Future<UserModel> markPhoneVerified() async {
+    _log.info('Marking phone as verified', tag: LogTags.auth);
+    
+    final user = _firebaseAuth.currentUser;
+    if (user == null) {
+      throw const AuthException(message: 'User not authenticated');
+    }
+
+    await _usersCollection.doc(user.uid).update({
+      'isPhoneVerified': true,
+      'updatedAt': FieldValue.serverTimestamp(),
+    });
+
+    return await _getUserFromFirestore(user.uid);
+  }
+
+  @override
+  Future<UserModel> updateProfileWithEmail({
+    required String email,
+    String? displayName,
+    String? phone,
+  }) async {
+    _log.info(
+      'Updating profile with email',
+      tag: LogTags.auth,
+      data: {'email': email, 'displayName': displayName, 'phone': phone},
+    );
+    
+    final user = _firebaseAuth.currentUser;
+    if (user == null) {
+      throw const AuthException(message: 'User not authenticated');
+    }
+
+    // Update Firebase Auth profile
+    if (displayName != null) {
+      await user.updateDisplayName(displayName);
+    }
+
+    // Update Firestore
+    final updates = <String, dynamic>{
+      'email': email.toLowerCase().trim(),
+      'updatedAt': FieldValue.serverTimestamp(),
+    };
+    if (displayName != null) updates['displayName'] = displayName;
+    if (phone != null) updates['phone'] = phone;
+
+    await _usersCollection.doc(user.uid).update(updates);
+
+    return await _getUserFromFirestore(user.uid);
+  }
+
+  /// Normalize phone number for consistent storage
+  String _normalizePhoneNumber(String phone) {
+    // Remove spaces and dashes
+    String normalized = phone.replaceAll(RegExp(r'[\s\-\(\)]'), '');
+    
+    // Ensure it starts with +
+    if (!normalized.startsWith('+')) {
+      // Assume Indian number if no country code
+      if (normalized.length == 10) {
+        normalized = '+91$normalized';
+      }
+    }
+    
+    return normalized;
+  }
+
   /// Map Firebase Auth exceptions to custom exceptions
   AuthException _mapFirebaseAuthException(
     firebase_auth.FirebaseAuthException e,
@@ -615,6 +940,21 @@ class FirebaseAuthDataSourceImpl implements FirebaseAuthDataSource {
         return const AuthException(
           message: 'Please sign in again to continue',
           code: 'requires-recent-login',
+        );
+      case 'invalid-verification-code':
+        return const AuthException(
+          message: 'Invalid OTP code. Please try again',
+          code: 'invalid-verification-code',
+        );
+      case 'invalid-verification-id':
+        return const AuthException(
+          message: 'Verification session expired. Please request a new OTP',
+          code: 'invalid-verification-id',
+        );
+      case 'credential-already-in-use':
+        return const AuthException(
+          message: 'This phone number is already linked to another account',
+          code: 'credential-already-in-use',
         );
       default:
         return AuthException(
