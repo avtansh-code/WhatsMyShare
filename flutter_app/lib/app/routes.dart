@@ -57,7 +57,10 @@ class AppRouter {
 
   /// Handle authentication-based redirects
   static String? _handleRedirect(BuildContext context, GoRouterState state) {
-    final isLoggedIn = FirebaseAuth.instance.currentUser != null;
+    final currentUser = FirebaseAuth.instance.currentUser;
+    final isLoggedIn = currentUser != null;
+    final hasCompletedProfile = currentUser?.displayName != null && 
+        currentUser!.displayName!.isNotEmpty;
     final isAuthRoute =
         state.matchedLocation == '/login' ||
         state.matchedLocation == '/phone-login' ||
@@ -71,6 +74,7 @@ class AppRouter {
       data: {
         'location': state.matchedLocation,
         'isLoggedIn': isLoggedIn,
+        'hasCompletedProfile': hasCompletedProfile,
         'isAuthRoute': isAuthRoute,
       },
     );
@@ -85,8 +89,19 @@ class AppRouter {
       return '/phone-login';
     }
 
-    // If logged in and on auth route (except complete-profile), redirect to dashboard
+    // If logged in but profile not complete, redirect to complete-profile
+    if (isLoggedIn && !hasCompletedProfile && state.matchedLocation != '/complete-profile') {
+      _log.info(
+        'Redirecting user with incomplete profile to complete-profile',
+        tag: LogTags.navigation,
+        data: {'from': state.matchedLocation},
+      );
+      return '/complete-profile';
+    }
+
+    // If logged in with complete profile and on auth route, redirect to dashboard
     if (isLoggedIn &&
+        hasCompletedProfile &&
         isAuthRoute &&
         state.matchedLocation != '/complete-profile') {
       _log.info(
@@ -301,12 +316,28 @@ class AppRouter {
     GoRoute(
       path: '/',
       redirect: (context, state) {
-        final isLoggedIn = FirebaseAuth.instance.currentUser != null;
-        final destination = isLoggedIn ? '/dashboard' : '/phone-login';
+        final currentUser = FirebaseAuth.instance.currentUser;
+        final isLoggedIn = currentUser != null;
+        final hasCompletedProfile = currentUser?.displayName != null && 
+            currentUser!.displayName!.isNotEmpty;
+        
+        String destination;
+        if (!isLoggedIn) {
+          destination = '/phone-login';
+        } else if (!hasCompletedProfile) {
+          destination = '/complete-profile';
+        } else {
+          destination = '/dashboard';
+        }
+        
         _log.debug(
           'Root redirect',
           tag: LogTags.navigation,
-          data: {'destination': destination},
+          data: {
+            'destination': destination,
+            'isLoggedIn': isLoggedIn,
+            'hasCompletedProfile': hasCompletedProfile,
+          },
         );
         return destination;
       },

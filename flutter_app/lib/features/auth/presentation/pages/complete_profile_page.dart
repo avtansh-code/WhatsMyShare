@@ -173,6 +173,9 @@ class _CompleteProfilePageState extends State<CompleteProfilePage> {
     return BlocConsumer<AuthBloc, AuthState>(
       listener: (context, state) {
         if (state is AuthAuthenticated) {
+          // Profile is complete, navigate to dashboard
+          context.go('/dashboard');
+        } else if (state is AuthNeedsProfileCompletion) {
           // Initialize controllers from loaded user if not already done
           _initializeFromUser(state.user);
         } else if (state is AuthUnauthenticated) {
@@ -180,8 +183,8 @@ class _CompleteProfilePageState extends State<CompleteProfilePage> {
         }
       },
       builder: (context, state) {
-        // Show loading if we don't have user data yet
-        if (_currentUser == null && state is! AuthAuthenticated) {
+        // Show loading only for AuthLoading or AuthInitial states
+        if (state is AuthLoading || state is AuthInitial) {
           return Scaffold(
             appBar: AppBar(
               title: const Text('Complete Your Profile'),
@@ -192,8 +195,14 @@ class _CompleteProfilePageState extends State<CompleteProfilePage> {
         }
 
         // Get user from state if available
-        final user =
-            _currentUser ?? (state is AuthAuthenticated ? state.user : null);
+        UserEntity? user;
+        if (_currentUser != null) {
+          user = _currentUser;
+        } else if (state is AuthNeedsProfileCompletion) {
+          user = state.user;
+        } else if (state is AuthAuthenticated) {
+          user = state.user;
+        }
         if (user == null) {
           return Scaffold(
             appBar: AppBar(
