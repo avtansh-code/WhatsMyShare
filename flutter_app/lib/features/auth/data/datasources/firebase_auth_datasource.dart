@@ -607,7 +607,29 @@ class FirebaseAuthDataSourceImpl implements FirebaseAuthDataSource {
       final newDoc = await _usersCollection.doc(uid).get();
       return UserModel.fromFirestore(newDoc);
     }
-    return UserModel.fromFirestore(doc);
+    
+    final userModel = UserModel.fromFirestore(doc);
+    
+    // Fix data inconsistency: if phone is null/empty but isPhoneVerified is true,
+    // reset isPhoneVerified to false
+    if ((userModel.phone == null || userModel.phone!.isEmpty) && 
+        userModel.isPhoneVerified) {
+      _log.warning(
+        'Data inconsistency detected: isPhoneVerified is true but phone is null/empty. Fixing...',
+        tag: LogTags.auth,
+        data: {'uid': uid, 'phone': userModel.phone, 'isPhoneVerified': userModel.isPhoneVerified},
+      );
+      
+      await _usersCollection.doc(uid).update({
+        'isPhoneVerified': false,
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+      
+      // Return corrected model
+      return userModel.copyWithModel(isPhoneVerified: false);
+    }
+    
+    return userModel;
   }
 
   /// Update last active timestamp (uses set with merge to handle missing documents)

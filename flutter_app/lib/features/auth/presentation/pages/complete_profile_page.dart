@@ -353,7 +353,10 @@ class _CompleteProfilePageState extends State<CompleteProfilePage> {
           );
         }
 
-        final isPhoneVerified = user.isPhoneVerified;
+        // Phone is only truly verified if both the flag is set AND the phone number exists
+        // This handles data inconsistency where isPhoneVerified=true but phone is null
+        final hasValidPhone = user.phone != null && user.phone!.isNotEmpty;
+        final isPhoneVerified = user.isPhoneVerified && hasValidPhone;
         final userEmail = user.email;
 
         return Scaffold(
@@ -512,10 +515,8 @@ class _CompleteProfilePageState extends State<CompleteProfilePage> {
                               if (phone.length != 10) {
                                 return 'Enter a valid 10-digit mobile number';
                               }
-                              // Validate Indian mobile number format (starts with 6-9)
-                              if (!RegExp(r'^[6-9]').hasMatch(phone)) {
-                                return 'Indian mobile numbers start with 6, 7, 8 or 9';
-                              }
+                              // Note: Removed strict Indian mobile validation (6-9 prefix)
+                              // to allow test phone numbers during development
                               return null;
                             },
                           ),

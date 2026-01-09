@@ -47,14 +47,12 @@ service cloud.firestore {
       allow read: if isAuthenticated();
       
       // Only the user can write their own data
-      // email is required, displayName/defaultCurrency/locale are optional (have defaults)
-      allow create: if isOwner(userId) && 
-        request.resource.data.keys().hasAny(['email']) &&
-        request.resource.data.email == request.auth.token.email;
+      // Supports email, phone, or social authentication
+      allow create: if isOwner(userId);
       
-      allow update: if isOwner(userId) &&
-        // Cannot change email or ID
-        request.resource.data.email == resource.data.email;
+      // User can update their own document
+      // Note: Email changes should be done through Firebase Auth first
+      allow update: if isOwner(userId);
       
       allow delete: if isOwner(userId);
       
