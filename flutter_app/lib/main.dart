@@ -5,7 +5,6 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_native_splash/flutter_native_splash.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -21,11 +20,8 @@ Future<void> main() async {
   // Set up error handling zone
   await runZonedGuarded(
     () async {
-      // Ensure Flutter bindings are initialized and preserve splash
-      final widgetsBinding = WidgetsFlutterBinding.ensureInitialized();
-
-      // Preserve the native splash screen until we're ready
-      FlutterNativeSplash.preserve(widgetsBinding: widgetsBinding);
+      // Ensure Flutter bindings are initialized
+      WidgetsFlutterBinding.ensureInitialized();
 
       _log.info('=== WhatsMyShare App Starting ===', tag: LogTags.app);
       _log.info('Debug mode: $kDebugMode', tag: LogTags.app);

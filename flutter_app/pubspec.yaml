@@ -105,9 +105,6 @@ dependencies:
   # UI Components
   shimmer: ^3.0.0
   flutter_svg: ^2.0.17
-  
-  # Native Splash Screen
-  flutter_native_splash: ^2.4.4
 
 dev_dependencies:
   flutter_test:
@@ -145,40 +142,6 @@ flutter_launcher_icons:
   remove_alpha_ios: true
   adaptive_icon_background: "#FFFFFF"
   adaptive_icon_foreground: "assets/app_icon.png"
-
-# Native Splash Screen Configuration
-flutter_native_splash:
-  # Background color (light theme - white/light green)
-  color: "#FFFFFF"
-  
-  # Dark mode background color
-  color_dark: "#1A1C1E"
-  
-  # Image path for the splash screen logo
-  image: "assets/app_icon.png"
-  
-  # Branding image at the bottom (optional - app name)
-  # branding: assets/branding.png
-  
-  # Android 12+ settings
-  android_12:
-    color: "#FFFFFF"
-    color_dark: "#1A1C1E"
-    image: "assets/app_icon.png"
-    icon_background_color: "#FFFFFF"
-    icon_background_color_dark: "#1A1C1E"
-  
-  # iOS settings
-  ios: true
-  
-  # Web settings
-  web: false
-  
-  # Android settings
-  android: true
-  
-  # Fill the screen or contain the image
-  fullscreen: false
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
@@ -221,3 +184,4 @@ flutter:
   # For details regarding fonts from package dependencies,
   # see https://flutter.dev/to/font-from-package
   # For details regarding fonts from package dependencies,
+

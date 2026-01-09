@@ -1,8 +1,5 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:flutter_native_splash/flutter_native_splash.dart';
 import 'package:go_router/go_router.dart';
 
 import '../core/config/theme_config.dart';
@@ -24,8 +21,6 @@ class _WhatsMyShareAppState extends State<WhatsMyShareApp>
   late final GoRouter _router;
   late final AuthBloc _authBloc;
   final LoggingService _log = LoggingService();
-  StreamSubscription<AuthState>? _authSubscription;
-  bool _splashRemoved = false;
 
   @override
   void initState() {
@@ -36,36 +31,13 @@ class _WhatsMyShareAppState extends State<WhatsMyShareApp>
     // Initialize AuthBloc and trigger auth check
     _authBloc = sl<AuthBloc>()..add(const AuthCheckRequested());
     
-    // Listen for auth state changes to remove native splash
-    _authSubscription = _authBloc.stream.listen(_onAuthStateChanged);
-    
     _router = AppRouter.createRouter();
     _log.info('Router created successfully', tag: LogTags.ui);
-  }
-
-  void _onAuthStateChanged(AuthState state) {
-    _log.debug(
-      'App: Auth state changed',
-      tag: LogTags.ui,
-      data: {'state': state.runtimeType.toString()},
-    );
-    
-    // Remove native splash when auth state is determined
-    if (!_splashRemoved) {
-      if (state is AuthAuthenticated || 
-          state is AuthUnauthenticated || 
-          state is AuthError) {
-        _splashRemoved = true;
-        _log.info('Removing native splash - auth state determined', tag: LogTags.ui);
-        FlutterNativeSplash.remove();
-      }
-    }
   }
 
   @override
   void dispose() {
     _log.info('WhatsMyShareApp disposing', tag: LogTags.ui);
-    _authSubscription?.cancel();
     _authBloc.close();
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();

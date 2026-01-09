@@ -29,7 +29,6 @@ import '../features/friends/presentation/pages/friends_page.dart';
 import '../features/expenses/presentation/bloc/chat_bloc.dart';
 import '../features/expenses/presentation/pages/expense_chat_page.dart';
 import '../features/expenses/domain/entities/expense_entity.dart';
-import '../features/splash/presentation/pages/splash_page.dart';
 
 /// Logging service for navigation
 final _log = LoggingService();
@@ -62,18 +61,12 @@ class AppRouter {
   /// Handle authentication-based redirects
   static String? _handleRedirect(BuildContext context, GoRouterState state) {
     final isLoggedIn = FirebaseAuth.instance.currentUser != null;
-    final isSplashRoute = state.matchedLocation == '/splash';
     final isAuthRoute =
         state.matchedLocation == '/login' ||
         state.matchedLocation == '/signup' ||
         state.matchedLocation == '/forgot-password' ||
         state.matchedLocation == '/phone-login' ||
         state.matchedLocation == '/phone-verify';
-
-    // Don't redirect if on splash screen
-    if (isSplashRoute) {
-      return null;
-    }
 
     _log.debug(
       'Handling redirect',
@@ -110,16 +103,6 @@ class AppRouter {
 
   /// Define all app routes
   static final List<RouteBase> _routes = [
-    // Splash Route
-    GoRoute(
-      path: '/splash',
-      name: 'splash',
-      builder: (context, state) {
-        _log.debug('Navigating to splash page', tag: LogTags.navigation);
-        return const SplashPage();
-      },
-    ),
-
     // Auth Routes
     GoRoute(
       path: '/login',
