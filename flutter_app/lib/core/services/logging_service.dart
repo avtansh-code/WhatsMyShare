@@ -91,7 +91,11 @@ class LoggingService {
 
     // Output based on environment
     if (kDebugMode) {
-      // Use developer.log for debug mode (shows in DevTools)
+      // Print to console (shows in Xcode/terminal)
+      // ignore: avoid_print
+      print(logMessage);
+      
+      // Also use developer.log for DevTools
       developer.log(
         logMessage,
         name: tag ?? 'WhatsMyShare',

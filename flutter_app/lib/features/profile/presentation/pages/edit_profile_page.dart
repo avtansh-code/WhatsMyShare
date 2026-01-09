@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:image_picker/image_picker.dart';
 
@@ -25,6 +26,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
   File? _selectedImage;
   bool _hasChanges = false;
   bool _isInitialized = false;
+  bool _isSaving = false;
 
   @override
   void initState() {
@@ -84,159 +86,231 @@ class _EditProfilePageState extends State<EditProfilePage> {
   Widget build(BuildContext context) {
     return BlocConsumer<ProfileBloc, ProfileState>(
       listener: (context, state) {
+        // Log state changes
+        _log.debug(
+          'ProfileBloc state changed',
+          tag: LogTags.ui,
+          data: {
+            'status': state.status.toString(),
+            'hasProfile': state.profile != null,
+            'hasError': state.hasError,
+            'errorMessage': state.errorMessage,
+            'isLoading': state.isLoading,
+            'isSaving': _isSaving,
+          },
+        );
+        
         // Initialize form when profile loads
         if (state.profile != null && !_isInitialized) {
+          _log.debug('Initializing form with profile data', tag: LogTags.ui);
           setState(() {
             _initializeFormWithProfile(state.profile);
           });
         }
         
-        if (state.status == ProfileStatus.updated ||
-            state.status == ProfileStatus.photoUpdated) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Profile updated successfully'),
-              backgroundColor: Colors.green,
-            ),
-          );
-          Navigator.pop(context);
-        } else if (state.hasError && state.errorMessage != null) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(state.errorMessage!),
-              backgroundColor: Theme.of(context).colorScheme.error,
-            ),
-          );
+        // Handle status changes when saving
+        if (_isSaving) {
+          if (state.status == ProfileStatus.photoUpdated ||
+              state.status == ProfileStatus.updated) {
+            // Success - hide loader and navigate back
+            _log.info('Profile operation successful, hiding loader', tag: LogTags.ui);
+            setState(() {
+              _isSaving = false;
+            });
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(
+                  state.status == ProfileStatus.photoUpdated
+                      ? 'Profile photo updated successfully'
+                      : 'Profile updated successfully',
+                ),
+                backgroundColor: Colors.green,
+              ),
+            );
+            Navigator.pop(context);
+          } else if (state.hasError && state.errorMessage != null) {
+            // Error - hide loader and show error
+            _log.error(
+              'Profile operation failed, hiding loader',
+              tag: LogTags.ui,
+              data: {'errorMessage': state.errorMessage},
+            );
+            setState(() {
+              _isSaving = false;
+            });
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(state.errorMessage!),
+                backgroundColor: Theme.of(context).colorScheme.error,
+              ),
+            );
+          }
+          // Note: uploadingPhoto and updating states keep the loader visible
         }
       },
       builder: (context, state) {
         final profile = state.profile;
-        final isLoading = state.isLoading;
 
-        return Scaffold(
-          appBar: AppBar(
-            title: const Text('Edit Profile'),
-            actions: [
-              if (_hasChanges || _selectedImage != null)
-                TextButton(
-                  onPressed: isLoading ? null : _saveProfile,
-                  child: isLoading
-                      ? const SizedBox(
-                          width: 20,
-                          height: 20,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : const Text('Save'),
-                ),
-            ],
-          ),
-          body: SingleChildScrollView(
-            padding: const EdgeInsets.all(16),
-            child: Form(
-              key: _formKey,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  // Profile Photo
-                  _buildPhotoSection(context, profile, state),
-                  const SizedBox(height: 32),
-
-                  // Display Name
-                  TextFormField(
-                    controller: _displayNameController,
-                    decoration: const InputDecoration(
-                      labelText: 'Display Name',
-                      hintText: 'Enter your name',
-                      prefixIcon: Icon(Icons.person_outline),
-                      border: OutlineInputBorder(),
-                    ),
-                    validator: (value) {
-                      if (value == null || value.trim().isEmpty) {
-                        return 'Please enter your name';
-                      }
-                      if (value.trim().length < 2) {
-                        return 'Name must be at least 2 characters';
-                      }
-                      return null;
-                    },
-                  ),
-                  const SizedBox(height: 16),
-
-                  // Email (read-only)
-                  TextFormField(
-                    controller: _emailController,
-                    decoration: const InputDecoration(
-                      labelText: 'Email',
-                      prefixIcon: Icon(Icons.email_outlined),
-                      border: OutlineInputBorder(),
-                    ),
-                    readOnly: true,
-                    enabled: false,
-                  ),
-                  const SizedBox(height: 16),
-
-                  // Phone
-                  TextFormField(
-                    controller: _phoneController,
-                    decoration: const InputDecoration(
-                      labelText: 'Phone Number',
-                      hintText: '+91 XXXXX XXXXX',
-                      prefixIcon: Icon(Icons.phone_outlined),
-                      border: OutlineInputBorder(),
-                    ),
-                    keyboardType: TextInputType.phone,
-                    validator: (value) {
-                      if (value != null && value.isNotEmpty) {
-                        final phoneRegex = RegExp(r'^\+?[0-9]{10,15}$');
-                        if (!phoneRegex.hasMatch(value.replaceAll(' ', ''))) {
-                          return 'Please enter a valid phone number';
-                        }
-                      }
-                      return null;
-                    },
-                  ),
-                  const SizedBox(height: 16),
-
-                  // Currency
-                  DropdownButtonFormField<String>(
-                    // ignore: deprecated_member_use
-                    value: _selectedCurrency,
-                    decoration: const InputDecoration(
-                      labelText: 'Default Currency',
-                      prefixIcon: Icon(Icons.currency_exchange),
-                      border: OutlineInputBorder(),
-                    ),
-                    items: const [
-                      DropdownMenuItem(value: 'INR', child: Text('INR (₹)')),
-                      DropdownMenuItem(value: 'USD', child: Text('USD (\$)')),
-                      DropdownMenuItem(value: 'EUR', child: Text('EUR (€)')),
-                      DropdownMenuItem(value: 'GBP', child: Text('GBP (£)')),
-                      DropdownMenuItem(value: 'AUD', child: Text('AUD (A\$)')),
-                      DropdownMenuItem(value: 'CAD', child: Text('CAD (C\$)')),
-                    ],
-                    onChanged: (value) {
-                      setState(() {
-                        _selectedCurrency = value;
-                        _hasChanges = true;
-                      });
-                    },
-                  ),
-                  const SizedBox(height: 32),
-
-                  // Delete Photo Button
-                  if (profile?.photoUrl != null && _selectedImage == null)
-                    OutlinedButton.icon(
-                      onPressed: isLoading ? null : _deletePhoto,
-                      icon: const Icon(Icons.delete_outline),
-                      label: const Text('Remove Profile Photo'),
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: Theme.of(context).colorScheme.error,
-                      ),
+        return Stack(
+          children: [
+            // Main content
+            Scaffold(
+              appBar: AppBar(
+                title: const Text('Edit Profile'),
+                actions: [
+                  if (_hasChanges || _selectedImage != null)
+                    TextButton(
+                      onPressed: _isSaving ? null : _saveProfile,
+                      child: const Text('Save'),
                     ),
                 ],
               ),
+              body: SingleChildScrollView(
+                padding: const EdgeInsets.all(16),
+                child: Form(
+                  key: _formKey,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      // Profile Photo
+                      _buildPhotoSection(context, profile, state),
+                      const SizedBox(height: 32),
+
+                      // Display Name
+                      TextFormField(
+                        controller: _displayNameController,
+                        decoration: const InputDecoration(
+                          labelText: 'Display Name',
+                          hintText: 'Enter your name',
+                          prefixIcon: Icon(Icons.person_outline),
+                          border: OutlineInputBorder(),
+                        ),
+                        enabled: !_isSaving,
+                        validator: (value) {
+                          if (value == null || value.trim().isEmpty) {
+                            return 'Please enter your name';
+                          }
+                          if (value.trim().length < 2) {
+                            return 'Name must be at least 2 characters';
+                          }
+                          return null;
+                        },
+                      ),
+                      const SizedBox(height: 16),
+
+                      // Email (read-only)
+                      TextFormField(
+                        controller: _emailController,
+                        decoration: const InputDecoration(
+                          labelText: 'Email',
+                          prefixIcon: Icon(Icons.email_outlined),
+                          border: OutlineInputBorder(),
+                        ),
+                        readOnly: true,
+                        enabled: false,
+                      ),
+                      const SizedBox(height: 16),
+
+                      // Phone
+                      TextFormField(
+                        controller: _phoneController,
+                        decoration: const InputDecoration(
+                          labelText: 'Phone Number',
+                          hintText: '+91 XXXXX XXXXX',
+                          prefixIcon: Icon(Icons.phone_outlined),
+                          border: OutlineInputBorder(),
+                        ),
+                        keyboardType: TextInputType.phone,
+                        enabled: !_isSaving,
+                        validator: (value) {
+                          if (value != null && value.isNotEmpty) {
+                            final phoneRegex = RegExp(r'^\+?[0-9]{10,15}$');
+                            if (!phoneRegex.hasMatch(value.replaceAll(' ', ''))) {
+                              return 'Please enter a valid phone number';
+                            }
+                          }
+                          return null;
+                        },
+                      ),
+                      const SizedBox(height: 16),
+
+                      // Currency
+                      DropdownButtonFormField<String>(
+                        value: _selectedCurrency,
+                        decoration: const InputDecoration(
+                          labelText: 'Default Currency',
+                          prefixIcon: Icon(Icons.currency_exchange),
+                          border: OutlineInputBorder(),
+                        ),
+                        items: const [
+                          DropdownMenuItem(value: 'INR', child: Text('INR (₹)')),
+                          DropdownMenuItem(value: 'USD', child: Text('USD (\$)')),
+                          DropdownMenuItem(value: 'EUR', child: Text('EUR (€)')),
+                          DropdownMenuItem(value: 'GBP', child: Text('GBP (£)')),
+                          DropdownMenuItem(value: 'AUD', child: Text('AUD (A\$)')),
+                          DropdownMenuItem(value: 'CAD', child: Text('CAD (C\$)')),
+                        ],
+                        onChanged: _isSaving
+                            ? null
+                            : (value) {
+                                setState(() {
+                                  _selectedCurrency = value;
+                                  _hasChanges = true;
+                                });
+                              },
+                      ),
+                      const SizedBox(height: 32),
+
+                      // Delete Photo Button
+                      if (profile?.photoUrl != null && _selectedImage == null)
+                        OutlinedButton.icon(
+                          onPressed: _isSaving ? null : _deletePhoto,
+                          icon: const Icon(Icons.delete_outline),
+                          label: const Text('Remove Profile Photo'),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: Theme.of(context).colorScheme.error,
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+              ),
             ),
-          ),
+
+            // Full-screen loading overlay
+            if (_isSaving)
+              Container(
+                color: Colors.black54,
+                child: Center(
+                  child: Card(
+                    margin: const EdgeInsets.all(32),
+                    child: Padding(
+                      padding: const EdgeInsets.all(24),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const CircularProgressIndicator(),
+                          const SizedBox(height: 16),
+                          Text(
+                            _selectedImage != null
+                                ? 'Uploading photo...'
+                                : 'Saving profile...',
+                            style: Theme.of(context).textTheme.titleMedium,
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            'Please wait',
+                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color: Theme.of(context).colorScheme.onSurfaceVariant,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+          ],
         );
       },
     );
@@ -269,16 +343,6 @@ class _EditProfilePageState extends State<EditProfilePage> {
                     : null,
               ),
 
-              // Loading overlay
-              if (state.status == ProfileStatus.uploadingPhoto)
-                const Positioned.fill(
-                  child: CircleAvatar(
-                    radius: 60,
-                    backgroundColor: Colors.black45,
-                    child: CircularProgressIndicator(strokeWidth: 3),
-                  ),
-                ),
-
               // Edit button
               Positioned(
                 bottom: 0,
@@ -290,7 +354,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
                   ),
                   child: IconButton(
                     icon: const Icon(Icons.camera_alt, color: Colors.white),
-                    onPressed: state.isLoading ? null : _showImagePickerOptions,
+                    onPressed: _isSaving ? null : _showImagePickerOptions,
                   ),
                 ),
               ),
@@ -337,8 +401,16 @@ class _EditProfilePageState extends State<EditProfilePage> {
   }
 
   Future<void> _pickImage(ImageSource source) async {
+    _log.info(
+      'Starting image pick',
+      tag: LogTags.ui,
+      data: {'source': source.toString()},
+    );
+    
     try {
       final picker = ImagePicker();
+      _log.debug('ImagePicker initialized, requesting image', tag: LogTags.ui);
+      
       final pickedFile = await picker.pickImage(
         source: source,
         maxWidth: 512,
@@ -347,15 +419,89 @@ class _EditProfilePageState extends State<EditProfilePage> {
       );
 
       if (pickedFile != null) {
+        final file = File(pickedFile.path);
+        final fileExists = await file.exists();
+        final fileSize = fileExists ? await file.length() : 0;
+        
+        _log.info(
+          'Image picked successfully',
+          tag: LogTags.ui,
+          data: {
+            'path': pickedFile.path,
+            'name': pickedFile.name,
+            'exists': fileExists,
+            'sizeBytes': fileSize,
+            'sizeMB': (fileSize / (1024 * 1024)).toStringAsFixed(2),
+          },
+        );
+        
+        if (!fileExists) {
+          _log.error(
+            'Picked file does not exist',
+            tag: LogTags.ui,
+            data: {'path': pickedFile.path},
+          );
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: const Text('Selected image file not found'),
+                backgroundColor: Theme.of(context).colorScheme.error,
+              ),
+            );
+          }
+          return;
+        }
+        
         setState(() {
-          _selectedImage = File(pickedFile.path);
+          _selectedImage = file;
         });
+        _log.debug('Selected image set in state', tag: LogTags.ui);
+      } else {
+        _log.info('Image pick cancelled by user', tag: LogTags.ui);
       }
-    } catch (e) {
+    } on PlatformException catch (e) {
+      _log.error(
+        'Platform exception picking image',
+        tag: LogTags.ui,
+        data: {
+          'code': e.code,
+          'message': e.message,
+          'details': e.details?.toString(),
+        },
+      );
+      if (mounted) {
+        String message = 'Failed to access ${source == ImageSource.camera ? 'camera' : 'gallery'}';
+        if (e.code == 'camera_access_denied' || e.code == 'photo_access_denied') {
+          message = 'Permission denied. Please enable ${source == ImageSource.camera ? 'camera' : 'photo library'} access in Settings.';
+        }
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(message),
+            backgroundColor: Theme.of(context).colorScheme.error,
+            action: SnackBarAction(
+              label: 'Settings',
+              textColor: Colors.white,
+              onPressed: () {
+                // Could open app settings here
+              },
+            ),
+          ),
+        );
+      }
+    } catch (e, stackTrace) {
+      _log.error(
+        'Unexpected error picking image',
+        tag: LogTags.ui,
+        data: {
+          'error': e.toString(),
+          'type': e.runtimeType.toString(),
+          'stackTrace': stackTrace.toString(),
+        },
+      );
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Failed to pick image: $e'),
+            content: Text('Failed to pick image: ${e.toString()}'),
             backgroundColor: Theme.of(context).colorScheme.error,
           ),
         );
@@ -364,26 +510,52 @@ class _EditProfilePageState extends State<EditProfilePage> {
   }
 
   void _saveProfile() {
-    if (!_formKey.currentState!.validate()) return;
-    _log.info('Profile save requested', tag: LogTags.ui);
+    if (!_formKey.currentState!.validate()) {
+      _log.warning('Profile form validation failed', tag: LogTags.ui);
+      return;
+    }
+    
+    _log.info(
+      'Profile save requested, showing loader',
+      tag: LogTags.ui,
+      data: {
+        'hasImageToUpload': _selectedImage != null,
+        'displayName': _displayNameController.text.trim(),
+        'hasPhone': _phoneController.text.trim().isNotEmpty,
+        'currency': _selectedCurrency,
+      },
+    );
+
+    // Show the loading overlay
+    setState(() {
+      _isSaving = true;
+    });
 
     // Upload photo first if selected
     if (_selectedImage != null) {
+      _log.info(
+        'Dispatching ProfilePhotoUpdateRequested event',
+        tag: LogTags.ui,
+        data: {
+          'imagePath': _selectedImage!.path,
+        },
+      );
       context.read<ProfileBloc>().add(
         ProfilePhotoUpdateRequested(imageFile: _selectedImage!),
       );
+    } else {
+      // No image, just update profile info
+      _log.info('Dispatching ProfileUpdateRequested event', tag: LogTags.ui);
+      context.read<ProfileBloc>().add(
+        ProfileUpdateRequested(
+          displayName: _displayNameController.text.trim(),
+          phone: _phoneController.text.trim().isEmpty
+              ? null
+              : _phoneController.text.trim(),
+          defaultCurrency: _selectedCurrency,
+        ),
+      );
     }
-
-    // Update profile info
-    context.read<ProfileBloc>().add(
-      ProfileUpdateRequested(
-        displayName: _displayNameController.text.trim(),
-        phone: _phoneController.text.trim().isEmpty
-            ? null
-            : _phoneController.text.trim(),
-        defaultCurrency: _selectedCurrency,
-      ),
-    );
   }
 
   void _deletePhoto() {
@@ -402,6 +574,9 @@ class _EditProfilePageState extends State<EditProfilePage> {
           TextButton(
             onPressed: () {
               Navigator.pop(context);
+              setState(() {
+                _isSaving = true;
+              });
               context.read<ProfileBloc>().add(
                 const ProfilePhotoDeleteRequested(),
               );

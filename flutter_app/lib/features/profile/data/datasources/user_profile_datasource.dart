@@ -230,28 +230,128 @@ class UserProfileDataSourceImpl implements UserProfileDataSource {
     _log.info(
       'Uploading profile photo',
       tag: LogTags.profile,
-      data: {'userId': userId},
+      data: {'userId': userId, 'filePath': imageFile.path},
     );
     try {
-      // Create storage reference
-      final ref = _storage.ref().child('users/$userId/profile/avatar.jpg');
+      // Verify file exists
+      if (!await imageFile.exists()) {
+        _log.error(
+          'Image file does not exist',
+          tag: LogTags.profile,
+          data: {'path': imageFile.path},
+        );
+        throw ServerException(message: 'Image file not found');
+      }
 
-      // Upload with metadata
-      final metadata = SettableMetadata(
-        contentType: 'image/jpeg',
-        customMetadata: {'userId': userId},
+      // Read file bytes
+      final bytes = await imageFile.readAsBytes();
+      _log.debug(
+        'File bytes read',
+        tag: LogTags.profile,
+        data: {
+          'bytesLength': bytes.length,
+          'sizeMB': (bytes.length / (1024 * 1024)).toStringAsFixed(2),
+        },
       );
 
-      final uploadTask = ref.putFile(imageFile, metadata);
+      // Determine content type from file extension
+      final extension = imageFile.path.split('.').last.toLowerCase();
+      String contentType;
+      String fileName;
+      
+      switch (extension) {
+        case 'png':
+          contentType = 'image/png';
+          fileName = 'avatar.png';
+          break;
+        case 'gif':
+          contentType = 'image/gif';
+          fileName = 'avatar.gif';
+          break;
+        case 'webp':
+          contentType = 'image/webp';
+          fileName = 'avatar.webp';
+          break;
+        case 'heic':
+        case 'heif':
+          contentType = 'image/heic';
+          fileName = 'avatar.heic';
+          break;
+        case 'jpg':
+        case 'jpeg':
+        default:
+          contentType = 'image/jpeg';
+          fileName = 'avatar.jpg';
+          break;
+      }
+
+      _log.debug(
+        'Detected image format',
+        tag: LogTags.profile,
+        data: {'extension': extension, 'contentType': contentType, 'fileName': fileName},
+      );
+
+      // Create storage reference with unique timestamp to avoid caching issues
+      final timestamp = DateTime.now().millisecondsSinceEpoch;
+      final storagePath = 'users/$userId/profile/$fileName';
+      final ref = _storage.ref().child(storagePath);
+      
+      _log.debug(
+        'Storage reference created',
+        tag: LogTags.profile,
+        data: {'path': storagePath, 'fullPath': ref.fullPath},
+      );
+
+      // Upload with metadata using putData (more reliable than putFile)
+      final metadata = SettableMetadata(
+        contentType: contentType,
+        customMetadata: {
+          'userId': userId,
+          'uploadedAt': DateTime.now().toIso8601String(),
+          'timestamp': timestamp.toString(),
+        },
+      );
+
+      _log.debug('Starting bytes upload to Firebase Storage', tag: LogTags.profile);
+      
+      // Use putData instead of putFile for more reliable uploads
+      final uploadTask = ref.putData(bytes, metadata);
 
       // Wait for upload to complete
       final snapshot = await uploadTask;
+      
+      _log.debug(
+        'Upload task completed',
+        tag: LogTags.profile,
+        data: {
+          'state': snapshot.state.toString(),
+          'bytesTransferred': snapshot.bytesTransferred,
+          'totalBytes': snapshot.totalBytes,
+        },
+      );
+      
+      if (snapshot.state != TaskState.success) {
+        _log.error(
+          'Upload did not complete successfully',
+          tag: LogTags.profile,
+          data: {'state': snapshot.state.toString()},
+        );
+        throw ServerException(message: 'Upload failed with state: ${snapshot.state}');
+      }
 
-      // Get download URL
-      final downloadUrl = await snapshot.ref.getDownloadURL();
-      _log.debug('Profile photo uploaded to storage', tag: LogTags.profile);
+      // Get download URL directly from the reference (not snapshot.ref)
+      // This is more reliable as it queries the storage directly
+      _log.debug('Getting download URL from reference', tag: LogTags.profile);
+      final downloadUrl = await ref.getDownloadURL();
+      
+      _log.debug(
+        'Profile photo uploaded to storage',
+        tag: LogTags.profile,
+        data: {'downloadUrl': downloadUrl},
+      );
 
       // Update user profile with new photo URL
+      _log.debug('Updating Firestore with new photo URL', tag: LogTags.profile);
       await _usersCollection.doc(userId).update({
         'photoUrl': downloadUrl,
         'updatedAt': FieldValue.serverTimestamp(),
@@ -265,12 +365,33 @@ class UserProfileDataSourceImpl implements UserProfileDataSource {
       return downloadUrl;
     } on FirebaseException catch (e) {
       _log.error(
-        'Failed to upload profile photo',
+        'Firebase error uploading profile photo',
         tag: LogTags.profile,
-        data: {'userId': userId, 'error': e.message},
+        data: {
+          'userId': userId,
+          'code': e.code,
+          'message': e.message,
+          'plugin': e.plugin,
+        },
       );
       throw ServerException(
-        message: e.message ?? 'Failed to upload profile photo',
+        message: e.message ?? 'Failed to upload profile photo: ${e.code}',
+      );
+    } on ServerException {
+      rethrow;
+    } catch (e, stackTrace) {
+      _log.error(
+        'Unexpected error uploading profile photo',
+        tag: LogTags.profile,
+        data: {
+          'userId': userId,
+          'error': e.toString(),
+          'type': e.runtimeType.toString(),
+          'stackTrace': stackTrace.toString(),
+        },
+      );
+      throw ServerException(
+        message: 'Failed to upload profile photo: ${e.toString()}',
       );
     }
   }
@@ -283,17 +404,20 @@ class UserProfileDataSourceImpl implements UserProfileDataSource {
       data: {'userId': userId},
     );
     try {
-      // Delete from storage
-      final ref = _storage.ref().child('users/$userId/profile/avatar.jpg');
-      try {
-        await ref.delete();
-        _log.debug('Profile photo deleted from storage', tag: LogTags.profile);
-      } catch (_) {
-        // File might not exist, continue
-        _log.debug(
-          'Profile photo not found in storage, continuing',
-          tag: LogTags.profile,
-        );
+      // Try to delete all possible avatar file extensions
+      final extensions = ['jpg', 'png', 'gif', 'webp', 'heic'];
+      for (final ext in extensions) {
+        try {
+          final ref = _storage.ref().child('users/$userId/profile/avatar.$ext');
+          await ref.delete();
+          _log.debug(
+            'Profile photo deleted from storage',
+            tag: LogTags.profile,
+            data: {'extension': ext},
+          );
+        } catch (_) {
+          // File with this extension doesn't exist, continue to next
+        }
       }
 
       // Update user profile

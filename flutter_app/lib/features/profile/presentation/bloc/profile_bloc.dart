@@ -121,15 +121,65 @@ class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
         'Attempted to update photo but no profile loaded',
         tag: LogTags.profile,
       );
+      emit(
+        state.copyWith(
+          status: ProfileStatus.error,
+          errorMessage: 'Profile not loaded. Please try again.',
+        ),
+      );
       return;
     }
 
+    // Log detailed file info
+    final imageFile = event.imageFile;
+    bool fileExists = false;
+    int fileSize = 0;
+    
+    try {
+      fileExists = await imageFile.exists();
+      if (fileExists) {
+        fileSize = await imageFile.length();
+      }
+    } catch (e) {
+      _log.error(
+        'Error checking image file',
+        tag: LogTags.profile,
+        data: {'error': e.toString()},
+      );
+    }
+
     _log.info(
-      'Uploading profile photo',
+      'Starting profile photo upload',
       tag: LogTags.profile,
-      data: {'userId': state.profile!.id},
+      data: {
+        'userId': state.profile!.id,
+        'filePath': imageFile.path,
+        'fileExists': fileExists,
+        'fileSizeBytes': fileSize,
+        'fileSizeMB': (fileSize / (1024 * 1024)).toStringAsFixed(2),
+      },
     );
+
+    if (!fileExists) {
+      _log.error(
+        'Image file does not exist',
+        tag: LogTags.profile,
+        data: {'path': imageFile.path},
+      );
+      emit(
+        state.copyWith(
+          status: ProfileStatus.error,
+          errorMessage: 'Image file not found. Please select again.',
+        ),
+      );
+      return;
+    }
+
     emit(state.copyWith(status: ProfileStatus.uploadingPhoto));
+    _log.debug(
+      'Emitted uploadingPhoto status, calling repository',
+      tag: LogTags.profile,
+    );
 
     final result = await _repository.updateProfilePhoto(
       userId: state.profile!.id,
@@ -139,19 +189,32 @@ class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
     result.fold(
       (failure) {
         _log.error(
-          'Failed to upload profile photo',
+          'Profile photo upload failed',
           tag: LogTags.profile,
-          data: {'userId': state.profile!.id, 'error': failure.message},
+          data: {
+            'userId': state.profile!.id,
+            'errorType': failure.runtimeType.toString(),
+            'errorMessage': failure.message,
+          },
         );
         emit(
           state.copyWith(
             status: ProfileStatus.error,
-            errorMessage: ErrorMessages.profilePhotoUploadFailed,
+            errorMessage: failure.message.isNotEmpty 
+                ? failure.message 
+                : ErrorMessages.profilePhotoUploadFailed,
           ),
         );
       },
       (photoUrl) {
-        _log.info('Profile photo uploaded successfully', tag: LogTags.profile);
+        _log.info(
+          'Profile photo uploaded successfully',
+          tag: LogTags.profile,
+          data: {
+            'userId': state.profile!.id,
+            'photoUrl': photoUrl,
+          },
+        );
         final updatedProfile = state.profile!.copyWith(photoUrl: photoUrl);
         emit(
           state.copyWith(

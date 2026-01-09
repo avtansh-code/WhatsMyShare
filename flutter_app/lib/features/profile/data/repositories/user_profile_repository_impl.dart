@@ -207,36 +207,99 @@ class UserProfileRepositoryImpl implements UserProfileRepository {
     required String userId,
     required File imageFile,
   }) async {
-    _log.info(
-      'Updating profile photo',
-      tag: LogTags.profile,
-      data: {'userId': userId},
-    );
+    // Gather file info for logging
+    bool fileExists = false;
+    int fileSize = 0;
+    String extension = '';
+    
     try {
+      fileExists = await imageFile.exists();
+      if (fileExists) {
+        fileSize = await imageFile.length();
+      }
+      extension = imageFile.path.split('.').last.toLowerCase();
+    } catch (e) {
+      _log.warning(
+        'Could not read file info',
+        tag: LogTags.profile,
+        data: {'error': e.toString()},
+      );
+    }
+    
+    _log.info(
+      'Repository: Starting profile photo update',
+      tag: LogTags.profile,
+      data: {
+        'userId': userId,
+        'filePath': imageFile.path,
+        'fileExists': fileExists,
+        'fileSizeBytes': fileSize,
+        'fileSizeMB': (fileSize / (1024 * 1024)).toStringAsFixed(2),
+        'extension': extension,
+      },
+    );
+    
+    if (!fileExists) {
+      _log.error(
+        'Repository: Image file does not exist',
+        tag: LogTags.profile,
+        data: {'path': imageFile.path},
+      );
+      return Left(ServerFailure(message: 'Image file not found'));
+    }
+    
+    try {
+      _log.debug(
+        'Repository: Calling datasource uploadProfilePhoto',
+        tag: LogTags.profile,
+      );
+      
       final url = await _dataSource.uploadProfilePhoto(
         userId: userId,
         imageFile: imageFile,
       );
+      
       _log.info(
-        'Profile photo updated',
+        'Repository: Profile photo updated successfully',
         tag: LogTags.profile,
-        data: {'userId': userId},
+        data: {
+          'userId': userId,
+          'photoUrl': url,
+        },
       );
       return Right(url);
     } on ServerException catch (e) {
       _log.error(
-        'Server error updating photo',
+        'Repository: Server exception updating photo',
         tag: LogTags.profile,
-        data: {'userId': userId, 'error': e.message},
+        data: {
+          'userId': userId,
+          'exceptionMessage': e.message,
+        },
       );
       return Left(ServerFailure(message: e.message));
-    } catch (e) {
+    } on AuthException catch (e) {
       _log.error(
-        'Unexpected error updating photo',
+        'Repository: Auth exception updating photo',
         tag: LogTags.profile,
-        data: {'userId': userId, 'error': e.toString()},
+        data: {
+          'userId': userId,
+          'exceptionMessage': e.message,
+        },
       );
-      return Left(ServerFailure(message: e.toString()));
+      return Left(AuthFailure(message: e.message));
+    } catch (e, stackTrace) {
+      _log.error(
+        'Repository: Unexpected error updating photo',
+        tag: LogTags.profile,
+        data: {
+          'userId': userId,
+          'error': e.toString(),
+          'errorType': e.runtimeType.toString(),
+          'stackTrace': stackTrace.toString(),
+        },
+      );
+      return Left(ServerFailure(message: 'Failed to upload photo: ${e.toString()}'));
     }
   }
 
