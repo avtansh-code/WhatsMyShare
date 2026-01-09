@@ -8,6 +8,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../../../core/constants/app_constants.dart';
 import '../../../../core/di/injection_container.dart';
 import '../../../../core/services/logging_service.dart';
+import '../../../../core/services/otp_rate_limiter_service.dart';
 import '../../../../core/services/user_cache_service.dart';
 
 /// Callback type for verification received
@@ -327,12 +328,29 @@ class _PhoneLoginPageState extends State<PhoneLoginPage> {
       return;
     }
 
+    final phoneNumber = _fullPhoneNumber;
+
+    // Check rate limit before sending OTP
+    final otpRateLimiter = OtpRateLimiterService();
+    final rateLimitResult = await otpRateLimiter.checkCanSendOtp(phoneNumber);
+
+    if (!rateLimitResult.canSend) {
+      if (rateLimitResult.isHourlyLimitReached) {
+        _showError(
+          'You have reached the maximum of ${AppConstants.otpMaxRequestsPerHour} OTP requests per hour. Please try again later.',
+        );
+      } else if (rateLimitResult.cooldownSecondsRemaining > 0) {
+        _showError(
+          'Please wait ${rateLimitResult.cooldownSecondsRemaining} seconds before requesting another OTP.',
+        );
+      }
+      return;
+    }
+
     setState(() {
       _isLoading = true;
       _hasNavigatedToOtp = false;
     });
-
-    final phoneNumber = _fullPhoneNumber;
 
     _log.info(
       'Initiating phone verification',
@@ -367,12 +385,15 @@ class _PhoneLoginPageState extends State<PhoneLoginPage> {
             _showError(_mapFirebaseError(e.code));
           }
         },
-        codeSent: (String verificationId, int? resendToken) {
+        codeSent: (String verificationId, int? resendToken) async {
           _log.info(
             'OTP sent successfully',
             tag: LogTags.auth,
             data: {'verificationId': verificationId},
           );
+
+          // Record the OTP request in the rate limiter
+          await otpRateLimiter.recordOtpRequest(phoneNumber);
 
           // Store in singleton and notify all listeners
           pending.verificationId = verificationId;

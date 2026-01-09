@@ -65,6 +65,12 @@ class AppConstants {
   static const String defaultTimezone = 'Asia/Kolkata';
   static const String defaultCountryCode = 'IN';
 
+  // OTP Rate Limiting
+  static const int otpResendCooldownSeconds = 30;
+  static const int otpMaxRequestsPerHour = 3;
+  static const int otpRateLimitWindowMinutes = 60;
+  static const String keyOtpRequestTimestamps = 'otp_request_timestamps';
+
   // Thresholds
   static const int biometricThresholdPaisa = 500000; // ₹5,000
   static const int maxExpenseAmountPaisa = 10000000; // ₹1,00,000

@@ -7,8 +7,10 @@ import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../../../../core/constants/app_constants.dart';
 import '../../../../core/di/injection_container.dart';
 import '../../../../core/services/logging_service.dart';
+import '../../../../core/services/otp_rate_limiter_service.dart';
 import '../../../../core/services/user_cache_service.dart';
 
 /// OTP verification page for phone authentication
@@ -35,10 +37,13 @@ class _PhoneVerifyPageState extends State<PhoneVerifyPage> {
   );
   final List<FocusNode> _focusNodes = List.generate(6, (_) => FocusNode());
   final LoggingService _log = LoggingService();
+  final OtpRateLimiterService _otpRateLimiter = OtpRateLimiterService();
 
   bool _isLoading = false;
   bool _canResend = false;
-  int _resendCountdown = 60;
+  int _resendCountdown = AppConstants.otpResendCooldownSeconds;
+  int _requestsRemaining = AppConstants.otpMaxRequestsPerHour;
+  bool _isHourlyLimitReached = false;
   Timer? _timer;
   String _currentVerificationId = '';
   int? _currentResendToken;
@@ -53,7 +58,7 @@ class _PhoneVerifyPageState extends State<PhoneVerifyPage> {
       tag: LogTags.ui,
       data: {'phoneNumber': widget.phoneNumber},
     );
-    _startResendTimer();
+    _initializeRateLimitState();
   }
 
   @override
@@ -68,18 +73,68 @@ class _PhoneVerifyPageState extends State<PhoneVerifyPage> {
     super.dispose();
   }
 
-  void _startResendTimer() {
-    _resendCountdown = 60;
+  /// Initialize rate limit state from the OTP rate limiter service
+  Future<void> _initializeRateLimitState() async {
+    final result = await _otpRateLimiter.checkCanSendOtp(widget.phoneNumber);
+
+    if (!mounted) return;
+
+    setState(() {
+      _requestsRemaining = result.requestsRemaining;
+      _isHourlyLimitReached = result.isHourlyLimitReached;
+    });
+
+    if (result.isHourlyLimitReached) {
+      // Don't start timer if hourly limit is reached
+      setState(() {
+        _canResend = false;
+        _resendCountdown = 0;
+      });
+    } else if (result.cooldownSecondsRemaining > 0) {
+      // Start timer with remaining cooldown
+      _startResendTimerWithSeconds(result.cooldownSecondsRemaining);
+    } else {
+      // OTP was just sent, start full cooldown timer
+      _startResendTimerWithSeconds(AppConstants.otpResendCooldownSeconds);
+    }
+  }
+
+  /// Start the resend timer with the specified number of seconds
+  void _startResendTimerWithSeconds(int seconds) {
+    _resendCountdown = seconds;
     _canResend = false;
     _timer?.cancel();
     _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
       if (_resendCountdown > 0) {
         setState(() => _resendCountdown--);
       } else {
-        setState(() => _canResend = true);
+        // Re-check rate limit before enabling resend
+        _checkAndEnableResend();
         timer.cancel();
       }
     });
+  }
+
+  /// Check rate limit and enable resend if allowed
+  Future<void> _checkAndEnableResend() async {
+    final result = await _otpRateLimiter.checkCanSendOtp(widget.phoneNumber);
+
+    if (!mounted) return;
+
+    setState(() {
+      _requestsRemaining = result.requestsRemaining;
+      _isHourlyLimitReached = result.isHourlyLimitReached;
+      _canResend = result.canSend && !result.isHourlyLimitReached;
+    });
+
+    // If there's still cooldown remaining (shouldn't happen normally), restart timer
+    if (result.cooldownSecondsRemaining > 0) {
+      _startResendTimerWithSeconds(result.cooldownSecondsRemaining);
+    }
+  }
+
+  void _startResendTimer() {
+    _startResendTimerWithSeconds(AppConstants.otpResendCooldownSeconds);
   }
 
   String get _otp {
@@ -196,7 +251,32 @@ class _PhoneVerifyPageState extends State<PhoneVerifyPage> {
   }
 
   Future<void> _resendOTP() async {
-    if (!_canResend) return;
+    if (!_canResend || _isHourlyLimitReached) return;
+
+    // Check rate limit before sending
+    final rateLimitResult = await _otpRateLimiter.checkCanSendOtp(
+      widget.phoneNumber,
+    );
+
+    if (!rateLimitResult.canSend) {
+      if (mounted) {
+        setState(() {
+          _isHourlyLimitReached = rateLimitResult.isHourlyLimitReached;
+          _requestsRemaining = rateLimitResult.requestsRemaining;
+        });
+
+        if (rateLimitResult.isHourlyLimitReached) {
+          _showError(
+            'You have reached the maximum of ${AppConstants.otpMaxRequestsPerHour} OTP requests per hour. Please try again later.',
+          );
+        } else if (rateLimitResult.cooldownSecondsRemaining > 0) {
+          _startResendTimerWithSeconds(
+            rateLimitResult.cooldownSecondsRemaining,
+          );
+        }
+      }
+      return;
+    }
 
     setState(() {
       _isLoading = true;
@@ -244,21 +324,38 @@ class _PhoneVerifyPageState extends State<PhoneVerifyPage> {
             _showError(_mapFirebaseError(e.code));
           }
         },
-        codeSent: (String verificationId, int? resendToken) {
+        codeSent: (String verificationId, int? resendToken) async {
           _log.info('OTP resent successfully', tag: LogTags.auth);
+
+          // Record the OTP request in the rate limiter
+          await _otpRateLimiter.recordOtpRequest(widget.phoneNumber);
+
           if (mounted) {
+            // Update requests remaining
+            final updatedResult = await _otpRateLimiter.checkCanSendOtp(
+              widget.phoneNumber,
+            );
+
             setState(() {
               _isLoading = false;
               _currentVerificationId = verificationId;
               _currentResendToken = resendToken;
+              _requestsRemaining = updatedResult.requestsRemaining;
+              _isHourlyLimitReached = updatedResult.isHourlyLimitReached;
             });
+
             _startResendTimer();
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('OTP sent successfully'),
-                backgroundColor: Colors.green,
-              ),
-            );
+
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(
+                    'OTP sent successfully. $_requestsRemaining request${_requestsRemaining == 1 ? '' : 's'} remaining this hour.',
+                  ),
+                  backgroundColor: Colors.green,
+                ),
+              );
+            }
           }
         },
         codeAutoRetrievalTimeout: (String verificationId) {
@@ -448,30 +545,74 @@ class _PhoneVerifyPageState extends State<PhoneVerifyPage> {
               const SizedBox(height: 16),
 
               // Resend OTP
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text(
-                    "Didn't receive the code? ",
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: theme.colorScheme.onSurfaceVariant,
-                    ),
+              if (_isHourlyLimitReached)
+                // Hourly limit reached message
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.errorContainer,
+                    borderRadius: BorderRadius.circular(12),
                   ),
-                  if (_canResend)
-                    TextButton(
-                      onPressed: _isLoading ? null : _resendOTP,
-                      child: const Text('Resend'),
-                    )
-                  else
-                    Text(
-                      'Resend in ${_resendCountdown}s',
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: theme.colorScheme.primary,
-                        fontWeight: FontWeight.w600,
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.warning_amber_rounded,
+                        color: theme.colorScheme.onErrorContainer,
+                        size: 20,
                       ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'You have reached the maximum of ${AppConstants.otpMaxRequestsPerHour} OTP requests per hour. Please try again later.',
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: theme.colorScheme.onErrorContainer,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                )
+              else
+                Column(
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          "Didn't receive the code? ",
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: theme.colorScheme.onSurfaceVariant,
+                          ),
+                        ),
+                        if (_canResend)
+                          TextButton(
+                            onPressed: _isLoading ? null : _resendOTP,
+                            child: Text('Resend ($_requestsRemaining left)'),
+                          )
+                        else
+                          Text(
+                            'Resend in ${_resendCountdown}s',
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: theme.colorScheme.primary,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                      ],
                     ),
-                ],
-              ),
+                    // Show remaining requests info
+                    if (_requestsRemaining < AppConstants.otpMaxRequestsPerHour)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 4),
+                        child: Text(
+                          '$_requestsRemaining OTP request${_requestsRemaining == 1 ? '' : 's'} remaining this hour',
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: theme.colorScheme.onSurfaceVariant,
+                            fontSize: 11,
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
               const SizedBox(height: 24),
 
               // Change Number
