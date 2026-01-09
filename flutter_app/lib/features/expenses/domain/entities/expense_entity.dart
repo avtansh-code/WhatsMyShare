@@ -101,6 +101,66 @@ enum SplitType {
 /// Expense status enum
 enum ExpenseStatus { active, deleted }
 
+/// Split context type - whether expense is within a group or between friends
+enum SplitContextType { group, friends }
+
+/// Context information for friend-based expense splits
+class FriendSplitParticipant extends Equatable {
+  final String? userId; // null if unregistered user
+  final String? email;
+  final String? phone;
+  final String displayName;
+  final String? photoUrl;
+
+  const FriendSplitParticipant({
+    this.userId,
+    this.email,
+    this.phone,
+    required this.displayName,
+    this.photoUrl,
+  });
+
+  /// Check if participant is a registered user
+  bool get isRegistered => userId != null && userId!.isNotEmpty;
+
+  /// Get identifier (userId, email, or phone)
+  String get identifier => userId ?? email ?? phone ?? displayName;
+
+  @override
+  List<Object?> get props => [userId, email, phone, displayName, photoUrl];
+}
+
+/// Split context information
+class SplitContext extends Equatable {
+  final SplitContextType type;
+  final String? groupId; // only for group context
+  final List<FriendSplitParticipant>? friendParticipants; // only for friends context
+
+  const SplitContext({
+    required this.type,
+    this.groupId,
+    this.friendParticipants,
+  });
+
+  /// Create group context
+  const SplitContext.group(String groupId)
+      : type = SplitContextType.group,
+        groupId = groupId,
+        friendParticipants = null;
+
+  /// Create friends context
+  const SplitContext.friends(List<FriendSplitParticipant> participants)
+      : type = SplitContextType.friends,
+        groupId = null,
+        friendParticipants = participants;
+
+  bool get isGroupContext => type == SplitContextType.group;
+  bool get isFriendsContext => type == SplitContextType.friends;
+
+  @override
+  List<Object?> get props => [type, groupId, friendParticipants];
+}
+
 /// Information about who paid for the expense
 class PayerInfo extends Equatable {
   final String userId;
@@ -172,7 +232,7 @@ class ExpenseSplit extends Equatable {
 /// Main expense entity
 class ExpenseEntity extends Equatable {
   final String id;
-  final String groupId;
+  final String groupId; // Kept for backward compatibility, use splitContext for new code
   final String description;
   final int amount; // in paisa (smallest unit)
   final String currency;
@@ -190,6 +250,7 @@ class ExpenseEntity extends Equatable {
   final DateTime updatedAt;
   final DateTime? deletedAt;
   final String? deletedBy;
+  final SplitContext? splitContext; // New: context for split (group or friends)
 
   const ExpenseEntity({
     required this.id,
@@ -211,7 +272,16 @@ class ExpenseEntity extends Equatable {
     required this.updatedAt,
     this.deletedAt,
     this.deletedBy,
+    this.splitContext,
   });
+
+  /// Check if this is a friend-based split (not group-based)
+  bool get isFriendSplit =>
+      splitContext?.isFriendsContext == true || groupId.isEmpty;
+
+  /// Check if this is a group-based split
+  bool get isGroupSplit =>
+      splitContext?.isGroupContext == true || groupId.isNotEmpty;
 
   /// Get the formatted amount string
   String get formattedAmount {
@@ -282,6 +352,7 @@ class ExpenseEntity extends Equatable {
     DateTime? updatedAt,
     DateTime? deletedAt,
     String? deletedBy,
+    SplitContext? splitContext,
   }) {
     return ExpenseEntity(
       id: id ?? this.id,
@@ -303,6 +374,7 @@ class ExpenseEntity extends Equatable {
       updatedAt: updatedAt ?? this.updatedAt,
       deletedAt: deletedAt ?? this.deletedAt,
       deletedBy: deletedBy ?? this.deletedBy,
+      splitContext: splitContext ?? this.splitContext,
     );
   }
 
@@ -327,5 +399,6 @@ class ExpenseEntity extends Equatable {
     updatedAt,
     deletedAt,
     deletedBy,
+    splitContext,
   ];
 }

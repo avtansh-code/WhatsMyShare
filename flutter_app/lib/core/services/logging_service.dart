@@ -196,4 +196,5 @@ class LogTags {
   static const String bloc = 'BLoC';
   static const String ui = 'UI';
   static const String performance = 'Performance';
+  static const String friends = 'Friends';
 }

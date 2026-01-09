@@ -39,6 +39,121 @@ class PayerInfoModel {
   }
 }
 
+/// Friend split participant model for Firestore
+class FriendSplitParticipantModel {
+  final String? userId;
+  final String? email;
+  final String? phone;
+  final String displayName;
+  final String? photoUrl;
+
+  const FriendSplitParticipantModel({
+    this.userId,
+    this.email,
+    this.phone,
+    required this.displayName,
+    this.photoUrl,
+  });
+
+  factory FriendSplitParticipantModel.fromMap(Map<String, dynamic> map) {
+    return FriendSplitParticipantModel(
+      userId: map['userId'] as String?,
+      email: map['email'] as String?,
+      phone: map['phone'] as String?,
+      displayName: map['displayName'] as String? ?? 'Unknown',
+      photoUrl: map['photoUrl'] as String?,
+    );
+  }
+
+  Map<String, dynamic> toMap() {
+    return {
+      if (userId != null) 'userId': userId,
+      if (email != null) 'email': email,
+      if (phone != null) 'phone': phone,
+      'displayName': displayName,
+      if (photoUrl != null) 'photoUrl': photoUrl,
+    };
+  }
+
+  FriendSplitParticipant toEntity() {
+    return FriendSplitParticipant(
+      userId: userId,
+      email: email,
+      phone: phone,
+      displayName: displayName,
+      photoUrl: photoUrl,
+    );
+  }
+
+  factory FriendSplitParticipantModel.fromEntity(FriendSplitParticipant entity) {
+    return FriendSplitParticipantModel(
+      userId: entity.userId,
+      email: entity.email,
+      phone: entity.phone,
+      displayName: entity.displayName,
+      photoUrl: entity.photoUrl,
+    );
+  }
+}
+
+/// Split context model for Firestore
+class SplitContextModel {
+  final SplitContextType type;
+  final String? groupId;
+  final List<FriendSplitParticipantModel>? friendParticipants;
+
+  const SplitContextModel({
+    required this.type,
+    this.groupId,
+    this.friendParticipants,
+  });
+
+  factory SplitContextModel.fromMap(Map<String, dynamic> map) {
+    final typeStr = map['type'] as String? ?? 'group';
+    final type = typeStr == 'friends' ? SplitContextType.friends : SplitContextType.group;
+    
+    List<FriendSplitParticipantModel>? participants;
+    if (map['friendParticipants'] != null) {
+      participants = (map['friendParticipants'] as List<dynamic>)
+          .map((p) => FriendSplitParticipantModel.fromMap(p as Map<String, dynamic>))
+          .toList();
+    }
+
+    return SplitContextModel(
+      type: type,
+      groupId: map['groupId'] as String?,
+      friendParticipants: participants,
+    );
+  }
+
+  Map<String, dynamic> toMap() {
+    return {
+      'type': type.name,
+      if (groupId != null) 'groupId': groupId,
+      if (friendParticipants != null)
+        'friendParticipants': friendParticipants!.map((p) => p.toMap()).toList(),
+    };
+  }
+
+  SplitContext toEntity() {
+    return SplitContext(
+      type: type,
+      groupId: groupId,
+      friendParticipants: friendParticipants?.map((p) => p.toEntity()).toList(),
+    );
+  }
+
+  factory SplitContextModel.fromEntity(SplitContext entity) {
+    return SplitContextModel(
+      type: entity.type,
+      groupId: entity.groupId,
+      friendParticipants: entity.friendParticipants
+          ?.map((p) => FriendSplitParticipantModel.fromEntity(p))
+          .toList(),
+    );
+  }
+}
+
 /// Expense split model for Firestore
 class ExpenseSplitModel {
   final String userId;
@@ -131,6 +246,7 @@ class ExpenseModel {
   final DateTime updatedAt;
   final DateTime? deletedAt;
   final String? deletedBy;
+  final SplitContextModel? splitContext;
 
   const ExpenseModel({
     required this.id,
@@ -152,13 +268,14 @@ class ExpenseModel {
     required this.updatedAt,
     this.deletedAt,
     this.deletedBy,
+    this.splitContext,
   });
 
   factory ExpenseModel.fromFirestore(DocumentSnapshot doc) {
     final data = doc.data() as Map<String, dynamic>;
     return ExpenseModel(
       id: doc.id,
-      groupId: data['groupId'] as String,
+      groupId: data['groupId'] as String? ?? '',
       description: data['description'] as String,
       amount: data['amount'] as int,
       currency: data['currency'] as String? ?? 'INR',
@@ -184,6 +301,9 @@ class ExpenseModel {
           ? (data['deletedAt'] as Timestamp).toDate()
           : null,
       deletedBy: data['deletedBy'] as String?,
+      splitContext: data['splitContext'] != null
+          ? SplitContextModel.fromMap(data['splitContext'] as Map<String, dynamic>)
+          : null,
     );
   }
 
@@ -207,6 +327,7 @@ class ExpenseModel {
       'updatedAt': Timestamp.fromDate(updatedAt),
       if (deletedAt != null) 'deletedAt': Timestamp.fromDate(deletedAt!),
       if (deletedBy != null) 'deletedBy': deletedBy,
+      if (splitContext != null) 'splitContext': splitContext!.toMap(),
     };
   }
 
@@ -231,6 +352,7 @@ class ExpenseModel {
       updatedAt: updatedAt,
       deletedAt: deletedAt,
       deletedBy: deletedBy,
+      splitContext: splitContext?.toEntity(),
     );
   }
 
@@ -257,6 +379,9 @@ class ExpenseModel {
       updatedAt: entity.updatedAt,
       deletedAt: entity.deletedAt,
       deletedBy: entity.deletedBy,
+      splitContext: entity.splitContext != null
+          ? SplitContextModel.fromEntity(entity.splitContext!)
+          : null,
     );
   }
 

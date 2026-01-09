@@ -36,6 +36,10 @@ import '../../features/notifications/data/datasources/notification_datasource.da
 import '../../features/notifications/data/repositories/notification_repository_impl.dart';
 import '../../features/notifications/domain/repositories/notification_repository.dart';
 import '../../features/notifications/presentation/bloc/notification_bloc.dart';
+import '../../features/friends/data/datasources/friend_datasource.dart';
+import '../../features/friends/data/repositories/friend_repository_impl.dart';
+import '../../features/friends/domain/repositories/friend_repository.dart';
+import '../../features/friends/presentation/bloc/friend_bloc.dart';
 import '../services/audio_service.dart';
 import '../services/encryption_service.dart';
 import '../services/logging_service.dart';
@@ -77,6 +81,9 @@ Future<void> initializeDependencies() async {
 
   await _initNotificationFeature();
   _log.debug('Notification feature initialized', tag: LogTags.app);
+
+  await _initFriendsFeature();
+  _log.debug('Friends feature initialized', tag: LogTags.app);
 
   _log.info('All dependencies initialized successfully', tag: LogTags.app);
 }
@@ -310,6 +317,34 @@ Future<void> _initNotificationFeature() async {
   // BLoC
   sl.registerFactory<NotificationBloc>(
     () => NotificationBloc(repository: sl<NotificationRepository>()),
+  );
+}
+
+/// Initialize friends feature
+Future<void> _initFriendsFeature() async {
+  _log.debug('Initializing friends feature', tag: LogTags.friends);
+
+  // Data Sources
+  sl.registerLazySingleton<FriendDatasource>(
+    () => FriendDatasourceImpl(
+      firestore: sl<FirebaseFirestore>(),
+      loggingService: sl<LoggingService>(),
+    ),
+  );
+
+  // Repositories
+  sl.registerLazySingleton<FriendRepository>(
+    () => FriendRepositoryImpl(
+      datasource: sl<FriendDatasource>(),
+      connectivityService: sl<ConnectivityService>(),
+    ),
+  );
+
+  // BLoC
+  sl.registerFactory<FriendBloc>(
+    () => FriendBloc(
+      repository: sl<FriendRepository>(),
+    ),
   );
 }
 
