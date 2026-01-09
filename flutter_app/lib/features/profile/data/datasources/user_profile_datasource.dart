@@ -243,14 +243,14 @@ class UserProfileDataSourceImpl implements UserProfileDataSource {
         throw ServerException(message: 'Image file not found');
       }
 
-      // Read file bytes
-      final bytes = await imageFile.readAsBytes();
+      // Get file size for logging
+      final fileSize = await imageFile.length();
       _log.debug(
-        'File bytes read',
+        'File size verified',
         tag: LogTags.profile,
         data: {
-          'bytesLength': bytes.length,
-          'sizeMB': (bytes.length / (1024 * 1024)).toStringAsFixed(2),
+          'sizeBytes': fileSize,
+          'sizeMB': (fileSize / (1024 * 1024)).toStringAsFixed(2),
         },
       );
 
@@ -291,7 +291,7 @@ class UserProfileDataSourceImpl implements UserProfileDataSource {
         data: {'extension': extension, 'contentType': contentType, 'fileName': fileName},
       );
 
-      // Create storage reference with unique timestamp to avoid caching issues
+      // Create storage reference
       final timestamp = DateTime.now().millisecondsSinceEpoch;
       final storagePath = 'users/$userId/profile/$fileName';
       final ref = _storage.ref().child(storagePath);
@@ -299,10 +299,14 @@ class UserProfileDataSourceImpl implements UserProfileDataSource {
       _log.debug(
         'Storage reference created',
         tag: LogTags.profile,
-        data: {'path': storagePath, 'fullPath': ref.fullPath},
+        data: {
+          'path': storagePath, 
+          'fullPath': ref.fullPath,
+          'bucket': ref.bucket,
+        },
       );
 
-      // Upload with metadata using putData (more reliable than putFile)
+      // Upload with metadata using putFile (more reliable for iOS)
       final metadata = SettableMetadata(
         contentType: contentType,
         customMetadata: {
@@ -312,10 +316,31 @@ class UserProfileDataSourceImpl implements UserProfileDataSource {
         },
       );
 
-      _log.debug('Starting bytes upload to Firebase Storage', tag: LogTags.profile);
+      _log.debug('Starting file upload to Firebase Storage using putFile', tag: LogTags.profile);
       
-      // Use putData instead of putFile for more reliable uploads
-      final uploadTask = ref.putData(bytes, metadata);
+      // Use putFile - this is more reliable on iOS as it handles the file stream properly
+      final uploadTask = ref.putFile(imageFile, metadata);
+
+      // Monitor upload progress
+      uploadTask.snapshotEvents.listen((TaskSnapshot snapshot) {
+        final progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+        _log.debug(
+          'Upload progress',
+          tag: LogTags.profile,
+          data: {
+            'progress': '${progress.toStringAsFixed(1)}%',
+            'bytesTransferred': snapshot.bytesTransferred,
+            'totalBytes': snapshot.totalBytes,
+            'state': snapshot.state.toString(),
+          },
+        );
+      }, onError: (error) {
+        _log.error(
+          'Upload stream error',
+          tag: LogTags.profile,
+          data: {'error': error.toString()},
+        );
+      });
 
       // Wait for upload to complete
       final snapshot = await uploadTask;
@@ -339,10 +364,9 @@ class UserProfileDataSourceImpl implements UserProfileDataSource {
         throw ServerException(message: 'Upload failed with state: ${snapshot.state}');
       }
 
-      // Get download URL directly from the reference (not snapshot.ref)
-      // This is more reliable as it queries the storage directly
-      _log.debug('Getting download URL from reference', tag: LogTags.profile);
-      final downloadUrl = await ref.getDownloadURL();
+      // Get download URL from the snapshot reference
+      _log.debug('Getting download URL from snapshot reference', tag: LogTags.profile);
+      final downloadUrl = await snapshot.ref.getDownloadURL();
       
       _log.debug(
         'Profile photo uploaded to storage',
@@ -374,9 +398,29 @@ class UserProfileDataSourceImpl implements UserProfileDataSource {
           'plugin': e.plugin,
         },
       );
-      throw ServerException(
-        message: e.message ?? 'Failed to upload profile photo: ${e.code}',
-      );
+      
+      // Provide more helpful error messages for common issues
+      String errorMessage;
+      switch (e.code) {
+        case 'object-not-found':
+          // This error during upload usually means Storage isn't enabled
+          errorMessage = 'Firebase Storage may not be enabled. Please check Firebase Console.';
+          break;
+        case 'unauthorized':
+        case 'unauthenticated':
+          errorMessage = 'Not authorized to upload. Please sign in again.';
+          break;
+        case 'canceled':
+          errorMessage = 'Upload was canceled.';
+          break;
+        case 'unknown':
+          errorMessage = 'Upload failed. Please check your internet connection.';
+          break;
+        default:
+          errorMessage = e.message ?? 'Failed to upload profile photo: ${e.code}';
+      }
+      
+      throw ServerException(message: errorMessage);
     } on ServerException {
       rethrow;
     } catch (e, stackTrace) {
