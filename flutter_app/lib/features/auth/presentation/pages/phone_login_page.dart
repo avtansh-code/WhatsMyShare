@@ -445,6 +445,16 @@ class _PhoneLoginPageState extends State<PhoneLoginPage> {
         return 'App not authorized. Please contact support.';
       case 'captcha-check-failed':
         return 'Verification failed. Please try again.';
+      case 'web-internal-error':
+        // This error occurs when reCAPTCHA fails to load
+        // Common on iOS Simulator where APNs is not available
+        return 'Phone verification is not available on this device. Please use a physical device or configure test phone numbers in Firebase Console.';
+      case 'network-request-failed':
+        return 'Network error. Please check your internet connection and try again.';
+      case 'missing-client-identifier':
+        return 'App verification failed. Please restart the app and try again.';
+      case 'invalid-app-credential':
+        return 'App verification failed. Please update the app or contact support.';
       default:
         return 'Something went wrong. Please try again.';
     }
@@ -466,10 +476,13 @@ class _PhoneLoginPageState extends State<PhoneLoginPage> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Sign in with Phone'),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () => context.pop(),
-        ),
+        leading: context.canPop()
+            ? IconButton(
+                icon: const Icon(Icons.arrow_back),
+                onPressed: () => context.pop(),
+              )
+            : null,
+        automaticallyImplyLeading: false,
       ),
       body: SafeArea(
         child: SingleChildScrollView(

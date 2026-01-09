@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
@@ -68,11 +69,25 @@ Future<void> main() async {
       _log.debug('Hive initialized', tag: LogTags.app);
 
       // Initialize Firebase
+      // On iOS, Firebase is already configured in AppDelegate.swift
+      // to properly handle APNs for phone authentication
       _log.debug('Initializing Firebase', tag: LogTags.firebase);
-      await Firebase.initializeApp(
-        options: DefaultFirebaseOptions.currentPlatform,
-      );
+      if (Platform.isIOS) {
+        // Check if Firebase is already initialized (from AppDelegate)
+        if (Firebase.apps.isEmpty) {
+          await Firebase.initializeApp(
+            options: DefaultFirebaseOptions.currentPlatform,
+          );
+        }
+      } else {
+        await Firebase.initializeApp(
+          options: DefaultFirebaseOptions.currentPlatform,
+        );
+      }
       _log.info('Firebase initialized', tag: LogTags.firebase);
+
+      // Configure Firebase Auth settings for phone authentication
+      await _configureFirebaseAuth();
 
       // Handle first launch - clear stale auth state from iOS Keychain
       // This fixes the issue where Firebase Auth persists across app uninstalls on iOS
@@ -101,6 +116,54 @@ Future<void> main() async {
       );
     },
   );
+}
+
+/// Configure Firebase Auth settings for phone authentication
+///
+/// This sets up the appropriate app verification method based on the platform
+/// and environment (simulator vs real device)
+Future<void> _configureFirebaseAuth() async {
+  try {
+    final auth = FirebaseAuth.instance;
+
+    if (Platform.isIOS) {
+      // On iOS, we need to configure the app verification settings
+      // The APNs token will be set automatically by AppDelegate when available
+      _log.info(
+        'Configuring Firebase Auth for iOS phone authentication',
+        tag: LogTags.auth,
+      );
+
+      // Set auth settings - this helps with phone verification
+      // When APNs is not available (simulator), Firebase will use reCAPTCHA
+      await auth.setSettings(
+        // Allow app verification to happen
+        appVerificationDisabledForTesting: false,
+      );
+
+      _log.debug(
+        'Firebase Auth settings configured for iOS',
+        tag: LogTags.auth,
+      );
+    } else if (Platform.isAndroid) {
+      _log.info(
+        'Configuring Firebase Auth for Android phone authentication',
+        tag: LogTags.auth,
+      );
+
+      // Android uses SafetyNet/Play Integrity by default
+      // No additional configuration needed
+      _log.debug('Firebase Auth ready for Android', tag: LogTags.auth);
+    }
+  } catch (e, stackTrace) {
+    _log.error(
+      'Error configuring Firebase Auth',
+      tag: LogTags.auth,
+      error: e,
+      stackTrace: stackTrace,
+    );
+    // Don't rethrow - the app can still try to use phone auth
+  }
 }
 
 /// Handles first launch auth cleanup to clear stale Firebase Auth state
