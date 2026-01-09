@@ -170,6 +170,7 @@ Future<void> _initAuthFeature() async {
   sl.registerFactory<AuthBloc>(
     () => AuthBloc(
       authRepository: sl<AuthRepository>(),
+      encryptionService: sl<EncryptionService>(),
       loggingService: sl<LoggingService>(),
     ),
   );

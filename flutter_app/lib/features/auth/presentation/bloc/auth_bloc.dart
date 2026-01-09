@@ -4,6 +4,7 @@ import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../../core/errors/error_messages.dart';
+import '../../../../core/services/encryption_service.dart';
 import '../../../../core/services/logging_service.dart';
 import '../../domain/entities/user_entity.dart';
 import '../../domain/repositories/auth_repository.dart';
@@ -14,6 +15,7 @@ part 'auth_state.dart';
 /// BLoC for handling phone-based authentication
 class AuthBloc extends Bloc<AuthEvent, AuthState> {
   final AuthRepository _authRepository;
+  final EncryptionService _encryptionService;
   final LoggingService _log;
 
   StreamSubscription<UserEntity?>? _authStateSubscription;
@@ -24,8 +26,10 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
 
   AuthBloc({
     required AuthRepository authRepository,
+    required EncryptionService encryptionService,
     required LoggingService loggingService,
   }) : _authRepository = authRepository,
+       _encryptionService = encryptionService,
        _log = loggingService,
        super(AuthInitial()) {
     // Auth check
@@ -69,18 +73,24 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     try {
       final result = await _authRepository.getCurrentUser();
 
-      result.fold(
-        (failure) {
+      await result.fold(
+        (failure) async {
           _log.error('Auth check failed', tag: LogTags.auth, error: failure);
           emit(AuthUnauthenticated());
         },
-        (user) {
+        (user) async {
           if (user != null) {
             _log.info(
               'User authenticated',
               tag: LogTags.auth,
               data: {'userId': user.id, 'hasName': user.displayName != null},
             );
+
+            // Initialize encryption service for the authenticated user
+            await _initializeEncryption(user.id);
+
+            // Check if emit is still valid before emitting
+            if (emit.isDone) return;
 
             // Check if profile is complete (has display name)
             if (user.displayName == null || user.displayName!.isEmpty) {
@@ -101,7 +111,9 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         error: e,
         stackTrace: stackTrace,
       );
-      emit(AuthError(ErrorMessages.genericError));
+      if (!emit.isDone) {
+        emit(AuthError(ErrorMessages.genericError));
+      }
     }
   }
 
@@ -164,18 +176,18 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       event.credential,
     );
 
-    result.fold(
-      (failure) {
+    await result.fold(
+      (failure) async {
         _log.error('Auto sign in failed', tag: LogTags.auth, error: failure);
         emit(AuthError(failure.message));
       },
-      (user) {
+      (user) async {
         _log.info(
           'Auto sign in successful',
           tag: LogTags.auth,
           data: {'userId': user.id},
         );
-        _handleSuccessfulSignIn(user, emit);
+        await _handleSuccessfulSignIn(user, emit);
       },
     );
   }
@@ -227,8 +239,8 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       smsCode: event.otp,
     );
 
-    result.fold(
-      (failure) {
+    await result.fold(
+      (failure) async {
         _log.warning(
           'OTP verification failed',
           tag: LogTags.auth,
@@ -236,13 +248,13 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         );
         emit(AuthError(failure.message));
       },
-      (user) {
+      (user) async {
         _log.info(
           'OTP verification successful',
           tag: LogTags.auth,
           data: {'userId': user.id},
         );
-        _handleSuccessfulSignIn(user, emit);
+        await _handleSuccessfulSignIn(user, emit);
       },
     );
   }
@@ -348,18 +360,27 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         _log.info('Sign out successful', tag: LogTags.auth);
         _verificationId = null;
         _resendToken = null;
+        // Clear encryption cache on sign out
+        _encryptionService.clearCache();
+        _log.debug('Encryption cache cleared', tag: LogTags.auth);
         emit(AuthUnauthenticated());
       },
     );
   }
 
-  void _onUserChanged(AuthUserChanged event, Emitter<AuthState> emit) {
+  Future<void> _onUserChanged(AuthUserChanged event, Emitter<AuthState> emit) async {
     if (event.user != null) {
       _log.debug(
         'Auth state changed: authenticated',
         tag: LogTags.auth,
         data: {'userId': event.user!.id},
       );
+
+      // Initialize encryption service for the authenticated user
+      await _initializeEncryption(event.user!.id);
+
+      // Check if emit is still valid before emitting
+      if (emit.isDone) return;
 
       // Check if profile is complete
       if (event.user!.displayName == null || event.user!.displayName!.isEmpty) {
@@ -369,6 +390,8 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       }
     } else {
       _log.debug('Auth state changed: unauthenticated', tag: LogTags.auth);
+      // Clear encryption cache when user becomes unauthenticated
+      _encryptionService.clearCache();
       emit(AuthUnauthenticated());
     }
   }
@@ -389,16 +412,51 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     }
   }
 
-  void _handleSuccessfulSignIn(UserEntity user, Emitter<AuthState> emit) {
+  Future<void> _handleSuccessfulSignIn(UserEntity user, Emitter<AuthState> emit) async {
     // Clear verification state
     _verificationId = null;
     _resendToken = null;
+
+    // Initialize encryption service for the authenticated user
+    await _initializeEncryption(user.id);
+
+    // Check if emit is still valid before emitting
+    if (emit.isDone) return;
 
     // Check if profile is complete
     if (user.displayName == null || user.displayName!.isEmpty) {
       emit(AuthNeedsProfileCompletion(user));
     } else {
       emit(AuthAuthenticated(user));
+    }
+  }
+
+  /// Initialize encryption service for the authenticated user
+  Future<void> _initializeEncryption(String userId) async {
+    try {
+      if (!_encryptionService.isInitialized) {
+        _log.info(
+          'Initializing encryption service for user',
+          tag: LogTags.auth,
+          data: {'userId': userId},
+        );
+        await _encryptionService.initialize(userId);
+        _log.info('Encryption service initialized', tag: LogTags.auth);
+      } else {
+        _log.debug(
+          'Encryption service already initialized',
+          tag: LogTags.auth,
+        );
+      }
+    } catch (e, stackTrace) {
+      _log.error(
+        'Failed to initialize encryption service',
+        tag: LogTags.auth,
+        error: e,
+        stackTrace: stackTrace,
+      );
+      // Don't fail authentication if encryption fails to initialize
+      // The user can still use the app, but encrypted features may not work
     }
   }
 
