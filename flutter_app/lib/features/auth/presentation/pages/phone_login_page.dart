@@ -3,9 +3,12 @@ import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../../core/constants/app_constants.dart';
+import '../../../../core/di/injection_container.dart';
 import '../../../../core/services/logging_service.dart';
+import '../../../../core/services/user_cache_service.dart';
 
 /// Callback type for verification received
 typedef VerificationCallback =
@@ -175,34 +178,17 @@ class _PhoneLoginPageState extends State<PhoneLoginPage> {
 
         if (!mounted) return;
 
-        // Check if profile needs completion
-        final userDoc = await FirebaseFirestore.instance
-            .collection('users')
-            .doc(userCredential.user!.uid)
-            .get();
+        // Check if profile needs completion using local cache and backend
+        final isProfileComplete = await _checkProfileCompletion(
+          userCredential.user!.uid,
+        );
 
         if (!mounted) return;
 
-        if (userDoc.exists) {
-          final data = userDoc.data()!;
-          final hasCompletedProfile =
-              data['displayName'] != null &&
-              data['displayName'].toString().isNotEmpty;
-
-          if (hasCompletedProfile) {
-            context.go('/dashboard');
-          } else {
-            context.go(
-              '/complete-profile',
-              extra: {
-                'id': userCredential.user!.uid,
-                'phone': userCredential.user!.phoneNumber,
-                'isPhoneVerified': true,
-              },
-            );
-          }
-        } else {
+        if (isProfileComplete) {
           context.go('/dashboard');
+        } else {
+          context.go('/complete-profile');
         }
       }
     } catch (e) {
@@ -210,6 +196,104 @@ class _PhoneLoginPageState extends State<PhoneLoginPage> {
       if (mounted) {
         setState(() => _isLoading = false);
       }
+    }
+  }
+
+  /// Check if user profile is complete in both local cache and backend
+  Future<bool> _checkProfileCompletion(String userId) async {
+    // 1. First check local cache (SharedPreferences)
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final localDisplayName = prefs.getString('user_display_name_$userId');
+
+      if (localDisplayName != null && localDisplayName.isNotEmpty) {
+        // Also verify with backend to ensure consistency
+        final backendComplete = await _checkBackendProfileCompletion(userId);
+        if (backendComplete) {
+          return true;
+        }
+      }
+    } catch (e) {
+      _log.warning(
+        'Failed to check local cache',
+        tag: LogTags.auth,
+        data: {'error': e.toString()},
+      );
+    }
+
+    // 2. Check UserCacheService (in-memory cache)
+    try {
+      final userCacheService = sl<UserCacheService>();
+      final cachedUser = await userCacheService.getUser(userId);
+
+      if (cachedUser != null &&
+          cachedUser.displayName != null &&
+          cachedUser.displayName!.isNotEmpty) {
+        return true;
+      }
+    } catch (e) {
+      _log.warning(
+        'Failed to check UserCacheService',
+        tag: LogTags.auth,
+        data: {'error': e.toString()},
+      );
+    }
+
+    // 3. Finally check backend (Firestore)
+    return await _checkBackendProfileCompletion(userId);
+  }
+
+  /// Check if profile is complete in Firestore backend
+  Future<bool> _checkBackendProfileCompletion(String userId) async {
+    try {
+      final userDoc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(userId)
+          .get();
+
+      if (userDoc.exists) {
+        final data = userDoc.data()!;
+        final displayName = data['displayName'] as String?;
+        final isComplete = displayName != null && displayName.isNotEmpty;
+
+        // If profile is complete in backend, save to local cache for future use
+        if (isComplete) {
+          try {
+            final prefs = await SharedPreferences.getInstance();
+            await prefs.setString('user_display_name_$userId', displayName);
+
+            // Also update UserCacheService
+            final userCacheService = sl<UserCacheService>();
+            userCacheService.updateCache(
+              userId,
+              CachedUser(
+                id: userId,
+                displayName: displayName,
+                phone: data['phone'] as String?,
+                photoUrl: data['photoUrl'] as String?,
+                cachedAt: DateTime.now(),
+              ),
+            );
+          } catch (e) {
+            _log.warning(
+              'Failed to update local cache from backend',
+              tag: LogTags.auth,
+              data: {'error': e.toString()},
+            );
+          }
+        }
+
+        return isComplete;
+      }
+
+      return false;
+    } catch (e) {
+      _log.error(
+        'Failed to check backend profile completion',
+        tag: LogTags.auth,
+        error: e,
+      );
+      return false;
     }
   }
 

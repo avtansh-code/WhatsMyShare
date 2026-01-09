@@ -5,8 +5,11 @@ import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
+import '../../../../core/di/injection_container.dart';
 import '../../../../core/services/logging_service.dart';
+import '../../../../core/services/user_cache_service.dart';
 
 /// OTP verification page for phone authentication
 class PhoneVerifyPage extends StatefulWidget {
@@ -119,35 +122,23 @@ class _PhoneVerifyPageState extends State<PhoneVerifyPage> {
 
       if (!mounted) return;
 
-      // Check if user needs to complete profile
-      final userDoc = await FirebaseFirestore.instance
-          .collection('users')
-          .doc(user.uid)
-          .get();
+      // Check profile completion in both local cache AND backend
+      final isProfileComplete = await _checkProfileCompletion(user.uid);
 
       if (!mounted) return;
 
-      if (userDoc.exists) {
-        final data = userDoc.data()!;
-        final hasCompletedProfile =
-            data['displayName'] != null &&
-            data['displayName'].toString().isNotEmpty;
-
-        if (hasCompletedProfile) {
-          context.go('/dashboard');
-        } else {
-          // Navigate to complete profile
-          context.go(
-            '/complete-profile',
-            extra: {
-              'id': user.uid,
-              'phone': user.phoneNumber,
-              'isPhoneVerified': true,
-            },
-          );
-        }
-      } else {
+      if (isProfileComplete) {
+        _log.info(
+          'Profile is complete, navigating to dashboard',
+          tag: LogTags.auth,
+        );
         context.go('/dashboard');
+      } else {
+        _log.info(
+          'Profile incomplete, navigating to complete profile',
+          tag: LogTags.auth,
+        );
+        context.go('/complete-profile');
       }
     } on firebase_auth.FirebaseAuthException catch (e) {
       _log.error(
@@ -228,8 +219,18 @@ class _PhoneVerifyPageState extends State<PhoneVerifyPage> {
                     .signInWithCredential(credential);
                 if (userCredential.user != null && mounted) {
                   await _ensureUserDocument(userCredential.user!);
+
+                  // Check profile completion before navigation
+                  final isProfileComplete = await _checkProfileCompletion(
+                    userCredential.user!.uid,
+                  );
+
                   if (mounted) {
-                    context.go('/dashboard');
+                    if (isProfileComplete) {
+                      context.go('/dashboard');
+                    } else {
+                      context.go('/complete-profile');
+                    }
                   }
                 }
               } catch (e) {
@@ -485,5 +486,136 @@ class _PhoneVerifyPageState extends State<PhoneVerifyPage> {
         ),
       ),
     );
+  }
+
+  /// Check if user profile is complete in both local cache and backend
+  /// Profile is complete if displayName exists and is not empty
+  Future<bool> _checkProfileCompletion(String userId) async {
+    _log.debug(
+      'Checking profile completion',
+      tag: LogTags.auth,
+      data: {'userId': userId},
+    );
+
+    // 1. First check local cache (SharedPreferences)
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final localDisplayName = prefs.getString('user_display_name_$userId');
+
+      if (localDisplayName != null && localDisplayName.isNotEmpty) {
+        _log.debug(
+          'Profile complete in local cache',
+          tag: LogTags.auth,
+          data: {'displayName': localDisplayName},
+        );
+
+        // Also verify with backend to ensure consistency
+        final backendComplete = await _checkBackendProfileCompletion(userId);
+        if (backendComplete) {
+          return true;
+        }
+      }
+    } catch (e) {
+      _log.warning(
+        'Failed to check local cache',
+        tag: LogTags.auth,
+        data: {'error': e.toString()},
+      );
+    }
+
+    // 2. Check UserCacheService (in-memory cache)
+    try {
+      final userCacheService = sl<UserCacheService>();
+      final cachedUser = await userCacheService.getUser(userId);
+
+      if (cachedUser != null &&
+          cachedUser.displayName != null &&
+          cachedUser.displayName!.isNotEmpty) {
+        _log.debug(
+          'Profile complete in UserCacheService',
+          tag: LogTags.auth,
+          data: {'displayName': cachedUser.displayName},
+        );
+        return true;
+      }
+    } catch (e) {
+      _log.warning(
+        'Failed to check UserCacheService',
+        tag: LogTags.auth,
+        data: {'error': e.toString()},
+      );
+    }
+
+    // 3. Finally check backend (Firestore)
+    return await _checkBackendProfileCompletion(userId);
+  }
+
+  /// Check if profile is complete in Firestore backend
+  Future<bool> _checkBackendProfileCompletion(String userId) async {
+    try {
+      final userDoc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(userId)
+          .get();
+
+      if (userDoc.exists) {
+        final data = userDoc.data()!;
+        final displayName = data['displayName'] as String?;
+        final isComplete = displayName != null && displayName.isNotEmpty;
+
+        _log.debug(
+          'Backend profile check',
+          tag: LogTags.auth,
+          data: {
+            'userId': userId,
+            'displayName': displayName,
+            'isComplete': isComplete,
+          },
+        );
+
+        // If profile is complete in backend, save to local cache for future use
+        if (isComplete) {
+          try {
+            final prefs = await SharedPreferences.getInstance();
+            await prefs.setString('user_display_name_$userId', displayName);
+
+            // Also update UserCacheService
+            final userCacheService = sl<UserCacheService>();
+            userCacheService.updateCache(
+              userId,
+              CachedUser(
+                id: userId,
+                displayName: displayName,
+                phone: data['phone'] as String?,
+                photoUrl: data['photoUrl'] as String?,
+                cachedAt: DateTime.now(),
+              ),
+            );
+          } catch (e) {
+            _log.warning(
+              'Failed to update local cache from backend',
+              tag: LogTags.auth,
+              data: {'error': e.toString()},
+            );
+          }
+        }
+
+        return isComplete;
+      }
+
+      _log.debug(
+        'User document does not exist in backend',
+        tag: LogTags.auth,
+        data: {'userId': userId},
+      );
+      return false;
+    } catch (e) {
+      _log.error(
+        'Failed to check backend profile completion',
+        tag: LogTags.auth,
+        error: e,
+      );
+      return false;
+    }
   }
 }

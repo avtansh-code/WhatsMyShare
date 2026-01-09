@@ -1,9 +1,13 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../../core/di/injection_container.dart';
 import '../../../../core/services/logging_service.dart';
+import '../../../../core/services/user_cache_service.dart';
 import '../../data/datasources/firebase_auth_datasource.dart';
 import '../../domain/entities/user_entity.dart';
 import '../bloc/auth_bloc.dart';
@@ -84,11 +88,56 @@ class _CompleteProfilePageState extends State<CompleteProfilePage> {
 
     try {
       final displayName = _nameController.text.trim();
+      final currentUser = firebase_auth.FirebaseAuth.instance.currentUser;
 
-      // Update profile with display name
+      if (currentUser == null) {
+        throw Exception('User not authenticated');
+      }
+
+      final userId = currentUser.uid;
+      final phone = currentUser.phoneNumber ?? '';
+
+      // 1. Update Firebase Auth profile
       await _authDataSource.updateProfile(displayName: displayName);
 
-      _log.info('Profile completed successfully', tag: LogTags.auth);
+      // 2. Update Firestore user document
+      await FirebaseFirestore.instance.collection('users').doc(userId).set({
+        'displayName': displayName,
+        'displayNameLower': displayName.toLowerCase(),
+        'phone': phone,
+        'isPhoneVerified': true,
+        'updatedAt': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true));
+
+      // 3. Save to local cache (SharedPreferences)
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('user_display_name_$userId', displayName);
+
+      // 4. Update UserCacheService (in-memory cache)
+      try {
+        final userCacheService = sl<UserCacheService>();
+        userCacheService.updateCache(
+          userId,
+          CachedUser(
+            id: userId,
+            displayName: displayName,
+            phone: phone,
+            cachedAt: DateTime.now(),
+          ),
+        );
+      } catch (e) {
+        _log.warning(
+          'Failed to update UserCacheService',
+          tag: LogTags.auth,
+          data: {'error': e.toString()},
+        );
+      }
+
+      _log.info(
+        'Profile completed successfully',
+        tag: LogTags.auth,
+        data: {'userId': userId, 'displayName': displayName},
+      );
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -102,11 +151,17 @@ class _CompleteProfilePageState extends State<CompleteProfilePage> {
         context.read<AuthBloc>().add(const AuthCheckRequested());
         context.go('/dashboard');
       }
-    } catch (e) {
+    } catch (e, stackTrace) {
+      _log.error(
+        'Failed to complete profile',
+        tag: LogTags.auth,
+        error: e,
+        stackTrace: stackTrace,
+      );
       if (!mounted) return;
       setState(() {
         _isLoading = false;
-        _errorMessage = e.toString();
+        _errorMessage = 'Failed to complete profile. Please try again.';
       });
     }
   }
