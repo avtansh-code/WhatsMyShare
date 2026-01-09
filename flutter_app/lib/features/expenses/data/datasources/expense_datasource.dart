@@ -4,6 +4,7 @@ import 'package:firebase_storage/firebase_storage.dart';
 import 'dart:io';
 
 import '../../../../core/errors/exceptions.dart';
+import '../../../../core/services/encryption_service.dart';
 import '../../../../core/services/logging_service.dart';
 import '../../domain/entities/expense_entity.dart';
 import '../models/expense_model.dart';
@@ -73,15 +74,18 @@ class FirebaseExpenseDatasource implements ExpenseDatasource {
   final FirebaseFirestore _firestore;
   final FirebaseAuth _auth;
   final FirebaseStorage _storage;
+  final EncryptionService _encryptionService;
   final LoggingService _log = LoggingService();
 
   FirebaseExpenseDatasource({
     FirebaseFirestore? firestore,
     FirebaseAuth? auth,
     FirebaseStorage? storage,
+    required EncryptionService encryptionService,
   }) : _firestore = firestore ?? FirebaseFirestore.instance,
        _auth = auth ?? FirebaseAuth.instance,
-       _storage = storage ?? FirebaseStorage.instance {
+       _storage = storage ?? FirebaseStorage.instance,
+       _encryptionService = encryptionService {
     _log.debug('ExpenseDatasource initialized', tag: LogTags.expenses);
   }
 
@@ -490,26 +494,53 @@ class FirebaseExpenseDatasource implements ExpenseDatasource {
     String filePath,
   ) async {
     _log.info(
-      'Uploading receipt',
+      'Uploading encrypted receipt',
       tag: LogTags.expenses,
       data: {'groupId': groupId, 'expenseId': expenseId},
     );
     try {
       final file = File(filePath);
+      
+      // Encrypt the file before uploading
+      _log.debug('Encrypting receipt before upload', tag: LogTags.encryption);
+      final encryptedBytes = await _encryptionService.encryptFile(file);
+      
+      // Use .enc extension to indicate encrypted file
       final fileName =
-          '${DateTime.now().millisecondsSinceEpoch}_${file.uri.pathSegments.last}';
+          '${DateTime.now().millisecondsSinceEpoch}_receipt.enc';
       final ref = _storage.ref().child(
         'groups/$groupId/expenses/$expenseId/receipts/$fileName',
       );
 
-      await ref.putFile(file);
+      // Upload encrypted data with appropriate metadata
+      final metadata = SettableMetadata(
+        contentType: 'application/octet-stream',
+        customMetadata: {
+          'encrypted': 'true',
+          'originalExtension': file.uri.pathSegments.last.split('.').last,
+        },
+      );
+      
+      await ref.putData(encryptedBytes, metadata);
       final downloadUrl = await ref.getDownloadURL();
+      
       _log.info(
-        'Receipt uploaded successfully',
+        'Encrypted receipt uploaded successfully',
         tag: LogTags.expenses,
-        data: {'expenseId': expenseId},
+        data: {
+          'expenseId': expenseId,
+          'originalSize': (await file.length()),
+          'encryptedSize': encryptedBytes.length,
+        },
       );
       return downloadUrl;
+    } on EncryptionException catch (e) {
+      _log.error(
+        'Failed to encrypt receipt',
+        tag: LogTags.encryption,
+        data: {'expenseId': expenseId, 'error': e.message},
+      );
+      throw ServerException(message: 'Failed to encrypt receipt: ${e.message}');
     } on FirebaseException catch (e) {
       _log.error(
         'Failed to upload receipt',

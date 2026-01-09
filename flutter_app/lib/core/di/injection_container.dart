@@ -37,6 +37,7 @@ import '../../features/notifications/data/repositories/notification_repository_i
 import '../../features/notifications/domain/repositories/notification_repository.dart';
 import '../../features/notifications/presentation/bloc/notification_bloc.dart';
 import '../services/audio_service.dart';
+import '../services/encryption_service.dart';
 import '../services/logging_service.dart';
 import '../services/analytics_service.dart';
 import '../services/connectivity_service.dart';
@@ -132,6 +133,9 @@ void _initCore() {
 
   // Audio Service (factory - new instance for each use case)
   sl.registerFactory<AudioService>(() => AudioService());
+
+  // Encryption Service (singleton - uses same key for all encryption)
+  sl.registerLazySingleton<EncryptionService>(() => EncryptionService());
 }
 
 /// Initialize authentication feature
@@ -185,6 +189,7 @@ Future<void> _initProfileFeature() async {
       firestore: sl<FirebaseFirestore>(),
       storage: sl<FirebaseStorage>(),
       auth: sl<FirebaseAuth>(),
+      encryptionService: sl<EncryptionService>(),
     ),
   );
 
@@ -233,6 +238,7 @@ Future<void> _initExpenseFeature() async {
       firestore: sl<FirebaseFirestore>(),
       auth: sl<FirebaseAuth>(),
       storage: sl<FirebaseStorage>(),
+      encryptionService: sl<EncryptionService>(),
     ),
   );
 

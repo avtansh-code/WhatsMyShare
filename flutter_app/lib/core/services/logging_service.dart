@@ -188,6 +188,7 @@ class LogTags {
   static const String sync = 'Sync';
   static const String audio = 'Audio';
   static const String storage = 'Storage';
+  static const String encryption = 'Encryption';
   static const String navigation = 'Navigation';
   static const String analytics = 'Analytics';
   static const String crashlytics = 'Crashlytics';

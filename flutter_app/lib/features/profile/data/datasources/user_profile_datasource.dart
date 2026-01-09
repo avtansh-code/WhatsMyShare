@@ -5,6 +5,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 
 import '../../../../core/errors/exceptions.dart';
+import '../../../../core/services/encryption_service.dart';
 import '../../../../core/services/logging_service.dart';
 import '../models/user_profile_model.dart';
 
@@ -57,15 +58,18 @@ class UserProfileDataSourceImpl implements UserProfileDataSource {
   final FirebaseFirestore _firestore;
   final FirebaseAuth _auth;
   final FirebaseStorage _storage;
+  final EncryptionService _encryptionService;
   final LoggingService _log = LoggingService();
 
   UserProfileDataSourceImpl({
     FirebaseFirestore? firestore,
     FirebaseAuth? auth,
     FirebaseStorage? storage,
+    required EncryptionService encryptionService,
   }) : _firestore = firestore ?? FirebaseFirestore.instance,
        _auth = auth ?? FirebaseAuth.instance,
-       _storage = storage ?? FirebaseStorage.instance {
+       _storage = storage ?? FirebaseStorage.instance,
+       _encryptionService = encryptionService {
     _log.debug('UserProfileDataSource initialized', tag: LogTags.profile);
   }
 
@@ -316,10 +320,37 @@ class UserProfileDataSourceImpl implements UserProfileDataSource {
         },
       );
 
-      _log.debug('Starting file upload to Firebase Storage using putFile', tag: LogTags.profile);
+      _log.debug('Starting file encryption before upload', tag: LogTags.encryption);
       
-      // Use putFile - this is more reliable on iOS as it handles the file stream properly
-      final uploadTask = ref.putFile(imageFile, metadata);
+      // Encrypt the image before uploading
+      final encryptedBytes = await _encryptionService.encryptFile(imageFile);
+      
+      // Update metadata for encrypted file
+      final encryptedMetadata = SettableMetadata(
+        contentType: 'application/octet-stream',
+        customMetadata: {
+          'userId': userId,
+          'uploadedAt': DateTime.now().toIso8601String(),
+          'timestamp': timestamp.toString(),
+          'encrypted': 'true',
+          'originalContentType': contentType,
+          'originalExtension': extension,
+        },
+      );
+      
+      _log.debug(
+        'File encrypted successfully',
+        tag: LogTags.encryption,
+        data: {
+          'originalSize': fileSize,
+          'encryptedSize': encryptedBytes.length,
+        },
+      );
+      
+      _log.debug('Starting encrypted file upload to Firebase Storage', tag: LogTags.profile);
+      
+      // Use putData for encrypted bytes
+      final uploadTask = ref.putData(encryptedBytes, encryptedMetadata);
 
       // Monitor upload progress
       uploadTask.snapshotEvents.listen((TaskSnapshot snapshot) {

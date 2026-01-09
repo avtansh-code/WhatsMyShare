@@ -16,7 +16,7 @@ service cloud.firestore {
       return request.auth.uid == userId;
     }
     
-    // Check if user is a member of the specified group
+    // Check if user is a member of the specified group (for subcollections)
     function isGroupMember(groupId) {
       return isAuthenticated() &&
         request.auth.uid in get(/databases/$(database)/documents/groups/$(groupId)).data.memberIds;
@@ -75,7 +75,8 @@ service cloud.firestore {
     
     match /groups/{groupId} {
       // Only group members can read group data
-      allow read: if isGroupMember(groupId);
+      // Using resource.data.memberIds for collection queries compatibility
+      allow read: if isAuthenticated() && request.auth.uid in resource.data.memberIds;
       
       // Any authenticated user can create a group
       allow create: if isAuthenticated() &&
