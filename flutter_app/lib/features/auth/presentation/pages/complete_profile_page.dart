@@ -203,7 +203,7 @@ class _CompleteProfilePageState extends State<CompleteProfilePage> {
                         color: theme.colorScheme.surfaceContainerHighest,
                         borderRadius: BorderRadius.circular(8),
                         border: Border.all(
-                          color: Colors.green.withOpacity(0.5),
+                          color: Colors.green.withValues(alpha: 0.5),
                         ),
                       ),
                       child: Row(
@@ -221,7 +221,7 @@ class _CompleteProfilePageState extends State<CompleteProfilePage> {
                                   ),
                                 ),
                                 Text(
-                                  user.phone ?? 'Not available',
+                                  user.phone,
                                   style: theme.textTheme.bodyLarge,
                                 ),
                               ],

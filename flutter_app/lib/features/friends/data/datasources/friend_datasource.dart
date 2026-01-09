@@ -2,7 +2,6 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 
 import '../../../../core/services/logging_service.dart';
 import '../models/friend_model.dart';
-import '../../domain/entities/friend_entity.dart';
 
 /// Abstract interface for friend data operations
 abstract class FriendDatasource {

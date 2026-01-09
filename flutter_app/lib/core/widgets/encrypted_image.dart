@@ -173,16 +173,6 @@ class _EncryptedImageState extends State<EncryptedImage> {
     }
   }
 
-  /// Clear all cached images
-  static Future<void> clearAllCache() async {
-    _decryptedCache.clear();
-    final cacheDir = await getTemporaryDirectory();
-    final encryptedCacheDir = Directory('${cacheDir.path}/encrypted_images');
-    if (await encryptedCacheDir.exists()) {
-      await encryptedCacheDir.delete(recursive: true);
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     Widget imageWidget;

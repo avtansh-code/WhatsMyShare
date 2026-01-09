@@ -106,7 +106,7 @@ class AppRouter {
     GoRoute(
       path: '/login',
       name: 'login',
-      redirect: (_, __) => '/phone-login', // Redirect to phone login
+      redirect: (context, state) => '/phone-login', // Redirect to phone login
     ),
     GoRoute(
       path: '/phone-login',

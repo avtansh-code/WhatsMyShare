@@ -186,34 +186,36 @@ class _PhoneLoginPageState extends State<PhoneLoginPage> {
         _log.info('User signed in via auto-verification', tag: LogTags.auth);
         await _ensureUserDocument(userCredential.user!);
 
-        if (mounted) {
-          // Check if profile needs completion
-          final userDoc = await FirebaseFirestore.instance
-              .collection('users')
-              .doc(userCredential.user!.uid)
-              .get();
+        if (!mounted) return;
 
-          if (userDoc.exists) {
-            final data = userDoc.data()!;
-            final hasCompletedProfile =
-                data['displayName'] != null &&
-                data['displayName'].toString().isNotEmpty;
+        // Check if profile needs completion
+        final userDoc = await FirebaseFirestore.instance
+            .collection('users')
+            .doc(userCredential.user!.uid)
+            .get();
 
-            if (hasCompletedProfile) {
-              context.go('/dashboard');
-            } else {
-              context.go(
-                '/complete-profile',
-                extra: {
-                  'id': userCredential.user!.uid,
-                  'phone': userCredential.user!.phoneNumber,
-                  'isPhoneVerified': true,
-                },
-              );
-            }
-          } else {
+        if (!mounted) return;
+
+        if (userDoc.exists) {
+          final data = userDoc.data()!;
+          final hasCompletedProfile =
+              data['displayName'] != null &&
+              data['displayName'].toString().isNotEmpty;
+
+          if (hasCompletedProfile) {
             context.go('/dashboard');
+          } else {
+            context.go(
+              '/complete-profile',
+              extra: {
+                'id': userCredential.user!.uid,
+                'phone': userCredential.user!.phoneNumber,
+                'isPhoneVerified': true,
+              },
+            );
           }
+        } else {
+          context.go('/dashboard');
         }
       }
     } catch (e) {

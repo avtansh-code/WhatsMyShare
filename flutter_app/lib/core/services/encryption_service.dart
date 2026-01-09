@@ -25,7 +25,7 @@ class EncryptionService {
   static const String _keyVersionStorageKey = 'user_encryption_key_version';
   static const int _keyLength = 32; // 256 bits for AES-256
   static const int _ivLength = 12; // 96 bits for GCM recommended IV size
-  static const int _tagLength = 128; // GCM authentication tag length in bits
+  // Note: GCM auth tag length is 128 bits (handled internally by encrypt package)
 
   final FlutterSecureStorage _secureStorage;
   final LoggingService _log = LoggingService();

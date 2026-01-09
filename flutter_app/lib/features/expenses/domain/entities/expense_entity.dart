@@ -143,9 +143,8 @@ class SplitContext extends Equatable {
   });
 
   /// Create group context
-  const SplitContext.group(String groupId)
+  const SplitContext.group(this.groupId)
     : type = SplitContextType.group,
-      groupId = groupId,
       friendParticipants = null;
 
   /// Create friends context

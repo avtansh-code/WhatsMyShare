@@ -117,35 +117,37 @@ class _PhoneVerifyPageState extends State<PhoneVerifyPage> {
       // Check/create user document in Firestore
       await _ensureUserDocument(user);
 
-      if (mounted) {
-        // Check if user needs to complete profile
-        final userDoc = await FirebaseFirestore.instance
-            .collection('users')
-            .doc(user.uid)
-            .get();
+      if (!mounted) return;
 
-        if (userDoc.exists) {
-          final data = userDoc.data()!;
-          final hasCompletedProfile =
-              data['displayName'] != null &&
-              data['displayName'].toString().isNotEmpty;
+      // Check if user needs to complete profile
+      final userDoc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .get();
 
-          if (hasCompletedProfile) {
-            context.go('/dashboard');
-          } else {
-            // Navigate to complete profile
-            context.go(
-              '/complete-profile',
-              extra: {
-                'id': user.uid,
-                'phone': user.phoneNumber,
-                'isPhoneVerified': true,
-              },
-            );
-          }
-        } else {
+      if (!mounted) return;
+
+      if (userDoc.exists) {
+        final data = userDoc.data()!;
+        final hasCompletedProfile =
+            data['displayName'] != null &&
+            data['displayName'].toString().isNotEmpty;
+
+        if (hasCompletedProfile) {
           context.go('/dashboard');
+        } else {
+          // Navigate to complete profile
+          context.go(
+            '/complete-profile',
+            extra: {
+              'id': user.uid,
+              'phone': user.phoneNumber,
+              'isPhoneVerified': true,
+            },
+          );
         }
+      } else {
+        context.go('/dashboard');
       }
     } on firebase_auth.FirebaseAuthException catch (e) {
       _log.error(
@@ -226,7 +228,9 @@ class _PhoneVerifyPageState extends State<PhoneVerifyPage> {
                     .signInWithCredential(credential);
                 if (userCredential.user != null && mounted) {
                   await _ensureUserDocument(userCredential.user!);
-                  context.go('/dashboard');
+                  if (mounted) {
+                    context.go('/dashboard');
+                  }
                 }
               } catch (e) {
                 _log.error('Auto sign-in failed', tag: LogTags.auth, error: e);
@@ -401,8 +405,8 @@ class _PhoneVerifyPageState extends State<PhoneVerifyPage> {
                           ),
                           filled: true,
                           fillColor: _otpControllers[index].text.isNotEmpty
-                              ? theme.colorScheme.primaryContainer.withOpacity(
-                                  0.3,
+                              ? theme.colorScheme.primaryContainer.withValues(
+                                  alpha: 0.3,
                                 )
                               : null,
                         ),

@@ -314,15 +314,8 @@ class UserProfileDataSourceImpl implements UserProfileDataSource {
         },
       );
 
-      // Upload with metadata using putFile (more reliable for iOS)
-      final metadata = SettableMetadata(
-        contentType: contentType,
-        customMetadata: {
-          'userId': userId,
-          'uploadedAt': DateTime.now().toIso8601String(),
-          'timestamp': timestamp.toString(),
-        },
-      );
+      // Note: We encrypt before uploading so metadata for unencrypted file is not needed
+      // Content type and other metadata are stored with the encrypted file below
 
       _log.debug(
         'Starting file encryption before upload',

@@ -238,7 +238,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
 
                       // Currency
                       DropdownButtonFormField<String>(
-                        value: _selectedCurrency,
+                        initialValue: _selectedCurrency,
                         decoration: const InputDecoration(
                           labelText: 'Default Currency',
                           prefixIcon: Icon(Icons.currency_exchange),
