@@ -21,6 +21,16 @@ service firebase.storage {
       return request.resource.contentType.matches('image/.*');
     }
     
+    // Helper function to validate encrypted file (used for encrypted uploads)
+    function isEncryptedFile() {
+      return request.resource.contentType == 'application/octet-stream';
+    }
+    
+    // Helper function to check if file is either an image or encrypted
+    function isImageOrEncrypted() {
+      return isImage() || isEncryptedFile();
+    }
+    
     // ============================================
     // USER PROFILE PICTURES
     // ============================================
@@ -28,8 +38,13 @@ service firebase.storage {
       // Anyone can read profile pictures
       allow read: if isAuthenticated();
       
-      // Only owner can upload/update/delete their profile picture
-      allow write: if isOwner(userId) && isImage() && isValidFileSize();
+      // Only owner can upload/update their profile picture
+      // Allow both image types and encrypted files (application/octet-stream)
+      allow create, update: if isOwner(userId) && isImageOrEncrypted() && isValidFileSize();
+      
+      // Only owner can delete their profile picture
+      // Delete operations don't have request.resource, so we only check ownership
+      allow delete: if isOwner(userId);
     }
     
     // ============================================
@@ -39,8 +54,11 @@ service firebase.storage {
       // Group members can read
       allow read: if isAuthenticated();
       
-      // Group members can write (verified through Firestore)
-      allow write: if isAuthenticated() && isImage() && isValidFileSize();
+      // Group members can upload/update images (verified through Firestore)
+      allow create, update: if isAuthenticated() && isImage() && isValidFileSize();
+      
+      // Group members can delete images
+      allow delete: if isAuthenticated();
     }
     
     // ============================================
@@ -50,8 +68,11 @@ service firebase.storage {
       // Group members can read
       allow read: if isAuthenticated();
       
-      // Group members can upload receipts
-      allow write: if isAuthenticated() && isValidFileSize();
+      // Group members can upload/update receipts
+      allow create, update: if isAuthenticated() && isValidFileSize();
+      
+      // Group members can delete receipts
+      allow delete: if isAuthenticated();
     }
     
     // ============================================
@@ -61,8 +82,11 @@ service firebase.storage {
       // Group members can read
       allow read: if isAuthenticated();
       
-      // Group members can upload attachments
-      allow write: if isAuthenticated() && isValidFileSize();
+      // Group members can upload/update attachments
+      allow create, update: if isAuthenticated() && isValidFileSize();
+      
+      // Group members can delete attachments
+      allow delete: if isAuthenticated();
     }
     
     // ============================================
@@ -72,8 +96,11 @@ service firebase.storage {
       // Group members can read
       allow read: if isAuthenticated();
       
-      // Authenticated users can upload settlement proofs
-      allow write: if isAuthenticated() && isValidFileSize();
+      // Authenticated users can upload/update settlement proofs
+      allow create, update: if isAuthenticated() && isValidFileSize();
+      
+      // Authenticated users can delete settlement proofs
+      allow delete: if isAuthenticated();
     }
   }
 }

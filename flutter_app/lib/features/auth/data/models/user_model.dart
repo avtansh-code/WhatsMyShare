@@ -1,0 +1,217 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+
+import '../../../../core/constants/app_constants.dart';
+import '../../domain/entities/user_entity.dart';
+
+/// User model for data layer - handles Firestore serialization
+/// Phone number is the primary identifier (phone-only authentication)
+/// India-only app - currency, timezone, locale are hardcoded
+class UserModel extends UserEntity {
+  const UserModel({
+    required super.id,
+    required super.phone,
+    super.displayName,
+    super.photoUrl,
+    super.isPhoneVerified,
+    super.notificationsEnabled,
+    super.contactSyncEnabled,
+    super.biometricAuthEnabled,
+    super.createdAt,
+    super.updatedAt,
+    super.lastActiveAt,
+    super.totalOwed,
+    super.totalOwing,
+    super.groupCount,
+    super.fcmTokens,
+  });
+
+  /// Create UserModel from Firestore document
+  factory UserModel.fromFirestore(DocumentSnapshot<Map<String, dynamic>> doc) {
+    final data = doc.data()!;
+    return UserModel(
+      id: doc.id,
+      phone: (data['phone'] as String?) ?? '',
+      displayName: data['displayName'] as String?,
+      photoUrl: data['photoUrl'] as String?,
+      isPhoneVerified: data['isPhoneVerified'] as bool? ?? false,
+      notificationsEnabled: data['notificationsEnabled'] as bool? ?? true,
+      contactSyncEnabled: data['contactSyncEnabled'] as bool? ?? false,
+      biometricAuthEnabled: data['biometricAuthEnabled'] as bool? ?? false,
+      createdAt: (data['createdAt'] as Timestamp?)?.toDate(),
+      updatedAt: (data['updatedAt'] as Timestamp?)?.toDate(),
+      lastActiveAt: (data['lastActiveAt'] as Timestamp?)?.toDate(),
+      totalOwed: data['totalOwed'] as int? ?? 0,
+      totalOwing: data['totalOwing'] as int? ?? 0,
+      groupCount: data['groupCount'] as int? ?? 0,
+      fcmTokens:
+          (data['fcmTokens'] as List<dynamic>?)
+              ?.map((e) => e as String)
+              .toList() ??
+          [],
+    );
+  }
+
+  /// Create UserModel from a Map (for local storage)
+  factory UserModel.fromMap(Map<String, dynamic> map) {
+    return UserModel(
+      id: map['id'] as String,
+      phone: (map['phone'] as String?) ?? '',
+      displayName: map['displayName'] as String?,
+      photoUrl: map['photoUrl'] as String?,
+      isPhoneVerified: map['isPhoneVerified'] as bool? ?? false,
+      notificationsEnabled: map['notificationsEnabled'] as bool? ?? true,
+      contactSyncEnabled: map['contactSyncEnabled'] as bool? ?? false,
+      biometricAuthEnabled: map['biometricAuthEnabled'] as bool? ?? false,
+      createdAt: map['createdAt'] != null
+          ? DateTime.parse(map['createdAt'] as String)
+          : null,
+      updatedAt: map['updatedAt'] != null
+          ? DateTime.parse(map['updatedAt'] as String)
+          : null,
+      lastActiveAt: map['lastActiveAt'] != null
+          ? DateTime.parse(map['lastActiveAt'] as String)
+          : null,
+      totalOwed: map['totalOwed'] as int? ?? 0,
+      totalOwing: map['totalOwing'] as int? ?? 0,
+      groupCount: map['groupCount'] as int? ?? 0,
+      fcmTokens:
+          (map['fcmTokens'] as List<dynamic>?)
+              ?.map((e) => e as String)
+              .toList() ??
+          [],
+    );
+  }
+
+  /// Create UserModel from UserEntity
+  factory UserModel.fromEntity(UserEntity entity) {
+    return UserModel(
+      id: entity.id,
+      phone: entity.phone,
+      displayName: entity.displayName,
+      photoUrl: entity.photoUrl,
+      isPhoneVerified: entity.isPhoneVerified,
+      notificationsEnabled: entity.notificationsEnabled,
+      contactSyncEnabled: entity.contactSyncEnabled,
+      biometricAuthEnabled: entity.biometricAuthEnabled,
+      createdAt: entity.createdAt,
+      updatedAt: entity.updatedAt,
+      lastActiveAt: entity.lastActiveAt,
+      totalOwed: entity.totalOwed,
+      totalOwing: entity.totalOwing,
+      groupCount: entity.groupCount,
+      fcmTokens: entity.fcmTokens,
+    );
+  }
+
+  /// Convert to Firestore document data
+  Map<String, dynamic> toFirestore() {
+    return {
+      'phone': phone,
+      'displayName': displayName,
+      'photoUrl': photoUrl,
+      'isPhoneVerified': isPhoneVerified,
+      'notificationsEnabled': notificationsEnabled,
+      'contactSyncEnabled': contactSyncEnabled,
+      'biometricAuthEnabled': biometricAuthEnabled,
+      'updatedAt': FieldValue.serverTimestamp(),
+      'lastActiveAt': FieldValue.serverTimestamp(),
+      'totalOwed': totalOwed,
+      'totalOwing': totalOwing,
+      'groupCount': groupCount,
+      'fcmTokens': fcmTokens,
+      // Store hardcoded India values for reference
+      'currency': AppConstants.currency,
+      'locale': AppConstants.locale,
+      'timezone': AppConstants.timezone,
+      'countryCode': AppConstants.countryCode,
+    };
+  }
+
+  /// Convert to Firestore document data for new user creation
+  Map<String, dynamic> toFirestoreCreate() {
+    return {
+      'phone': phone,
+      'displayName': displayName,
+      'photoUrl': photoUrl,
+      'isPhoneVerified': isPhoneVerified,
+      'notificationsEnabled': notificationsEnabled,
+      'contactSyncEnabled': contactSyncEnabled,
+      'biometricAuthEnabled': biometricAuthEnabled,
+      'createdAt': FieldValue.serverTimestamp(),
+      'updatedAt': FieldValue.serverTimestamp(),
+      'lastActiveAt': FieldValue.serverTimestamp(),
+      'totalOwed': 0,
+      'totalOwing': 0,
+      'groupCount': 0,
+      'fcmTokens': fcmTokens,
+      // Store hardcoded India values for reference
+      'currency': AppConstants.currency,
+      'locale': AppConstants.locale,
+      'timezone': AppConstants.timezone,
+      'countryCode': AppConstants.countryCode,
+    };
+  }
+
+  /// Convert to Map (for local storage)
+  Map<String, dynamic> toMap() {
+    return {
+      'id': id,
+      'phone': phone,
+      'displayName': displayName,
+      'photoUrl': photoUrl,
+      'isPhoneVerified': isPhoneVerified,
+      'notificationsEnabled': notificationsEnabled,
+      'contactSyncEnabled': contactSyncEnabled,
+      'biometricAuthEnabled': biometricAuthEnabled,
+      'createdAt': createdAt?.toIso8601String(),
+      'updatedAt': updatedAt?.toIso8601String(),
+      'lastActiveAt': lastActiveAt?.toIso8601String(),
+      'totalOwed': totalOwed,
+      'totalOwing': totalOwing,
+      'groupCount': groupCount,
+      'fcmTokens': fcmTokens,
+      // Store hardcoded India values for reference
+      'currency': AppConstants.currency,
+      'locale': AppConstants.locale,
+      'timezone': AppConstants.timezone,
+      'countryCode': AppConstants.countryCode,
+    };
+  }
+
+  /// Create a copy with updated fields
+  UserModel copyWithModel({
+    String? id,
+    String? phone,
+    String? displayName,
+    String? photoUrl,
+    bool? isPhoneVerified,
+    bool? notificationsEnabled,
+    bool? contactSyncEnabled,
+    bool? biometricAuthEnabled,
+    DateTime? createdAt,
+    DateTime? updatedAt,
+    DateTime? lastActiveAt,
+    int? totalOwed,
+    int? totalOwing,
+    int? groupCount,
+    List<String>? fcmTokens,
+  }) {
+    return UserModel(
+      id: id ?? this.id,
+      phone: phone ?? this.phone,
+      displayName: displayName ?? this.displayName,
+      photoUrl: photoUrl ?? this.photoUrl,
+      isPhoneVerified: isPhoneVerified ?? this.isPhoneVerified,
+      notificationsEnabled: notificationsEnabled ?? this.notificationsEnabled,
+      contactSyncEnabled: contactSyncEnabled ?? this.contactSyncEnabled,
+      biometricAuthEnabled: biometricAuthEnabled ?? this.biometricAuthEnabled,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+      lastActiveAt: lastActiveAt ?? this.lastActiveAt,
+      totalOwed: totalOwed ?? this.totalOwed,
+      totalOwing: totalOwing ?? this.totalOwing,
+      groupCount: groupCount ?? this.groupCount,
+      fcmTokens: fcmTokens ?? this.fcmTokens,
+    );
+  }
+}

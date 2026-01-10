@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="ic_launcher_background">#FFFFFF</color>
+    <!-- App primary color (green) -->
+    <color name="primary">#2E7D32</color>
+    <!-- Background color for splash screen -->
+    <color name="splash_background">#FEFFFE</color>
+    <!-- Text color for tagline -->
+    <color name="splash_tagline">#757575</color>
+</resources>

@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="ic_launcher_background">#1C1B1F</color>
+    <!-- App primary color (green) for dark mode -->
+    <color name="primary">#81C784</color>
+    <!-- Background color for splash screen (dark mode) -->
+    <color name="splash_background">#1C1B1F</color>
+    <!-- Text color for tagline (dark mode) -->
+    <color name="splash_tagline">#B0B0B0</color>
+</resources>

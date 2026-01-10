@@ -16,7 +16,7 @@ service cloud.firestore {
       return request.auth.uid == userId;
     }
     
-    // Check if user is a member of the specified group
+    // Check if user is a member of the specified group (for subcollections)
     function isGroupMember(groupId) {
       return isAuthenticated() &&
         request.auth.uid in get(/databases/$(database)/documents/groups/$(groupId)).data.memberIds;
@@ -43,17 +43,23 @@ service cloud.firestore {
     // ============================================
     
     match /users/{userId} {
-      // Any authenticated user can read basic user info (for searching friends)
+      // Any authenticated user can read basic user info (for searching friends by phone)
+      // This allows phone number lookup for adding friends
       allow read: if isAuthenticated();
       
       // Only the user can write their own data
-      allow create: if isOwner(userId) && 
-        request.resource.data.keys().hasAll(['email', 'displayName', 'defaultCurrency', 'locale']) &&
-        request.resource.data.email == request.auth.token.email;
+      // Phone authentication is the only supported method
+      allow create: if isOwner(userId) &&
+        // Phone must be provided for new users
+        request.resource.data.phone is string &&
+        request.resource.data.phone.size() > 0;
       
+      // User can update their own document
+      // Phone cannot be changed after creation (must match Firebase Auth)
       allow update: if isOwner(userId) &&
-        // Cannot change email or ID
-        request.resource.data.email == resource.data.email;
+        // Cannot change phone number
+        (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['phone']) ||
+         request.resource.data.phone == resource.data.phone);
       
       allow delete: if isOwner(userId);
       
@@ -76,7 +82,8 @@ service cloud.firestore {
     
     match /groups/{groupId} {
       // Only group members can read group data
-      allow read: if isGroupMember(groupId);
+      // Using resource.data.memberIds for collection queries compatibility
+      allow read: if isAuthenticated() && request.auth.uid in resource.data.memberIds;
       
       // Any authenticated user can create a group
       allow create: if isAuthenticated() &&
@@ -157,22 +164,26 @@ service cloud.firestore {
     
     // ============================================
     // INVITATIONS COLLECTION
+    // Updated for phone-based invitations
     // ============================================
     
     match /invitations/{invitationId} {
-      // Inviter or invitee can read
+      // Inviter can read their own invitations
+      // Invitee can read invitations sent to their phone
       allow read: if isAuthenticated() &&
         (resource.data.inviterId == request.auth.uid ||
-         resource.data.inviteeEmail == request.auth.token.email);
+         resource.data.inviteePhone == request.auth.token.phone_number);
       
       // Any authenticated user can create invitations
       allow create: if isAuthenticated() &&
         request.resource.data.inviterId == request.auth.uid &&
-        request.resource.data.status == 'pending';
+        request.resource.data.status == 'pending' &&
+        // Must have invitee phone number
+        request.resource.data.inviteePhone is string;
       
       // Only invitee can update (accept/decline)
       allow update: if isAuthenticated() &&
-        resource.data.inviteeEmail == request.auth.token.email &&
+        resource.data.inviteePhone == request.auth.token.phone_number &&
         resource.data.status == 'pending';
       
       // Only inviter can delete pending invitations
